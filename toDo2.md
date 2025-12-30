@@ -5,7 +5,7 @@ Tâches :
 1. Créer 5 pages catégories :
    - High-Tech, Maison, Cuisine, Sport, Beauté
 2. Pour chaque catégorie, créer les pages des 4 meilleures marques.
-3. Associer 3 produits par marque :
+3. Associer 3 produits, par type (telephone, ordi, aspirateur, robotcuisine...etc) puis par marque :
    - Meilleur rapport qualité/prix
    - Milieu
    - Moins cher fiable
