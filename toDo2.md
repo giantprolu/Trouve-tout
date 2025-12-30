@@ -1,7 +1,6 @@
 Tu es un expert full-stack web et SEO. Le projet "Trouve-Tout" est déjà créé sous Astro avec Tailwind CSS. 
 Cette semaine, concentre-toi sur la création des **pages catégories et marques** pour "Trouve-Tout"
 
-
 Tâches :
 1. Créer 5 pages catégories :
    - High-Tech, Maison, Cuisine, Sport, Beauté

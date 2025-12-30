@@ -1,0 +1,17 @@
+---
+export const prerender = false; // Page dynamique
+
+import { supabase } from "../../lib/supabase";
+
+// Exemple protection basique (à améliorer avec auth Guard)
+const {
+    data: { user },
+} = await supabase.auth.getUser();
+
+if (!user) {
+    // return Astro.redirect('/login'); // Décommentez pour rediriger si non connecté
+}
+---
+
+<h1 class="text-2xl font-bold">Profil</h1>
+<p>Bienvenue {user?.email}</p>
