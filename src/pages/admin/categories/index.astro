@@ -1,0 +1,217 @@
+---
+/**
+ * Gestion des catégories - Admin
+ * Route: /admin/categories
+ */
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getCategories, getProducts, type DbCategory } from '../../../lib/db';
+
+// Récupérer les données depuis Supabase
+const categories = await getCategories();
+const products = await getProducts();
+
+// Message de succès/erreur depuis URL
+const url = new URL(Astro.request.url);
+const success = url.searchParams.get('success');
+const error = url.searchParams.get('error');
+const editId = url.searchParams.get('edit');
+
+// Enrichir les catégories avec le nombre de produits
+interface CategoryWithStats extends DbCategory {
+    productCount: number;
+}
+
+const categoriesWithStats: CategoryWithStats[] = categories.map(cat => ({
+    ...cat,
+    productCount: products.filter(p => p.category_id === cat.id).length
+}));
+
+// Trouver la catégorie à éditer
+const editCategory = editId ? categoriesWithStats.find(c => c.id === editId) : null;
+---
+
+<AdminLayout title="Gestion des catégories">
+    {success && (
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6">
+            ✅ {success}
+        </div>
+    )}
+    
+    {error && (
+        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6">
+            ❌ {error}
+        </div>
+    )}
+
+    <!-- Toolbar -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <p class="text-gray-600">
+                    <strong>{categories.length}</strong> catégorie(s) configurée(s)
+                </p>
+            </div>
+            <button 
+                type="button" 
+                class="btn-primary"
+                onclick="document.getElementById('add-modal')?.classList.remove('hidden')"
+            >
+                ➕ Nouvelle catégorie
+            </button>
+        </div>
+    </div>
+
+    <!-- Categories Table -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Ordre</th>
+                    <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Catégorie</th>
+                    <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
+                    <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th class="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Produits</th>
+                    <th class="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                    <th class="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {categoriesWithStats.map((cat) => (
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-medium text-sm">
+                                {cat.display_order}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <span class="text-2xl">{cat.icon}</span>
+                                <span class="font-medium text-gray-900">{cat.name}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <code class="text-sm bg-gray-100 px-2 py-1 rounded">{cat.slug}</code>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-sm text-gray-500 truncate max-w-xs">{cat.description || '-'}</p>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                {cat.productCount}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {cat.is_active ? (
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Actif</span>
+                            ) : (
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactif</span>
+                            )}
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <a href={`/categories/${cat.slug}`} target="_blank" class="text-gray-400 hover:text-indigo-600 transition-colors p-1" title="Voir">👁️</a>
+                                <a href={`/admin/categories?edit=${cat.id}`} class="text-gray-400 hover:text-indigo-600 transition-colors p-1" title="Modifier">✏️</a>
+                                <form method="POST" action={`/api/admin/categories/${cat.id}`} class="inline" onsubmit="return confirm('Supprimer cette catégorie ?')">
+                                    <input type="hidden" name="_method" value="DELETE" />
+                                    <button type="submit" class="text-gray-400 hover:text-red-600 transition-colors p-1" title="Supprimer">🗑️</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+        {categories.length === 0 && (
+            <div class="p-12 text-center text-gray-500">
+                <p class="text-4xl mb-4">📁</p>
+                <p>Aucune catégorie configurée</p>
+            </div>
+        )}
+    </div>
+
+    <!-- Info Box -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="flex gap-3">
+            <span class="text-blue-500">ℹ️</span>
+            <div class="text-sm text-blue-700">
+                <p class="font-medium mb-1">À propos des catégories</p>
+                <p>Les catégories permettent d'organiser les produits par domaine. L'ordre d'affichage détermine la position dans les menus.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajout -->
+    <div id="add-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b flex items-center justify-between">
+                <h3 class="text-lg font-semibold">Nouvelle catégorie</h3>
+                <button type="button" onclick="document.getElementById('add-modal')?.classList.add('hidden')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <form method="POST" action="/api/admin/categories" class="p-6 space-y-4">
+                <div>
+                    <label class="form-label" for="add-name">Nom <span class="text-red-500">*</span></label>
+                    <input type="text" id="add-name" name="name" required class="form-input" placeholder="ex: High-Tech" />
+                </div>
+                <div>
+                    <label class="form-label" for="add-slug">Slug</label>
+                    <input type="text" id="add-slug" name="slug" class="form-input" placeholder="high-tech (auto si vide)" />
+                </div>
+                <div>
+                    <label class="form-label" for="add-icon">Icône <span class="text-red-500">*</span></label>
+                    <input type="text" id="add-icon" name="icon" required class="form-input" placeholder="ex: 💻" />
+                </div>
+                <div>
+                    <label class="form-label" for="add-description">Description</label>
+                    <textarea id="add-description" name="description" rows="3" class="form-input"></textarea>
+                </div>
+                <div>
+                    <label class="form-label" for="add-display_order">Ordre d'affichage</label>
+                    <input type="number" id="add-display_order" name="display_order" class="form-input" value="0" min="0" />
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="btn-primary flex-1">Créer</button>
+                    <button type="button" class="btn-secondary flex-1" onclick="document.getElementById('add-modal')?.classList.add('hidden')">Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Édition -->
+    {editCategory && (
+        <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">Modifier la catégorie</h3>
+                    <a href="/admin/categories" class="text-gray-400 hover:text-gray-600">✕</a>
+                </div>
+                <form method="POST" action={`/api/admin/categories/${editCategory.id}`} class="p-6 space-y-4">
+                    <input type="hidden" name="_method" value="PUT" />
+                    <div>
+                        <label class="form-label" for="edit-name">Nom <span class="text-red-500">*</span></label>
+                        <input type="text" id="edit-name" name="name" required class="form-input" value={editCategory.name} />
+                    </div>
+                    <div>
+                        <label class="form-label" for="edit-slug">Slug</label>
+                        <input type="text" id="edit-slug" name="slug" class="form-input" value={editCategory.slug} />
+                    </div>
+                    <div>
+                        <label class="form-label" for="edit-icon">Icône <span class="text-red-500">*</span></label>
+                        <input type="text" id="edit-icon" name="icon" required class="form-input" value={editCategory.icon} />
+                    </div>
+                    <div>
+                        <label class="form-label" for="edit-description">Description</label>
+                        <textarea id="edit-description" name="description" rows="3" class="form-input">{editCategory.description || ''}</textarea>
+                    </div>
+                    <div>
+                        <label class="form-label" for="edit-display_order">Ordre d'affichage</label>
+                        <input type="number" id="edit-display_order" name="display_order" class="form-input" value={editCategory.display_order} min="0" />
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="btn-primary flex-1">Enregistrer</button>
+                        <a href="/admin/categories" class="btn-secondary flex-1 text-center">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    )}
+</AdminLayout>

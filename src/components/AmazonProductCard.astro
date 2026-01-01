@@ -1,0 +1,144 @@
+---
+/**
+ * Composant pour afficher un produit Amazon avec lien d'affiliation
+ */
+import type { ProductTier } from '../data/catalog';
+import { tierLabels } from '../data/catalog';
+
+export interface AmazonProduct {
+    asin: string;
+    title: string;
+    price: number;
+    currency: string;
+    rating: number;
+    reviewCount: number;
+    imageUrl: string;
+    affiliateUrl: string;
+    isPrimeEligible: boolean;
+    availability: string;
+}
+
+interface Props {
+    product: AmazonProduct;
+    tier: ProductTier;
+    rank?: number;
+}
+
+const { product, tier, rank } = Astro.props;
+const tierInfo = tierLabels[tier];
+
+// Formater le prix
+function formatPrice(price: number, currency: string = 'EUR'): string {
+    return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: currency
+    }).format(price);
+}
+
+// Générer les étoiles
+function generateStars(rating: number): string {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    
+    return '★'.repeat(fullStars) + (hasHalfStar ? '½' : '') + '☆'.repeat(emptyStars);
+}
+---
+
+<article class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group relative">
+    <!-- Badge Tier -->
+    <div class={`absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-white text-sm font-medium ${tierInfo.color}`}>
+        {tierInfo.label}
+    </div>
+    
+    <!-- Badge Rang si fourni -->
+    {rank && (
+        <div class="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">
+            #{rank}
+        </div>
+    )}
+    
+    <!-- Badge Prime -->
+    {product.isPrimeEligible && (
+        <div class="absolute top-14 left-4 z-10">
+            <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded font-medium">
+                ✓ Prime
+            </span>
+        </div>
+    )}
+    
+    <!-- Image du produit -->
+    <div class="relative h-48 bg-gray-50 flex items-center justify-center p-4 overflow-hidden">
+        <img 
+            src={product.imageUrl} 
+            alt={product.title}
+            class="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+        />
+    </div>
+    
+    <!-- Contenu -->
+    <div class="p-5">
+        <!-- Titre -->
+        <h3 class="font-semibold text-gray-900 mb-2 line-clamp-2 min-h-[3rem] text-sm">
+            {product.title}
+        </h3>
+        
+        <!-- Notes et avis -->
+        <div class="flex items-center gap-2 mb-3">
+            <span class="text-yellow-500 text-sm">
+                {generateStars(product.rating)}
+            </span>
+            <span class="text-gray-700 font-medium text-sm">
+                {product.rating.toFixed(1)}
+            </span>
+            <span class="text-gray-400 text-xs">
+                ({product.reviewCount.toLocaleString('fr-FR')} avis)
+            </span>
+        </div>
+        
+        <!-- Prix -->
+        <div class="mb-4">
+            <span class="text-2xl font-bold text-gray-900">
+                {formatPrice(product.price, product.currency)}
+            </span>
+        </div>
+        
+        <!-- Disponibilité -->
+        <p class="text-sm text-gray-500 mb-4">
+            {product.availability}
+        </p>
+        
+        <!-- Bouton Voir sur Amazon -->
+        <a 
+            href={product.affiliateUrl}
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            class="block w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white text-center py-3 rounded-xl font-semibold transition-all duration-300 shadow-md hover:shadow-lg"
+        >
+            <span class="flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12.958 19.08c-2.67 1.85-6.54 2.84-9.87 2.84-4.67 0-8.87-1.73-12.05-4.61-.25-.23-.03-.54.27-.36 3.43 2 7.67 3.2 12.04 3.2 2.95 0 6.19-.61 9.17-1.87.45-.19.83.3.44.8z"/>
+                    <path d="M14.28 17.56c-.34-.44-2.25-.21-3.11-.1-.26.03-.3-.2-.07-.37 1.52-1.07 4.02-.76 4.31-.4.29.36-.08 2.86-1.51 4.06-.22.18-.43.08-.33-.16.32-.8 1.04-2.59.71-3.03z"/>
+                </svg>
+                Voir sur Amazon
+            </span>
+        </a>
+    </div>
+    
+    <!-- Tooltip description du tier -->
+    <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+        <div class="bg-gray-900 text-white text-xs px-3 py-2 rounded-lg whitespace-nowrap">
+            {tierInfo.description}
+        </div>
+    </div>
+</article>
+
+<style>
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>

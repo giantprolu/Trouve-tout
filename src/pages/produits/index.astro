@@ -1,6 +1,70 @@
 ---
+import Layout from '../../layouts/Layout.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import { products, categories, formatPrice } from '../../data/products';
 
+const title = "Tous les Produits | Trouve-Tout";
+const description = "Découvrez notre sélection complète de produits recommandés. Smartphones, électroménager, sport, beauté et plus encore.";
+
+// Grouper les produits par catégorie
+const productsByCategory = categories.map(cat => ({
+    category: cat,
+    products: products.filter(p => p.category === cat.slug)
+}));
 ---
 
-<h1 class="text-2xl font-bold">Produits</h1>
-<p>Liste des produits...</p>
+<Layout title={title} description={description}>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                Tous nos Produits
+            </h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Explorez notre sélection de {products.length} produits soigneusement évalués et recommandés.
+            </p>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+            <div class="bg-white rounded-xl shadow p-4 text-center">
+                <div class="text-3xl font-bold text-primary-600">{products.length}</div>
+                <div class="text-gray-600 text-sm">Produits</div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-4 text-center">
+                <div class="text-3xl font-bold text-green-600">{products.filter(p => p.tier === 'best-value').length}</div>
+                <div class="text-gray-600 text-sm">Meilleurs rapports Q/P</div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-4 text-center">
+                <div class="text-3xl font-bold text-blue-600">{categories.length}</div>
+                <div class="text-gray-600 text-sm">Catégories</div>
+            </div>
+            <div class="bg-white rounded-xl shadow p-4 text-center">
+                <div class="text-3xl font-bold text-orange-600">{products.filter(p => p.tier === 'budget').length}</div>
+                <div class="text-gray-600 text-sm">Options Budget</div>
+            </div>
+        </div>
+
+        <!-- Products by Category -->
+        {productsByCategory.map(({ category, products: catProducts }) => (
+            <section class="mb-16">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">
+                        {category.icon} {category.name}
+                    </h2>
+                    <a href={`/categories/${category.slug}`} class="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center">
+                        Voir tout
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {catProducts.slice(0, 4).map((product) => (
+                        <ProductCard product={product} />
+                    ))}
+                </div>
+            </section>
+        ))}
+    </div>
+</Layout>

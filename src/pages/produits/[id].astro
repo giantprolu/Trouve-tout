@@ -1,0 +1,184 @@
+---
+export const prerender = true;
+
+import Layout from '../../layouts/Layout.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import { products, getProductById, getBrandBySlug, getCategoryBySlug, getProductsByBrand, formatPrice, getTierLabel } from '../../data/products';
+
+export function getStaticPaths() {
+    return products.map(product => ({
+        params: { id: product.id }
+    }));
+}
+
+const { id } = Astro.params;
+const product = getProductById(id);
+
+if (!product) {
+    return Astro.redirect('/produits');
+}
+
+const brand = product.brand ? getBrandBySlug(product.brand) : null;
+const category = product.category ? getCategoryBySlug(product.category) : null;
+const relatedProducts = product.brand ? getProductsByBrand(product.brand).filter(p => p.id !== product.id).slice(0, 3) : [];
+const tierInfo = product.tier ? getTierLabel(product.tier) : null;
+
+const title = `${product.name} - Avis et Prix | Trouve-Tout`;
+const description = product.description || `Découvrez ${product.name} : caractéristiques, avis et meilleur prix.`;
+---
+
+<Layout title={title} description={description}>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Breadcrumb -->
+        <nav class="mb-8">
+            <ol class="flex items-center space-x-2 text-sm text-gray-500 flex-wrap">
+                <li><a href="/" class="hover:text-primary-600">Accueil</a></li>
+                <li>/</li>
+                <li><a href="/produits" class="hover:text-primary-600">Produits</a></li>
+                {category && (
+                    <>
+                        <li>/</li>
+                        <li><a href={`/categories/${category.slug}`} class="hover:text-primary-600">{category.name}</a></li>
+                    </>
+                )}
+                {brand && (
+                    <>
+                        <li>/</li>
+                        <li><a href={`/categories/${category?.slug}/${brand.slug}`} class="hover:text-primary-600">{brand.name}</a></li>
+                    </>
+                )}
+                <li>/</li>
+                <li class="text-gray-900 font-medium">{product.name}</li>
+            </ol>
+        </nav>
+
+        <!-- Product Detail -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+            <!-- Image -->
+            <div class="bg-white rounded-2xl shadow-lg p-8 flex items-center justify-center">
+                {product.image_url ? (
+                    <img 
+                        src={product.image_url} 
+                        alt={product.name}
+                        class="max-w-full max-h-96 object-contain"
+                    />
+                ) : (
+                    <div class="text-9xl">📦</div>
+                )}
+            </div>
+
+            <!-- Info -->
+            <div>
+                {tierInfo && (
+                    <span class={`inline-block ${tierInfo.color} text-white text-sm px-3 py-1 rounded-full font-medium mb-4`}>
+                        {tierInfo.label}
+                    </span>
+                )}
+                
+                <h1 class="text-3xl font-bold text-gray-900 mb-4">
+                    {product.name}
+                </h1>
+
+                {brand && (
+                    <a href={`/categories/${category?.slug}/${brand.slug}`} class="text-primary-600 hover:text-primary-700 font-medium mb-4 inline-block">
+                        {brand.name}
+                    </a>
+                )}
+
+                <p class="text-gray-600 text-lg mb-6">
+                    {product.description}
+                </p>
+
+                <!-- Ratings Grid -->
+                <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                    <h3 class="font-bold text-lg mb-4">Nos évaluations</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        {product.quality_rating && (
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">⭐ Qualité</span>
+                                <div class="flex items-center">
+                                    <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                                        <div class="bg-yellow-400 h-2 rounded-full" style={`width: ${product.quality_rating * 20}%`}></div>
+                                    </div>
+                                    <span class="font-medium">{product.quality_rating}/5</span>
+                                </div>
+                            </div>
+                        )}
+                        {product.price_rating && (
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">💸 Prix</span>
+                                <div class="flex items-center">
+                                    <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                                        <div class="bg-green-400 h-2 rounded-full" style={`width: ${product.price_rating * 20}%`}></div>
+                                    </div>
+                                    <span class="font-medium">{product.price_rating}/5</span>
+                                </div>
+                            </div>
+                        )}
+                        {product.durability_rating && (
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">🔧 Durabilité</span>
+                                <div class="flex items-center">
+                                    <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                                        <div class="bg-blue-400 h-2 rounded-full" style={`width: ${product.durability_rating * 20}%`}></div>
+                                    </div>
+                                    <span class="font-medium">{product.durability_rating}/5</span>
+                                </div>
+                            </div>
+                        )}
+                        {product.service_rating && (
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-600">🛠 SAV</span>
+                                <div class="flex items-center">
+                                    <div class="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                                        <div class="bg-purple-400 h-2 rounded-full" style={`width: ${product.service_rating * 20}%`}></div>
+                                    </div>
+                                    <span class="font-medium">{product.service_rating}/5</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <!-- Price and CTA -->
+                <div class="flex items-center justify-between p-6 bg-primary-50 rounded-xl">
+                    <div>
+                        <span class="text-sm text-gray-600">Prix constaté</span>
+                        <div class="text-4xl font-bold text-primary-600">
+                            {product.price ? formatPrice(product.price) : 'Prix sur demande'}
+                        </div>
+                    </div>
+                    <button class="bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors">
+                        Voir l'offre
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Products -->
+        {relatedProducts.length > 0 && (
+            <section class="mt-16">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">
+                    Autres produits {brand?.name}
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {relatedProducts.map((p) => (
+                        <ProductCard product={p} />
+                    ))}
+                </div>
+            </section>
+        )}
+
+        <!-- SEO Content -->
+        <section class="mt-16 prose prose-lg max-w-none">
+            <h2>À propos du {product.name}</h2>
+            <p>{product.description}</p>
+            {brand && (
+                <>
+                    <h3>Pourquoi choisir {brand.name} ?</h3>
+                    <p>{brand.description}</p>
+                </>
+            )}
+        </section>
+    </div>
+</Layout>

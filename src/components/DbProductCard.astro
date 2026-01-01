@@ -1,0 +1,139 @@
+---
+/**
+ * Carte produit dynamique - utilise les données de la BDD Supabase
+ * Ce composant est générique et fonctionne avec ProductFull
+ */
+import type { ProductFull } from '../lib/db';
+import { POSITION_LABELS } from '../lib/db';
+
+interface Props {
+    product: ProductFull;
+    showCategory?: boolean;
+    showBrand?: boolean;
+    compact?: boolean;
+}
+
+const { product, showCategory = false, showBrand = true, compact = false } = Astro.props;
+const position = POSITION_LABELS[product.position];
+---
+
+<article class={`group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 ${compact ? 'flex flex-row' : ''}`}>
+    <!-- Image -->
+    <div class={`relative bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center ${compact ? 'w-32 h-32 flex-shrink-0' : 'aspect-square p-6'}`}>
+        {product.image_url ? (
+            <img 
+                src={product.image_url} 
+                alt={product.name}
+                class={`object-contain group-hover:scale-105 transition-transform duration-300 ${compact ? 'w-full h-full p-2' : 'w-full h-full'}`}
+                loading="lazy"
+            />
+        ) : (
+            <div class={compact ? 'text-3xl text-gray-300' : 'text-6xl text-gray-300'}>📦</div>
+        )}
+        
+        <!-- Badge position -->
+        {!compact && (
+            <span class={`absolute top-3 left-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${position.bgColor} ${position.color}`}>
+                <span>{position.emoji}</span>
+                <span class="hidden sm:inline">{position.label}</span>
+            </span>
+        )}
+        
+        <!-- Note moyenne -->
+        {!compact && product.avg_rating > 0 && (
+            <span class="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/90 backdrop-blur-sm text-sm font-bold text-gray-800 shadow-sm">
+                ⭐ {product.avg_rating.toFixed(1)}
+            </span>
+        )}
+    </div>
+    
+    <!-- Contenu -->
+    <div class={compact ? 'p-4 flex-1 flex flex-col justify-between' : 'p-5'}>
+        <!-- Catégorie / Marque -->
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                {compact && (
+                    <span class={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${position.bgColor} ${position.color}`}>
+                        {position.emoji}
+                    </span>
+                )}
+                {showCategory && product.category && (
+                    <a 
+                        href={`/categories/${product.category.slug}`}
+                        class="text-xs text-gray-500 hover:text-blue-600"
+                    >
+                        {product.category.icon} {product.category.name}
+                    </a>
+                )}
+                {showCategory && showBrand && <span class="text-gray-300">•</span>}
+                {showBrand && product.brand && (
+                    <span class="text-xs font-medium text-gray-600">
+                        {product.brand.name}
+                    </span>
+                )}
+            </div>
+            
+            <!-- Nom -->
+            <h3 class={`font-bold text-gray-900 group-hover:text-blue-600 transition-colors ${compact ? 'text-base mb-1 line-clamp-1' : 'text-lg mb-2 line-clamp-2'}`}>
+                {product.name}
+            </h3>
+            
+            <!-- Résumé -->
+            {!compact && (
+                <p class="text-sm text-gray-600 mb-4 line-clamp-2">
+                    {product.summary}
+                </p>
+            )}
+        </div>
+        
+        <!-- Indicateurs (non compact) -->
+        {!compact && (
+            <div class="grid grid-cols-4 gap-2 mb-4">
+                {product.rating_quality && (
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500">Qualité</div>
+                        <div class="font-bold text-sm">{product.rating_quality}/5</div>
+                    </div>
+                )}
+                {product.rating_price && (
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500">Prix</div>
+                        <div class="font-bold text-sm">{product.rating_price}/5</div>
+                    </div>
+                )}
+                {product.rating_durability && (
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500">Durabilité</div>
+                        <div class="font-bold text-sm">{product.rating_durability}/5</div>
+                    </div>
+                )}
+                {product.rating_reliability && (
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500">Fiabilité</div>
+                        <div class="font-bold text-sm">{product.rating_reliability}/5</div>
+                    </div>
+                )}
+            </div>
+        )}
+        
+        <!-- Prix et CTA -->
+        <div class={`flex items-center ${compact ? 'gap-3' : 'justify-between pt-4 border-t border-gray-100'}`}>
+            {product.price_display && (
+                <span class={`font-bold text-gray-900 ${compact ? 'text-lg' : 'text-xl'}`}>
+                    {product.price_display}
+                </span>
+            )}
+            <a 
+                href={product.amazon_url}
+                target="_blank"
+                rel="noopener noreferrer sponsored"
+                class={`inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all shadow-sm hover:shadow-md ${compact ? 'px-3 py-1.5 text-sm' : 'px-4 py-2'}`}
+            >
+                <span>{compact ? 'Voir' : 'Voir sur Amazon'}</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+            </a>
+        </div>
+    </div>
+</article>

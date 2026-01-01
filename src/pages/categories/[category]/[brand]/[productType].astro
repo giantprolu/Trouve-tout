@@ -1,0 +1,306 @@
+---
+/**
+ * Page Type de Produit - Affiche les 3 produits recommandés
+ * Route: /categories/[category]/[brand]/[productType]
+ * 
+ * Affiche 3 produits basés sur leur position:
+ * - 🏆 Meilleur Rapport Qualité/Prix (best-value)
+ * - ⚖️ Le Choix du Milieu (middle-ground)
+ * - 💰 Petit Budget (budget)
+ */
+export const prerender = true;
+
+import Layout from '../../../../layouts/Layout.astro';
+import DbProductCard from '../../../../components/DbProductCard.astro';
+import { 
+    getCategories,
+    getCategoryBySlug, 
+    getBrandBySlug,
+    getBrandsByCategory,
+    getProductTypeBySlug,
+    getProductTypesByCategoryAndBrand,
+    getProductsByProductTypeId,
+    POSITION_LABELS,
+    type ProductPosition,
+    type ProductFull
+} from '../../../../lib/db';
+
+// Génération des chemins statiques depuis la BDD
+export async function getStaticPaths() {
+    const categories = await getCategories();
+    const paths: { params: { category: string; brand: string; productType: string } }[] = [];
+    
+    for (const category of categories) {
+        const brands = await getBrandsByCategory(category.slug);
+        for (const brand of brands) {
+            const productTypes = await getProductTypesByCategoryAndBrand(category.id, brand.id);
+            for (const productType of productTypes) {
+                paths.push({
+                    params: {
+                        category: category.slug,
+                        brand: brand.slug,
+                        productType: productType.slug
+                    }
+                });
+            }
+        }
+    }
+    
+    return paths;
+}
+
+const { category: categorySlug, brand: brandSlug, productType: productTypeSlug } = Astro.params;
+
+const category = await getCategoryBySlug(categorySlug);
+const brand = await getBrandBySlug(brandSlug);
+const productType = await getProductTypeBySlug(productTypeSlug);
+
+if (!category || !brand || !productType) {
+    return Astro.redirect('/404');
+}
+
+// Récupérer les produits pour ce type de produit
+const products = await getProductsByProductTypeId(productType.id);
+
+// Organiser les produits par position
+const productsByPosition: Record<ProductPosition, ProductFull | null> = {
+    'best-value': products.find(p => p.position === 'best-value') || null,
+    'middle-ground': products.find(p => p.position === 'middle-ground') || null,
+    'budget': products.find(p => p.position === 'budget') || null
+};
+
+// Les autres types de produits de cette marque
+const otherProductTypes = await getProductTypesByCategoryAndBrand(category.id, brand.id);
+
+// Breadcrumb
+const breadcrumb = [
+    { name: 'Accueil', href: '/' },
+    { name: 'Catégories', href: '/categories' },
+    { name: category.name, href: `/categories/${categorySlug}` },
+    { name: brand.name, href: `/categories/${categorySlug}/${brandSlug}` },
+    { name: productType.name, href: '' }
+];
+
+// SEO
+const seoMeta = {
+    title: `${productType.name} ${brand.name} - Comparatif 2025 | Trouve-Tout`,
+    description: productType.description 
+        || `Découvrez notre sélection des meilleurs ${productType.name} ${brand.name}. Comparatif des 3 meilleurs modèles avec avis et prix.`
+};
+
+const positions: ProductPosition[] = ['best-value', 'middle-ground', 'budget'];
+---
+
+<Layout title={seoMeta.title} description={seoMeta.description}>
+    <!-- Breadcrumb -->
+    <nav class="bg-gray-100 py-3 border-b">
+        <div class="max-w-7xl mx-auto px-4">
+            <ol class="flex flex-wrap items-center gap-2 text-sm">
+                {breadcrumb.map((item, index) => (
+                    <li class="flex items-center">
+                        {index > 0 && <span class="text-gray-400 mx-2">›</span>}
+                        {index === breadcrumb.length - 1 ? (
+                            <span class="text-indigo-600 font-medium">{item.name}</span>
+                        ) : (
+                            <a href={item.href} class="text-gray-600 hover:text-indigo-600 transition-colors">
+                                {item.name}
+                            </a>
+                        )}
+                    </li>
+                ))}
+            </ol>
+        </div>
+    </nav>
+    
+    <!-- Header -->
+    <section class="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white py-16">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <div class="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm rounded-full px-6 py-2 mb-6">
+                <span class="text-3xl">{productType.icon}</span>
+                <span class="text-lg font-medium">{brand.name}</span>
+            </div>
+            
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">
+                {productType.name} {brand.name}
+            </h1>
+            
+            <p class="text-xl text-white/90 max-w-2xl mx-auto mb-8">
+                {productType.description || `Découvrez notre sélection des meilleurs ${productType.name} ${brand.name}`}
+            </p>
+            
+            <div class="flex flex-wrap justify-center gap-4">
+                {positions.map(position => (
+                    <div class={`inline-flex items-center gap-2 ${POSITION_LABELS[position].color} px-4 py-2 rounded-full text-sm font-medium`}>
+                        <span>{POSITION_LABELS[position].emoji}</span>
+                        {POSITION_LABELS[position].label}
+                    </div>
+                ))}
+            </div>
+        </div>
+    </section>
+    
+    <!-- Section Explication -->
+    <section class="py-8 bg-gray-50 border-b">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="bg-white rounded-2xl p-6 shadow-sm">
+                <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span class="text-2xl">🎯</span>
+                    Comment nous sélectionnons les produits
+                </h2>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span class="text-xl">⭐</span>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-gray-900">Meilleure Note</h3>
+                            <p class="text-sm text-gray-600">Le produit le mieux noté par les acheteurs Amazon</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span class="text-xl">🏆</span>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-gray-900">Meilleur Rapport Q/P</h3>
+                            <p class="text-sm text-gray-600">Le meilleur compromis entre qualité et prix</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span class="text-xl">💰</span>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-gray-900">Moins Cher Fiable</h3>
+                            <p class="text-sm text-gray-600">Le prix le plus bas avec une note ≥ 4/5</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Grille des 3 produits -->
+    <section class="py-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">
+                Top 3 {productType.name} {brand.name}
+            </h2>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                {positions.map((position, index) => {
+                    const product = productsByPosition[position];
+                    return product ? (
+                        <DbProductCard 
+                            product={product} 
+                            showCategory={false}
+                            showBrand={false}
+                        />
+                    ) : (
+                        <div class="bg-gray-100 rounded-2xl p-8 text-center">
+                            <span class="text-4xl block mb-4">{POSITION_LABELS[position].emoji}</span>
+                            <h3 class="font-bold text-gray-600 mb-2">{POSITION_LABELS[position].label}</h3>
+                            <p class="text-sm text-gray-500">Produit à venir bientôt</p>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    </section>
+    
+    <!-- Section FAQ SEO -->
+    <section class="py-12 bg-gray-50">
+        <div class="max-w-4xl mx-auto px-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">
+                Questions fréquentes sur les {productType.name} {brand.name}
+            </h2>
+            
+            <div class="space-y-4">
+                <details class="bg-white rounded-xl p-6 shadow-sm cursor-pointer group">
+                    <summary class="font-semibold text-gray-900 list-none flex items-center justify-between">
+                        Quel est le meilleur {productType.name.toLowerCase()} {brand.name} en 2026 ?
+                        <span class="text-indigo-600 group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <p class="mt-4 text-gray-600">
+                        Le meilleur {productType.name.toLowerCase()} {brand.name} dépend de vos besoins. 
+                        Pour les performances maximales, optez pour le modèle Premium. Pour un excellent rapport 
+                        qualité-prix, le modèle Standard est idéal. Si vous avez un budget limité, le modèle 
+                        Essentiel offre une qualité fiable à prix accessible.
+                    </p>
+                </details>
+                
+                <details class="bg-white rounded-xl p-6 shadow-sm cursor-pointer group">
+                    <summary class="font-semibold text-gray-900 list-none flex items-center justify-between">
+                        Où acheter les {productType.name} {brand.name} au meilleur prix ?
+                        <span class="text-indigo-600 group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <p class="mt-4 text-gray-600">
+                        Amazon reste la meilleure plateforme pour acheter des {productType.name.toLowerCase()} {brand.name} 
+                        grâce à sa politique de retour, ses garanties et ses prix compétitifs. Les membres Prime 
+                        bénéficient en plus de la livraison gratuite et rapide.
+                    </p>
+                </details>
+                
+                <details class="bg-white rounded-xl p-6 shadow-sm cursor-pointer group">
+                    <summary class="font-semibold text-gray-900 list-none flex items-center justify-between">
+                        Comment choisir entre les différents modèles ?
+                        <span class="text-indigo-600 group-open:rotate-180 transition-transform">▼</span>
+                    </summary>
+                    <p class="mt-4 text-gray-600">
+                        Considérez votre budget et vos besoins réels. Le modèle Premium offre les meilleures 
+                        fonctionnalités mais à un prix élevé. Le modèle avec le meilleur rapport qualité-prix 
+                        convient à la majorité des utilisateurs. Le modèle économique est parfait si vous 
+                        cherchez l'essentiel à petit prix.
+                    </p>
+                </details>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Navigation vers autres types de produits -->
+    <section class="py-12 border-t">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">
+                Autres produits {brand.name}
+            </h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {otherProductTypes
+                    .filter(pt => pt.slug !== productTypeSlug)
+                    .map(pt => (
+                        <a 
+                            href={`/categories/${categorySlug}/${brandSlug}/${pt.slug}`}
+                            class="bg-white rounded-xl p-4 shadow-sm hover:shadow-lg transition-all duration-300 text-center group"
+                        >
+                            <span class="text-3xl block mb-2 group-hover:scale-110 transition-transform">
+                                {pt.icon}
+                            </span>
+                            <span class="font-medium text-gray-900">{pt.name}</span>
+                        </a>
+                    ))
+                }
+            </div>
+            
+            <!-- Lien retour marque -->
+            <div class="mt-8 text-center">
+                <a 
+                    href={`/categories/${categorySlug}/${brandSlug}`}
+                    class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                    ← Retour à tous les produits {brand.name}
+                </a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Disclaimer affiliation -->
+    <section class="py-6 bg-gray-100 border-t">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <p class="text-sm text-gray-500">
+                <strong>Transparence :</strong> Trouve-Tout participe au Programme Partenaires d'Amazon, 
+                un programme d'affiliation permettant de percevoir des commissions sur les produits achetés 
+                via nos liens. Cela ne modifie pas le prix pour vous.
+            </p>
+        </div>
+    </section>
+</Layout>

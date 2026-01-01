@@ -1,0 +1,337 @@
+---
+/**
+ * Gestion des types de produits - Admin
+ * Route: /admin/product-types
+ */
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getProductTypes, getProducts, getCategories, getBrands, getProductTypeBrands, type DbProductType, type DbBrand } from '../../../lib/db';
+
+// Récupérer les données depuis Supabase
+const productTypes = await getProductTypes();
+const products = await getProducts();
+const categories = await getCategories();
+const brands = await getBrands();
+
+// Message de succès/erreur depuis URL
+const url = new URL(Astro.request.url);
+const success = url.searchParams.get('success');
+const error = url.searchParams.get('error');
+const editId = url.searchParams.get('edit');
+const categoryFilter = url.searchParams.get('category') || '';
+
+// Enrichir les types de produits avec des stats et les marques liées
+interface ProductTypeWithStats extends DbProductType {
+    productCount: number;
+    categoryName: string;
+    categoryIcon: string;
+    categorySlug: string;
+    primaryBrandName: string;
+    linkedBrands: DbBrand[];
+}
+
+let productTypesWithStats: ProductTypeWithStats[] = await Promise.all(productTypes.map(async (pt) => {
+    const category = categories.find(c => c.id === pt.category_id);
+    const primaryBrand = brands.find(b => b.id === pt.brand_id);
+    const productCount = products.filter(p => p.product_type_id === pt.id).length;
+    const linkedBrands = await getProductTypeBrands(pt.id);
+    
+    return {
+        ...pt,
+        productCount,
+        categoryName: category?.name || 'Inconnue',
+        categoryIcon: category?.icon || '❓',
+        categorySlug: category?.slug || '',
+        primaryBrandName: primaryBrand?.name || 'Inconnue',
+        linkedBrands
+    };
+}));
+
+// Appliquer le filtre de catégorie
+if (categoryFilter) {
+    const cat = categories.find(c => c.slug === categoryFilter);
+    if (cat) {
+        productTypesWithStats = productTypesWithStats.filter(pt => pt.category_id === cat.id);
+    }
+}
+
+// Trier par catégorie puis par nom
+productTypesWithStats.sort((a, b) => {
+    if (a.categoryName !== b.categoryName) return a.categoryName.localeCompare(b.categoryName);
+    return a.name.localeCompare(b.name);
+});
+
+// Grouper par catégorie pour l'affichage
+const groupedByCategory = productTypesWithStats.reduce((acc, pt) => {
+    const key = `${pt.categoryIcon} ${pt.categoryName}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(pt);
+    return acc;
+}, {} as Record<string, ProductTypeWithStats[]>);
+
+// Trouver le type à éditer
+const editProductType = editId ? productTypesWithStats.find(pt => pt.id === editId) : null;
+const editProductTypeBrandIds = editProductType ? editProductType.linkedBrands.map(b => b.id) : [];
+---
+
+<AdminLayout title="Gestion des types de produits">
+    {success && (
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6">
+            ✅ {success}
+        </div>
+    )}
+    
+    {error && (
+        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6">
+            ❌ {error}
+        </div>
+    )}
+
+    <!-- Toolbar -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <p class="text-gray-600">
+                    <strong>{productTypes.length}</strong> type(s) de produit(s)
+                </p>
+                <form method="get" class="flex items-center gap-2">
+                    <select name="category" class="form-select w-48" onchange="this.form.submit()">
+                        <option value="">Toutes catégories</option>
+                        {categories.map(cat => (
+                            <option value={cat.slug} selected={cat.slug === categoryFilter}>{cat.icon} {cat.name}</option>
+                        ))}
+                    </select>
+                </form>
+            </div>
+            <button type="button" class="btn-primary" onclick="document.getElementById('add-modal')?.classList.remove('hidden')">
+                ➕ Nouveau type
+            </button>
+        </div>
+    </div>
+
+    <!-- Product Types by Category -->
+    {Object.entries(groupedByCategory).map(([categoryLabel, types]) => (
+        <div class="mb-8">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">{categoryLabel}</h2>
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Slug</th>
+                            <th class="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Marques liées</th>
+                            <th class="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Produits</th>
+                            <th class="text-center px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                            <th class="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {types.map((pt) => (
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-2xl">{pt.icon}</span>
+                                        <div>
+                                            <span class="font-medium text-gray-900">{pt.name}</span>
+                                            {pt.description && <p class="text-xs text-gray-500 mt-0.5 truncate max-w-xs">{pt.description}</p>}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4"><code class="text-sm bg-gray-100 px-2 py-1 rounded">{pt.slug}</code></td>
+                                <td class="px-6 py-4">
+                                    {pt.linkedBrands.length > 0 ? (
+                                        <div class="flex flex-wrap gap-1">
+                                            {pt.linkedBrands.slice(0, 3).map(brand => (
+                                                <span class="inline-block text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{brand.name}</span>
+                                            ))}
+                                            {pt.linkedBrands.length > 3 && (
+                                                <span class="inline-block text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">+{pt.linkedBrands.length - 3}</span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span class="text-xs text-gray-400 italic">
+                                            {pt.primaryBrandName !== 'Inconnue' ? pt.primaryBrandName : 'Aucune'}
+                                        </span>
+                                    )}
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pt.productCount > 0 ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-500'}`}>
+                                        {pt.productCount}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-center">
+                                    {pt.is_active ? (
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Actif</span>
+                                    ) : (
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactif</span>
+                                    )}
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <a href={`/admin/product-types?edit=${pt.id}`} class="text-gray-400 hover:text-indigo-600 transition-colors p-1" title="Modifier">✏️</a>
+                                        <form method="POST" action={`/api/admin/product-types/${pt.id}`} class="inline" onsubmit="return confirm('Supprimer ce type ?')">
+                                            <input type="hidden" name="_method" value="DELETE" />
+                                            <button type="submit" class="text-gray-400 hover:text-red-600 transition-colors p-1" title="Supprimer">🗑️</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    ))}
+    
+    {productTypes.length === 0 && (
+        <div class="bg-white rounded-xl shadow-sm p-12 text-center text-gray-500">
+            <p class="text-4xl mb-4">🗂️</p>
+            <p>Aucun type de produit configuré</p>
+        </div>
+    )}
+
+    <!-- Info Box -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="flex gap-3">
+            <span class="text-blue-500">ℹ️</span>
+            <div class="text-sm text-blue-700">
+                <p class="font-medium mb-1">À propos des types de produits</p>
+                <p>Un type de produit peut être associé à plusieurs marques. Par exemple, "Aspirateurs" peut inclure Dyson, Samsung, Philips, etc.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajout -->
+    <div id="add-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b flex items-center justify-between">
+                <h3 class="text-lg font-semibold">Nouveau type de produit</h3>
+                <button type="button" onclick="document.getElementById('add-modal')?.classList.add('hidden')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <form method="POST" action="/api/admin/product-types" class="p-6 space-y-4">
+                <div>
+                    <label class="form-label" for="add-name">Nom <span class="text-red-500">*</span></label>
+                    <input type="text" id="add-name" name="name" required class="form-input" placeholder="ex: Aspirateurs" />
+                </div>
+                <div>
+                    <label class="form-label" for="add-slug">Slug</label>
+                    <input type="text" id="add-slug" name="slug" class="form-input" placeholder="aspirateurs (auto si vide)" />
+                </div>
+                <div>
+                    <label class="form-label" for="add-icon">Icône <span class="text-red-500">*</span></label>
+                    <input type="text" id="add-icon" name="icon" required class="form-input" placeholder="ex: 🧹" />
+                </div>
+                <div>
+                    <label class="form-label" for="add-category_id">Catégorie <span class="text-red-500">*</span></label>
+                    <select id="add-category_id" name="category_id" required class="form-select">
+                        <option value="">Sélectionner...</option>
+                        {categories.map(cat => (
+                            <option value={cat.id}>{cat.icon} {cat.name}</option>
+                        ))}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" for="add-brand_id">Marque principale <span class="text-red-500">*</span></label>
+                    <select id="add-brand_id" name="brand_id" required class="form-select">
+                        <option value="">Sélectionner...</option>
+                        {brands.map(brand => (
+                            <option value={brand.id}>{brand.name}</option>
+                        ))}
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Vous pourrez ajouter d'autres marques après la création.</p>
+                </div>
+                <div>
+                    <label class="form-label" for="add-description">Description</label>
+                    <textarea id="add-description" name="description" rows="3" class="form-input"></textarea>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="btn-primary flex-1">Créer</button>
+                    <button type="button" class="btn-secondary flex-1" onclick="document.getElementById('add-modal')?.classList.add('hidden')">Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Édition -->
+    {editProductType && (
+        <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">Modifier : {editProductType.icon} {editProductType.name}</h3>
+                    <a href="/admin/product-types" class="text-gray-400 hover:text-gray-600">✕</a>
+                </div>
+                
+                <div class="p-6 space-y-6">
+                    <!-- Formulaire infos de base -->
+                    <form method="POST" action={`/api/admin/product-types/${editProductType.id}`} class="space-y-4">
+                        <input type="hidden" name="_method" value="PUT" />
+                        <h4 class="font-medium text-gray-900 border-b pb-2">Informations</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="form-label" for="edit-name">Nom <span class="text-red-500">*</span></label>
+                                <input type="text" id="edit-name" name="name" required class="form-input" value={editProductType.name} />
+                            </div>
+                            <div>
+                                <label class="form-label" for="edit-slug">Slug</label>
+                                <input type="text" id="edit-slug" name="slug" class="form-input" value={editProductType.slug} />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="form-label" for="edit-icon">Icône <span class="text-red-500">*</span></label>
+                                <input type="text" id="edit-icon" name="icon" required class="form-input" value={editProductType.icon} />
+                            </div>
+                            <div>
+                                <label class="form-label" for="edit-category_id">Catégorie <span class="text-red-500">*</span></label>
+                                <select id="edit-category_id" name="category_id" required class="form-select">
+                                    {categories.map(cat => (
+                                        <option value={cat.id} selected={cat.id === editProductType.category_id}>{cat.icon} {cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label" for="edit-brand_id">Marque principale</label>
+                            <select id="edit-brand_id" name="brand_id" required class="form-select">
+                                {brands.map(brand => (
+                                    <option value={brand.id} selected={brand.id === editProductType.brand_id}>{brand.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" for="edit-description">Description</label>
+                            <textarea id="edit-description" name="description" rows="2" class="form-input">{editProductType.description || ''}</textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">Enregistrer les informations</button>
+                    </form>
+                    
+                    <!-- Formulaire liaisons marques -->
+                    <form method="POST" action={`/api/admin/product-types/${editProductType.id}/brands`} class="space-y-4 pt-4 border-t">
+                        <h4 class="font-medium text-gray-900 border-b pb-2">Marques associées</h4>
+                        <p class="text-sm text-gray-500">Sélectionnez toutes les marques proposant ce type de produit.</p>
+                        
+                        <div class="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
+                            {brands.map(brand => (
+                                <label class="flex items-center gap-2 p-2 border rounded hover:bg-gray-50 cursor-pointer text-sm">
+                                    <input 
+                                        type="checkbox" 
+                                        name="brand_ids" 
+                                        value={brand.id}
+                                        checked={editProductTypeBrandIds.includes(brand.id)}
+                                        class="w-4 h-4 text-indigo-600 rounded border-gray-300"
+                                    />
+                                    <span class="text-gray-700 truncate">{brand.name}</span>
+                                </label>
+                            ))}
+                        </div>
+                        
+                        <button type="submit" class="btn-secondary">Mettre à jour les marques</button>
+                    </form>
+                    
+                    <div class="flex justify-end pt-4 border-t">
+                        <a href="/admin/product-types" class="btn-secondary">Fermer</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )}
+</AdminLayout>

@@ -1,0 +1,205 @@
+---
+/**
+ * Liste des produits - Admin
+ * Route: /admin/products
+ */
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getProducts, getCategories, POSITION_LABELS, type ProductPosition, type ProductFull } from '../../../lib/db';
+
+// Récupérer les données depuis Supabase
+const allProducts = await getProducts();
+const categories = await getCategories();
+
+// Filtres depuis URL
+const url = new URL(Astro.request.url);
+const categoryFilter = url.searchParams.get('category') || '';
+const positionFilter = url.searchParams.get('position') || '';
+const searchQuery = url.searchParams.get('q') || '';
+
+// Filtrer les produits
+let filteredProducts = [...allProducts];
+
+if (categoryFilter) {
+    filteredProducts = filteredProducts.filter(p => p.category.slug === categoryFilter);
+}
+
+if (positionFilter) {
+    filteredProducts = filteredProducts.filter(p => p.position === positionFilter);
+}
+
+if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    filteredProducts = filteredProducts.filter(p => 
+        p.name.toLowerCase().includes(query) ||
+        p.brand.name.toLowerCase().includes(query)
+    );
+}
+
+// Trier par catégorie puis par marque
+filteredProducts.sort((a, b) => {
+    if (a.category.slug !== b.category.slug) {
+        return a.category.slug.localeCompare(b.category.slug);
+    }
+    return a.brand.name.localeCompare(b.brand.name);
+});
+
+const positionColors: Record<ProductPosition, string> = {
+    'best-value': 'bg-yellow-100 text-yellow-800',
+    'middle-ground': 'bg-purple-100 text-purple-800',
+    'budget': 'bg-green-100 text-green-800'
+};
+---
+
+<AdminLayout title="Gestion des produits">
+    <!-- Toolbar -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-4">
+                <!-- Search -->
+                <form class="flex items-center gap-2">
+                    <input 
+                        type="text" 
+                        name="q" 
+                        placeholder="Rechercher..." 
+                        value={searchQuery}
+                        class="form-input w-64"
+                    />
+                    <button type="submit" class="btn-secondary">
+                        🔍
+                    </button>
+                </form>
+                
+                <!-- Category Filter -->
+                <select 
+                    name="category" 
+                    class="form-select w-48"
+                    onchange="this.form.submit()"
+                    form="filter-form"
+                >
+                    <option value="">Toutes catégories</option>
+                    {categories.map(cat => (
+                        <option value={cat.slug} selected={cat.slug === categoryFilter}>
+                            {cat.icon} {cat.name}
+                        </option>
+                    ))}
+                </select>
+                
+                <!-- Position Filter -->
+                <select 
+                    name="position" 
+                    class="form-select w-48"
+                    onchange="this.form.submit()"
+                    form="filter-form"
+                >
+                    <option value="">Tous positionnements</option>
+                    <option value="best-value" selected={positionFilter === 'best-value'}>⭐ Meilleur Q/P</option>
+                    <option value="middle-ground" selected={positionFilter === 'middle-ground'}>⚖️ Juste milieu</option>
+                    <option value="budget" selected={positionFilter === 'budget'}>💸 Petit budget</option>
+                </select>
+                
+                <form id="filter-form" class="hidden">
+                    <input type="hidden" name="q" value={searchQuery} />
+                </form>
+            </div>
+            
+            <a href="/admin/products/new" class="btn-primary">
+                ➕ Nouveau produit
+            </a>
+        </div>
+    </div>
+    
+    <!-- Stats -->
+    <div class="mb-4 text-sm text-gray-600">
+        {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''} trouvé{filteredProducts.length > 1 ? 's' : ''}
+    </div>
+    
+    <!-- Products Table -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produit</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Marque</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Catégorie</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Position</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Note moy.</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {filteredProducts.map(product => {
+                    return (
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center text-xl">
+                                        {product.image_url ? (
+                                            <img src={product.image_url} alt={product.name} class="w-full h-full object-cover rounded-lg" />
+                                        ) : (
+                                            <span>📦</span>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900 line-clamp-1">{product.name}</p>
+                                        <p class="text-xs text-gray-500">{product.id}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 text-sm text-gray-600">
+                                {product.brand.name}
+                            </td>
+                            <td class="px-4 py-4">
+                                <span class="inline-flex items-center gap-1 text-sm">
+                                    <span>{product.category.icon}</span>
+                                    <span class="text-gray-600">{product.category.name}</span>
+                                </span>
+                            </td>
+                            <td class="px-4 py-4">
+                                <span class={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${positionColors[product.position]}`}>
+                                    {POSITION_LABELS[product.position].emoji}
+                                    {POSITION_LABELS[product.position].label}
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 text-sm font-medium text-gray-900">
+                                {product.price_display || '-'}
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="flex items-center gap-1">
+                                    <span class="text-yellow-400">★</span>
+                                    <span class="text-sm font-medium">{product.avg_rating.toFixed(1)}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    <a 
+                                        href={`/admin/products/${product.id}`}
+                                        class="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                                    >
+                                        ✏️ Éditer
+                                    </a>
+                                    <a 
+                                        href={product.amazon_url}
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="text-gray-400 hover:text-gray-600"
+                                        title="Voir sur Amazon"
+                                    >
+                                        🔗
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
+        
+        {filteredProducts.length === 0 && (
+            <div class="text-center py-12">
+                <span class="text-4xl mb-4 block">🔍</span>
+                <p class="text-gray-500">Aucun produit trouvé</p>
+            </div>
+        )}
+    </div>
+</AdminLayout>

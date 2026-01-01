@@ -1,0 +1,244 @@
+---
+/**
+ * Page Marque - Affiche les types de produits disponibles
+ * Route: /categories/[category]/[brand]
+ * 
+ * Navigation hiérarchique: Catégorie → Marque → Types de produits (cette page)
+ */
+export const prerender = true;
+
+import Layout from '../../../../layouts/Layout.astro';
+import { 
+    getCategories, 
+    getCategoryBySlug, 
+    getBrandBySlug,
+    getBrandsByCategory,
+    getProductTypesByCategoryAndBrand,
+    type DbBrand,
+    type DbProductType
+} from '../../../../lib/db';
+
+// Génération des chemins statiques pour toutes les combinaisons catégorie/marque
+export async function getStaticPaths() {
+    const categories = await getCategories();
+    const paths: { params: { category: string; brand: string } }[] = [];
+    
+    for (const category of categories) {
+        const brands = await getBrandsByCategory(category.slug);
+        for (const brand of brands) {
+            paths.push({
+                params: {
+                    category: category.slug,
+                    brand: brand.slug
+                }
+            });
+        }
+    }
+    
+    return paths;
+}
+
+const { category: categorySlug, brand: brandSlug } = Astro.params;
+
+const category = await getCategoryBySlug(categorySlug);
+const brand = await getBrandBySlug(brandSlug);
+
+if (!category || !brand) {
+    return Astro.redirect('/categories');
+}
+
+// Récupérer les types de produits pour cette marque dans cette catégorie
+const productTypes = await getProductTypesByCategoryAndBrand(category.id, brand.id);
+
+// Récupérer les autres marques de la catégorie
+const allBrandsInCategory = await getBrandsByCategory(categorySlug);
+
+// Breadcrumb
+const breadcrumb = [
+    { name: 'Accueil', href: '/' },
+    { name: 'Catégories', href: '/categories' },
+    { name: category.name, href: `/categories/${categorySlug}` },
+    { name: brand.name, href: '' }
+];
+
+// SEO
+const seoMeta = {
+    title: `${brand.name} - ${category.name} | Trouve-Tout Conseil`,
+    description: brand.description 
+        ? `${brand.description} Découvrez notre sélection des meilleurs produits ${brand.name}.`
+        : `Découvrez notre sélection des meilleurs produits ${brand.name} dans la catégorie ${category.name}.`
+};
+---
+
+<Layout title={seoMeta.title} description={seoMeta.description}>
+    <!-- Breadcrumb -->
+    <nav class="bg-gray-100 py-3 border-b">
+        <div class="max-w-7xl mx-auto px-4">
+            <ol class="flex flex-wrap items-center gap-2 text-sm">
+                {breadcrumb.map((item, index) => (
+                    <li class="flex items-center">
+                        {index > 0 && <span class="text-gray-400 mx-2">›</span>}
+                        {index === breadcrumb.length - 1 ? (
+                            <span class="text-indigo-600 font-medium">{item.name}</span>
+                        ) : (
+                            <a href={item.href} class="text-gray-600 hover:text-indigo-600 transition-colors">
+                                {item.name}
+                            </a>
+                        )}
+                    </li>
+                ))}
+            </ol>
+        </div>
+    </nav>
+    
+    <!-- Header -->
+    <section class="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white py-16">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <!-- Logo marque -->
+            <div class="w-24 h-24 bg-white rounded-2xl shadow-xl mx-auto mb-6 flex items-center justify-center">
+                <span class="text-5xl font-bold bg-gradient-to-br from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    {brand.name.charAt(0)}
+                </span>
+            </div>
+            
+            <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-1 mb-4">
+                <span class="text-xl">{category.icon}</span>
+                <span class="text-sm font-medium">{category.name}</span>
+            </div>
+            
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">
+                {brand.name}
+            </h1>
+            
+            <p class="text-xl text-white/90 max-w-2xl mx-auto">
+                {brand.description || `Découvrez notre sélection des meilleurs produits ${brand.name} dans la catégorie ${category.name}.`}
+            </p>
+        </div>
+    </section>
+    
+    <!-- Types de produits -->
+    <section class="py-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">
+                    Choisissez un type de produit
+                </h2>
+                <p class="text-gray-600 max-w-2xl mx-auto">
+                    Sélectionnez la catégorie de produit {brand.name} qui vous intéresse pour découvrir 
+                    notre sélection des 3 meilleurs modèles.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {productTypes.map((productType) => (
+                    <a 
+                        href={`/categories/${categorySlug}/${brandSlug}/${productType.slug}`}
+                        class="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                    >
+                        <!-- Header avec icône -->
+                        <div class="bg-gradient-to-br from-gray-50 to-gray-100 p-8 text-center border-b group-hover:from-indigo-50 group-hover:to-purple-50 transition-colors">
+                            <span class="text-5xl block mb-3 group-hover:scale-110 transition-transform duration-300">
+                                {productType.icon}
+                            </span>
+                        </div>
+                        
+                        <!-- Contenu -->
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                                {productType.name}
+                            </h3>
+                            <p class="text-gray-600 text-sm mb-4">
+                                {productType.description || `Les meilleurs ${productType.name} ${brand.name}`}
+                            </p>
+                            
+                            <!-- Indicateur 3 produits -->
+                            <div class="flex items-center gap-2 text-sm">
+                                <div class="flex -space-x-2">
+                                    <span class="w-6 h-6 rounded-full bg-yellow-100 flex items-center justify-center text-xs">⭐</span>
+                                    <span class="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-xs">🏆</span>
+                                    <span class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">💰</span>
+                                </div>
+                                <span class="text-gray-500">3 produits sélectionnés</span>
+                            </div>
+                            
+                            <!-- CTA -->
+                            <div class="mt-4 flex items-center justify-between">
+                                <span class="text-indigo-600 font-medium group-hover:text-indigo-700">
+                                    Voir la sélection
+                                </span>
+                                <span class="text-indigo-600 group-hover:translate-x-1 transition-transform">
+                                    →
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                ))}
+            </div>
+        </div>
+    </section>
+    
+    <!-- Autres marques de la catégorie -->
+    <section class="py-12 bg-gray-50 border-t">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-8 text-center">
+                Autres marques {category.name}
+            </h2>
+            
+            <div class="flex flex-wrap justify-center gap-4">
+                {allBrandsInCategory
+                    .filter(b => b.slug !== brandSlug)
+                    .map(b => (
+                        <a 
+                            href={`/categories/${categorySlug}/${b.slug}`}
+                            class="bg-white px-6 py-3 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-3 group"
+                        >
+                            <span class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center font-bold text-gray-600 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                                {b.name.charAt(0)}
+                            </span>
+                            <span class="font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">
+                                {b.name}
+                            </span>
+                        </a>
+                    ))
+                }
+            </div>
+            
+            <!-- Lien retour catégorie -->
+            <div class="mt-8 text-center">
+                <a 
+                    href={`/categories/${categorySlug}`}
+                    class="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                    ← Retour à {category.name}
+                </a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Section SEO -->
+    <section class="py-12 border-t">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="prose prose-lg max-w-none">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                    À propos de {brand.name}
+                </h2>
+                <p class="text-gray-600 mb-6">
+                    {brand.description || `Découvrez les produits ${brand.name}`}. Découvrez notre sélection des meilleurs produits {brand.name} 
+                    dans la catégorie {category.name}. Nous avons soigneusement analysé les avis clients, 
+                    les caractéristiques techniques et les prix pour vous proposer les 3 meilleurs 
+                    modèles dans chaque type de produit.
+                </p>
+                
+                <h3 class="text-xl font-bold text-gray-900 mb-3">
+                    Pourquoi faire confiance à notre sélection ?
+                </h3>
+                <ul class="text-gray-600 space-y-2">
+                    <li>✓ Analyse des avis vérifiés Amazon</li>
+                    <li>✓ Comparaison objective des caractéristiques</li>
+                    <li>✓ Mise à jour régulière des prix et disponibilités</li>
+                    <li>✓ Sélection du meilleur rapport qualité-prix</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+</Layout>

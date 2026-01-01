@@ -1,17 +1,196 @@
 ---
-export const prerender = false; // Page dynamique
+export const prerender = false; // Page dynamique SSR
 
-import { supabase } from "../../lib/supabase";
+import Layout from '../../layouts/Layout.astro';
+import { supabase } from '../../lib/supabase';
+import type { Profile, SearchHistory, ProductSelection, Product } from '../../types/db';
 
-// Exemple protection basique (à améliorer avec auth Guard)
-const {
-    data: { user },
-} = await supabase.auth.getUser();
+const title = "Mon Profil | Trouve-Tout";
+const description = "Gérez votre profil, consultez votre historique de recherches et vos produits favoris.";
 
-if (!user) {
-    // return Astro.redirect('/login'); // Décommentez pour rediriger si non connecté
+// Récupérer l'utilisateur connecté
+const { data: { user } } = await supabase.auth.getUser();
+
+let profile: Profile | null = null;
+let searchHistory: SearchHistory[] = [];
+let selections: (ProductSelection & { product?: Product })[] = [];
+
+if (user) {
+    // Récupérer le profil
+    const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+    
+    profile = profileData;
+
+    // Récupérer l'historique de recherches
+    const { data: historyData } = await supabase
+        .from('search_history')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+    
+    searchHistory = historyData || [];
+
+    // Récupérer les sélections de produits
+    const { data: selectionsData } = await supabase
+        .from('product_selections')
+        .select(`
+            *,
+            product:products(*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+    
+    selections = selectionsData || [];
 }
 ---
 
-<h1 class="text-2xl font-bold">Profil</h1>
-<p>Bienvenue {user?.email}</p>
+<Layout title={title} description={description}>
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {user ? (
+            <!-- Logged In View -->
+            <div>
+                <!-- Profile Header -->
+                <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+                    <div class="flex items-center space-x-6">
+                        <div class="w-20 h-20 bg-primary-100 rounded-full flex items-center justify-center">
+                            {profile?.avatar_url ? (
+                                <img src={profile.avatar_url} alt="Avatar" class="w-20 h-20 rounded-full object-cover" />
+                            ) : (
+                                <span class="text-4xl">👤</span>
+                            )}
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">
+                                {profile?.username || 'Utilisateur'}
+                            </h1>
+                            <p class="text-gray-600">{user.email}</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-6 border-t grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <div class="text-2xl font-bold text-primary-600">{searchHistory.length}</div>
+                            <div class="text-gray-600 text-sm">Recherches</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-secondary-600">{selections.length}</div>
+                            <div class="text-gray-600 text-sm">Favoris</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-pink-600">0</div>
+                            <div class="text-gray-600 text-sm">Avis</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search History -->
+                <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                        <span class="mr-2">🔍</span> Historique de recherches
+                    </h2>
+                    
+                    {searchHistory.length > 0 ? (
+                        <ul class="space-y-3">
+                            {searchHistory.map((search) => (
+                                <li class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <span class="text-gray-700">{search.query}</span>
+                                    <span class="text-gray-400 text-sm">
+                                        {new Date(search.created_at).toLocaleDateString('fr-FR')}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p class="text-gray-500 text-center py-8">Aucune recherche récente</p>
+                    )}
+                </div>
+
+                <!-- Saved Products -->
+                <div class="bg-white rounded-2xl shadow-lg p-8 mb-8">
+                    <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                        <span class="mr-2">❤️</span> Produits favoris
+                    </h2>
+                    
+                    {selections.length > 0 ? (
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {selections.map((sel) => (
+                                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                                    <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mr-4">
+                                        📦
+                                    </div>
+                                    <div>
+                                        <h3 class="font-medium">{sel.product?.name || 'Produit'}</h3>
+                                        <p class="text-gray-500 text-sm">{sel.product?.brand}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p class="text-gray-500 text-center py-8">Aucun produit favori</p>
+                    )}
+                </div>
+
+                <!-- Logout -->
+                <div class="text-center">
+                    <form action="/api/auth/logout" method="POST">
+                        <button 
+                            type="submit"
+                            class="text-red-600 hover:text-red-700 font-medium"
+                        >
+                            Se déconnecter
+                        </button>
+                    </form>
+                </div>
+            </div>
+        ) : (
+            <!-- Logged Out View -->
+            <div class="text-center">
+                <div class="bg-white rounded-2xl shadow-lg p-12">
+                    <div class="text-6xl mb-6">👤</div>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-4">Mon Profil</h1>
+                    <p class="text-gray-600 mb-8 max-w-md mx-auto">
+                        Connectez-vous pour accéder à votre profil, sauvegarder vos recherches et créer une liste de favoris.
+                    </p>
+                    
+                    <div class="space-y-4 max-w-sm mx-auto">
+                        <a 
+                            href="/auth/login"
+                            class="block w-full bg-primary-600 hover:bg-primary-700 text-white py-3 px-6 rounded-xl font-medium transition-colors"
+                        >
+                            Se connecter
+                        </a>
+                        <a 
+                            href="/auth/register"
+                            class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-xl font-medium transition-colors"
+                        >
+                            Créer un compte
+                        </a>
+                    </div>
+
+                    <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                        <div class="p-4 bg-primary-50 rounded-xl">
+                            <div class="text-2xl mb-2">📚</div>
+                            <h3 class="font-bold mb-1">Historique</h3>
+                            <p class="text-sm text-gray-600">Retrouvez vos recherches précédentes</p>
+                        </div>
+                        <div class="p-4 bg-secondary-50 rounded-xl">
+                            <div class="text-2xl mb-2">❤️</div>
+                            <h3 class="font-bold mb-1">Favoris</h3>
+                            <p class="text-sm text-gray-600">Sauvegardez vos produits préférés</p>
+                        </div>
+                        <div class="p-4 bg-pink-50 rounded-xl">
+                            <div class="text-2xl mb-2">🔔</div>
+                            <h3 class="font-bold mb-1">Alertes prix</h3>
+                            <p class="text-sm text-gray-600">Soyez notifié des baisses de prix</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+    </div>
+</Layout>

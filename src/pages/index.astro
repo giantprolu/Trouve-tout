@@ -1,11 +1,270 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import { getCategories, getBrands, getProducts, getProductTypes, getBrandsByCategory, type DbCategory, type DbBrand } from '../lib/db';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const title = "Trouve-Tout | Trouvez le meilleur produit pour vous";
+const description = "Trouve-Tout vous aide à trouver les meilleurs produits selon vos besoins. Comparatifs, avis et recommandations personnalisées pour smartphones, maison, cuisine, sport et beauté.";
+
+// Données depuis Supabase
+const categories = await getCategories();
+const brands = await getBrands();
+const products = await getProducts();
+const productTypes = await getProductTypes();
+
+// Type pour les catégories enrichies
+interface CategoryWithBrands extends DbCategory {
+    brandCount: number;
+    topBrands: DbBrand[];
+}
+
+// Enrichir les catégories avec le nombre de marques
+const categoriesWithBrandCount: CategoryWithBrands[] = await Promise.all(
+    categories.map(async (cat): Promise<CategoryWithBrands> => {
+        const catBrands = await getBrandsByCategory(cat.slug);
+        return {
+            ...cat,
+            brandCount: catBrands.length,
+            topBrands: catBrands.slice(0, 2)
+        };
+    })
+);
+
+// Stats calculées
+const totalBrands = brands.length;
+const totalProductTypes = productTypes.length;
 ---
 
-<Layout>
-	<Welcome />
+<Layout title={title} description={description}>
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+            <div class="text-center">
+                <h1 class="text-4xl lg:text-6xl font-bold mb-6">
+                    Trouvez le <span class="text-yellow-300">meilleur produit</span><br />pour vous
+                </h1>
+                <p class="text-xl lg:text-2xl text-white/90 mb-10 max-w-3xl mx-auto">
+                    Des recommandations personnalisées basées sur vos besoins et votre budget. 
+                    Fini les heures de recherche !
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <a 
+                        href="/choix-express"
+                        class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-8 py-4 rounded-xl font-bold text-lg transition-colors inline-flex items-center justify-center shadow-lg"
+                    >
+                        ⚡ Choix Express
+                    </a>
+                    <a 
+                        href="/categories"
+                        class="bg-white/10 hover:bg-white/20 backdrop-blur text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors border border-white/30"
+                    >
+                        Explorer les catégories
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Wave -->
+        <div class="bg-white py-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                    <div>
+                        <div class="text-3xl lg:text-4xl font-bold text-indigo-600">{totalProductTypes * 3}</div>
+                        <div class="text-gray-600">Produits analysés</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl lg:text-4xl font-bold text-indigo-600">{categories.length}</div>
+                        <div class="text-gray-600">Catégories</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl lg:text-4xl font-bold text-indigo-600">{totalBrands}</div>
+                        <div class="text-gray-600">Marques testées</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl lg:text-4xl font-bold text-indigo-600">3</div>
+                        <div class="text-gray-600">Tiers par produit</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="py-16 lg:py-24 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                    Explorez nos catégories
+                </h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                    Des produits soigneusement sélectionnés dans 5 univers différents.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                {categoriesWithBrandCount.map((category) => (
+                    <a 
+                        href={`/categories/${category.slug}`}
+                        class="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 p-6 text-center"
+                    >
+                        <span class="text-5xl block mb-4 group-hover:scale-110 transition-transform">
+                            {category.icon}
+                        </span>
+                        <h3 class="font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                            {category.name}
+                        </h3>
+                        <p class="text-sm text-gray-500">
+                            {category.brandCount} marques
+                        </p>
+                    </a>
+                ))}
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Tools Section -->
+    <section class="py-16 lg:py-24">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Choix Express Card -->
+                <a 
+                    href="/choix-express"
+                    class="group bg-gradient-to-br from-secondary-500 to-secondary-600 rounded-2xl p-8 lg:p-12 text-white hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                >
+                    <div class="text-5xl mb-6">⚡</div>
+                    <h3 class="text-2xl lg:text-3xl font-bold mb-4">Choix Express</h3>
+                    <p class="text-secondary-100 text-lg mb-6">
+                        Répondez à 3 questions simples et trouvez le produit parfait en moins d'une minute !
+                    </p>
+                    <span class="inline-flex items-center font-medium group-hover:translate-x-2 transition-transform">
+                        Commencer
+                        <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                        </svg>
+                    </span>
+                </a>
+
+                <!-- Mode Cadeau Card -->
+                <a 
+                    href="/cadeau"
+                    class="group bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl p-8 lg:p-12 text-white hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
+                >
+                    <div class="text-5xl mb-6">🎁</div>
+                    <h3 class="text-2xl lg:text-3xl font-bold mb-4">Mode Cadeau</h3>
+                    <p class="text-pink-100 text-lg mb-6">
+                        Trouvez le cadeau parfait pour vos proches. Indiquez le profil et le budget, on s'occupe du reste !
+                    </p>
+                    <span class="inline-flex items-center font-medium group-hover:translate-x-2 transition-transform">
+                        Trouver un cadeau
+                        <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                        </svg>
+                    </span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Brands Section -->
+    <section class="py-16 lg:py-24 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                    🏆 Marques populaires
+                </h2>
+                <p class="text-xl text-gray-600">
+                    Découvrez nos sélections par marque.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-4">
+                {categoriesWithBrandCount.flatMap(cat => 
+                    cat.topBrands.map(brand => (
+                        <a 
+                            href={`/categories/${cat.slug}/${brand.slug}`}
+                            class="group bg-white px-6 py-4 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 flex items-center gap-3"
+                        >
+                            <span class="text-2xl">{cat.icon}</span>
+                            <div>
+                                <span class="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors block">
+                                    {brand.name}
+                                </span>
+                                <span class="text-xs text-gray-500">
+                                    {cat.name}
+                                </span>
+                            </div>
+                        </a>
+                    ))
+                )}
+            </div>
+            
+            <div class="mt-10 text-center">
+                <a 
+                    href="/categories"
+                    class="inline-flex items-center bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium transition-colors"
+                >
+                    Voir toutes les marques
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="py-16 lg:py-24">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+                    Comment ça marche ?
+                </h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                    Nous sélectionnons les 3 meilleurs produits dans chaque catégorie selon vos besoins.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="text-center p-6 bg-white rounded-2xl shadow-sm">
+                    <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-3xl">⭐</span>
+                    </div>
+                    <h3 class="font-bold text-xl mb-2">Meilleure Note</h3>
+                    <p class="text-gray-600">Le produit le mieux noté par les acheteurs Amazon vérifiés.</p>
+                </div>
+                <div class="text-center p-6 bg-white rounded-2xl shadow-sm">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-3xl">🏆</span>
+                    </div>
+                    <h3 class="font-bold text-xl mb-2">Meilleur Rapport Q/P</h3>
+                    <p class="text-gray-600">Le compromis idéal entre qualité et prix pour la majorité.</p>
+                </div>
+                <div class="text-center p-6 bg-white rounded-2xl shadow-sm">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-3xl">💰</span>
+                    </div>
+                    <h3 class="font-bold text-xl mb-2">Moins Cher Fiable</h3>
+                    <p class="text-gray-600">Le prix le plus bas avec une note minimum de 4/5 étoiles.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-16 lg:py-24 bg-gray-900 text-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl lg:text-4xl font-bold mb-6">
+                Prêt à trouver votre produit idéal ?
+            </h2>
+            <p class="text-xl text-gray-300 mb-10">
+                Utilisez notre Choix Express pour une recommandation personnalisée en quelques clics.
+            </p>
+            <a 
+                href="/choix-express"
+                class="inline-flex items-center bg-secondary-500 hover:bg-secondary-600 text-white px-10 py-5 rounded-xl font-bold text-xl transition-colors"
+            >
+                ⚡ Démarrer le Choix Express
+            </a>
+        </div>
+    </section>
 </Layout>

@@ -1,0 +1,122 @@
+---
+/**
+ * Layout Admin - Interface d'administration
+ */
+interface Props {
+    title: string;
+    description?: string;
+}
+
+const { title, description = 'Espace administration Trouve-Tout' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} | Admin Trouve-Tout</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body class="min-h-screen bg-gray-100">
+    <!-- Sidebar -->
+    <aside class="fixed inset-y-0 left-0 w-64 bg-gray-900 text-white z-50">
+        <div class="flex items-center justify-center h-16 bg-gray-800">
+            <a href="/admin" class="text-xl font-bold">
+                🔧 Admin TT
+            </a>
+        </div>
+        
+        <nav class="mt-6">
+            <div class="px-4 mb-3">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Gestion
+                </p>
+            </div>
+            
+            <a href="/admin" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                <span class="mr-3">📊</span>
+                Dashboard
+            </a>
+            
+            <a href="/admin/products" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                <span class="mr-3">📦</span>
+                Produits
+            </a>
+            
+            <a href="/admin/products/new" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                <span class="mr-3">➕</span>
+                Nouveau produit
+            </a>
+            
+            <div class="px-4 mt-6 mb-3">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Configuration
+                </p>
+            </div>
+            
+            <a href="/admin/categories" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                <span class="mr-3">📁</span>
+                Catégories
+            </a>
+            
+            <a href="/admin/brands" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                <span class="mr-3">🏷️</span>
+                Marques
+            </a>
+            
+            <a href="/admin/product-types" class="flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors">
+                <span class="mr-3">🗂️</span>
+                Types de produits
+            </a>
+        </nav>
+        
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-800">
+            <a href="/" class="flex items-center text-gray-400 hover:text-white transition-colors">
+                <span class="mr-2">←</span>
+                Retour au site
+            </a>
+        </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="ml-64">
+        <!-- Top Bar -->
+        <header class="bg-white shadow-sm h-16 flex items-center px-8">
+            <h1 class="text-xl font-semibold text-gray-900">{title}</h1>
+        </header>
+        
+        <!-- Page Content -->
+        <div class="p-8">
+            <slot />
+        </div>
+    </main>
+    
+    <style is:global>
+        /* Form styles */
+        .form-label {
+            @apply block text-sm font-medium text-gray-700 mb-1;
+        }
+        .form-input {
+            @apply w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500;
+        }
+        .form-select {
+            @apply w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white;
+        }
+        .form-textarea {
+            @apply w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y;
+        }
+        .btn-primary {
+            @apply inline-flex items-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors;
+        }
+        .btn-secondary {
+            @apply inline-flex items-center px-4 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors;
+        }
+        .btn-danger {
+            @apply inline-flex items-center px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors;
+        }
+    </style>
+</body>
+</html>

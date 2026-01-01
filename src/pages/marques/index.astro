@@ -1,6 +1,76 @@
 ---
+import Layout from '../../layouts/Layout.astro';
+import BrandCard from '../../components/BrandCard.astro';
+import { brands, categories, getCategoryBySlug } from '../../data/products';
 
+const title = "Toutes les Marques | Trouve-Tout";
+const description = "Découvrez toutes les marques que nous recommandons. De Apple à Dyson, trouvez les meilleurs produits par marque.";
+
+// Grouper les marques par catégorie
+const brandsByCategory = categories.map(cat => ({
+    category: cat,
+    brands: brands.filter(b => b.category === cat.slug)
+}));
 ---
 
-<h1 class="text-2xl font-bold">Marques</h1>
-<p>Liste des marques...</p>
+<Layout title={title} description={description}>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                Toutes les Marques
+            </h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Nous sélectionnons les meilleures marques dans chaque catégorie pour vous garantir qualité et fiabilité.
+            </p>
+        </div>
+
+        <!-- Brands by Category -->
+        {brandsByCategory.map(({ category, brands: catBrands }) => (
+            <section class="mb-16">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">
+                        {category.icon} {category.name}
+                    </h2>
+                    <a href={`/categories/${category.slug}`} class="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center">
+                        Voir la catégorie
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {catBrands.map((brand) => (
+                        <BrandCard brand={brand} categorySlug={category.slug} />
+                    ))}
+                </div>
+            </section>
+        ))}
+
+        <!-- SEO Content -->
+        <section class="mt-16 bg-gray-50 rounded-2xl p-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Pourquoi ces marques ?</h2>
+            <p class="text-gray-600 mb-4">
+                Chaque marque présente sur Trouve-Tout a été sélectionnée selon des critères stricts : 
+                qualité des produits, durabilité, service après-vente et rapport qualité-prix.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                <div class="bg-white p-6 rounded-xl">
+                    <div class="text-3xl mb-3">✅</div>
+                    <h3 class="font-bold mb-2">Qualité prouvée</h3>
+                    <p class="text-gray-600 text-sm">Nous testons et analysons les retours utilisateurs.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl">
+                    <div class="text-3xl mb-3">🛡️</div>
+                    <h3 class="font-bold mb-2">SAV fiable</h3>
+                    <p class="text-gray-600 text-sm">Un bon service client est essentiel pour nous.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl">
+                    <div class="text-3xl mb-3">💰</div>
+                    <h3 class="font-bold mb-2">Prix juste</h3>
+                    <p class="text-gray-600 text-sm">Des produits pour tous les budgets.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+</Layout>

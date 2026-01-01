@@ -1,22 +1,175 @@
+---
+interface Props {
+	title?: string;
+	description?: string;
+	canonical?: string;
+}
+
+const { 
+	title = "Trouve-Tout | Trouvez le meilleur produit pour vous", 
+	description = "Trouve-Tout vous aide à trouver les meilleurs produits selon vos besoins. Comparatifs, avis et recommandations personnalisées.",
+	canonical = Astro.url.href
+} = Astro.props;
+
+const categories = [
+	{ name: "High-Tech", slug: "high-tech", icon: "💻" },
+	{ name: "Maison", slug: "maison", icon: "🏠" },
+	{ name: "Cuisine", slug: "cuisine", icon: "🍳" },
+	{ name: "Sport", slug: "sport", icon: "⚽" },
+	{ name: "Beauté", slug: "beaute", icon: "💄" },
+];
+---
+
 <!doctype html>
-<html lang="en">
+<html lang="fr">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
+		
+		<!-- SEO Meta Tags -->
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={canonical} />
+		
+		<!-- Open Graph -->
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={canonical} />
+		
+		<!-- Twitter Card -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
 	</head>
-	<body>
-		<slot />
+	<body class="min-h-screen bg-gray-50 flex flex-col">
+		<!-- Navigation -->
+		<nav class="bg-white shadow-md sticky top-0 z-50">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div class="flex justify-between h-16">
+					<div class="flex items-center">
+						<a href="/" class="flex items-center space-x-2">
+							<span class="text-2xl">🔍</span>
+							<span class="text-xl font-bold text-primary-600">Trouve-Tout</span>
+						</a>
+					</div>
+					
+					<!-- Desktop Menu -->
+					<div class="hidden md:flex items-center space-x-4">
+						<div class="relative group">
+							<button class="flex items-center space-x-1 px-3 py-2 text-gray-700 hover:text-primary-600 transition-colors">
+								<span>Catégories</span>
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+								</svg>
+							</button>
+							<div class="absolute left-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+								{categories.map((cat) => (
+									<a href={`/categories/${cat.slug}`} class="block px-4 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 first:rounded-t-lg last:rounded-b-lg">
+										{cat.icon} {cat.name}
+									</a>
+								))}
+							</div>
+						</div>
+						<a href="/marques" class="px-3 py-2 text-gray-700 hover:text-primary-600 transition-colors">Marques</a>
+						<a href="/choix-express" class="px-4 py-2 bg-secondary-500 text-white rounded-lg hover:bg-secondary-600 transition-colors font-medium">⚡ Choix Express</a>
+						<a href="/cadeau" class="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors font-medium">🎁 Mode Cadeau</a>
+						<a href="/blog" class="px-3 py-2 text-gray-700 hover:text-primary-600 transition-colors">Blog</a>
+						<a href="/profil" class="px-3 py-2 text-gray-700 hover:text-primary-600 transition-colors">
+							<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+							</svg>
+						</a>
+					</div>
+
+					<!-- Mobile Menu Button -->
+					<div class="md:hidden flex items-center">
+						<button id="mobile-menu-btn" class="text-gray-700 hover:text-primary-600">
+							<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+							</svg>
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<!-- Mobile Menu -->
+			<div id="mobile-menu" class="hidden md:hidden bg-white border-t">
+				<div class="px-4 py-2 space-y-1">
+					{categories.map((cat) => (
+						<a href={`/categories/${cat.slug}`} class="block px-3 py-2 text-gray-700 hover:bg-primary-50 rounded-lg">
+							{cat.icon} {cat.name}
+						</a>
+					))}
+					<hr class="my-2" />
+					<a href="/marques" class="block px-3 py-2 text-gray-700 hover:bg-primary-50 rounded-lg">Marques</a>
+					<a href="/choix-express" class="block px-3 py-2 text-secondary-600 font-medium hover:bg-secondary-50 rounded-lg">⚡ Choix Express</a>
+					<a href="/cadeau" class="block px-3 py-2 text-pink-600 font-medium hover:bg-pink-50 rounded-lg">🎁 Mode Cadeau</a>
+					<a href="/blog" class="block px-3 py-2 text-gray-700 hover:bg-primary-50 rounded-lg">Blog</a>
+					<a href="/profil" class="block px-3 py-2 text-gray-700 hover:bg-primary-50 rounded-lg">👤 Mon Profil</a>
+				</div>
+			</div>
+		</nav>
+
+		<!-- Main Content -->
+		<main class="flex-grow">
+			<slot />
+		</main>
+
+		<!-- Footer -->
+		<footer class="bg-gray-800 text-white mt-auto">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+				<div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+					<div>
+						<h3 class="text-lg font-bold mb-4">🔍 Trouve-Tout</h3>
+						<p class="text-gray-400 text-sm">Votre guide pour trouver les meilleurs produits adaptés à vos besoins.</p>
+					</div>
+					<div>
+						<h4 class="font-semibold mb-4">Catégories</h4>
+						<ul class="space-y-2 text-gray-400 text-sm">
+							{categories.map((cat) => (
+								<li><a href={`/categories/${cat.slug}`} class="hover:text-white transition-colors">{cat.name}</a></li>
+							))}
+						</ul>
+					</div>
+					<div>
+						<h4 class="font-semibold mb-4">Outils</h4>
+						<ul class="space-y-2 text-gray-400 text-sm">
+							<li><a href="/choix-express" class="hover:text-white transition-colors">Choix Express</a></li>
+							<li><a href="/cadeau" class="hover:text-white transition-colors">Mode Cadeau</a></li>
+							<li><a href="/marques" class="hover:text-white transition-colors">Toutes les Marques</a></li>
+						</ul>
+					</div>
+					<div>
+						<h4 class="font-semibold mb-4">À propos</h4>
+						<ul class="space-y-2 text-gray-400 text-sm">
+							<li><a href="/blog" class="hover:text-white transition-colors">Blog</a></li>
+							<li><a href="/mentions-legales" class="hover:text-white transition-colors">Mentions légales</a></li>
+							<li><a href="/contact" class="hover:text-white transition-colors">Contact</a></li>
+						</ul>
+					</div>
+				</div>
+				<div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400 text-sm">
+					<p>&copy; 2026 Trouve-Tout. Tous droits réservés.</p>
+				</div>
+			</div>
+		</footer>
+
+		<script>
+			const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+			const mobileMenu = document.getElementById('mobile-menu');
+			
+			mobileMenuBtn?.addEventListener('click', () => {
+				mobileMenu?.classList.toggle('hidden');
+			});
+		</script>
 	</body>
 </html>
 
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
+<style is:global>
+	@tailwind base;
+	@tailwind components;
+	@tailwind utilities;
 </style>

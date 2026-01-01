@@ -1,0 +1,542 @@
+---
+/**
+ * Page édition produit - Admin
+ * Route: /admin/products/[id]
+ */
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getCategories, getBrands, getProductTypes, getProductById, POSITION_LABELS, type ProductFull } from '../../../lib/db';
+
+// Récupérer l'ID du produit depuis l'URL
+const { id } = Astro.params;
+
+if (!id) {
+    return Astro.redirect('/admin/products');
+}
+
+// Trouver le produit
+const product = await getProductById(id);
+
+if (!product) {
+    return Astro.redirect('/admin/products?error=Produit non trouvé');
+}
+
+// Récupérer les données de référence pour les selects
+const categories = await getCategories();
+const brands = await getBrands();
+const productTypes = await getProductTypes();
+
+// Note moyenne
+const avgRating = product.avg_rating;
+
+// Message de succès/erreur depuis URL
+const url = new URL(Astro.request.url);
+const success = url.searchParams.get('success');
+const error = url.searchParams.get('error');
+---
+
+<AdminLayout title={`Éditer: ${product.name}`}>
+    {success && (
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6">
+            ✅ {success}
+        </div>
+    )}
+    
+    {error && (
+        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6">
+            ❌ {error}
+        </div>
+    )}
+    
+    <!-- En-tête -->
+    <div class="flex items-center gap-4 mb-6">
+        <a href="/admin/products" class="text-gray-400 hover:text-gray-600">
+            ← Retour
+        </a>
+        <div class="flex-1">
+            <h2 class="text-sm text-gray-500">Édition</h2>
+            <h1 class="text-xl font-bold">{product.name}</h1>
+        </div>
+        <a 
+            href={product.amazon_url} 
+            target="_blank"
+            class="btn-secondary text-sm"
+        >
+            🔗 Voir sur Amazon
+        </a>
+    </div>
+
+    <form id="product-form" class="space-y-8" method="POST" action={`/api/admin/products/${id}`}>
+        <input type="hidden" name="_method" value="PUT" />
+        
+        <!-- Section: Informations de base -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📝</span> Informations de base
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Nom -->
+                <div class="md:col-span-2">
+                    <label class="form-label" for="name">
+                        Nom du produit <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        required
+                        value={product.name}
+                        class="form-input"
+                    />
+                </div>
+                
+                <!-- Slug -->
+                <div>
+                    <label class="form-label" for="slug">
+                        Slug (URL)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="slug" 
+                        name="slug"
+                        value={product.slug}
+                        class="form-input bg-gray-50"
+                    />
+                </div>
+                
+                <!-- Prix indicatif -->
+                <div>
+                    <label class="form-label" for="price_display">
+                        Prix indicatif
+                    </label>
+                    <input 
+                        type="text" 
+                        id="price_display" 
+                        name="price_display"
+                        value={product.price_display || ''}
+                        class="form-input"
+                    />
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Classification -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📁</span> Classification
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Catégorie (lecture seule) -->
+                <div>
+                    <label class="form-label">Catégorie</label>
+                    <div class="form-input bg-gray-100 text-gray-600">
+                        {product.category.name}
+                    </div>
+                    <input type="hidden" name="category" value={product.category.slug} />
+                </div>
+                
+                <!-- Marque (lecture seule) -->
+                <div>
+                    <label class="form-label">Marque</label>
+                    <div class="form-input bg-gray-100 text-gray-600">
+                        {product.brand.name}
+                    </div>
+                    <input type="hidden" name="brand" value={product.brand.slug} />
+                </div>
+                
+                <!-- Type (lecture seule) -->
+                <div>
+                    <label class="form-label">Type de produit</label>
+                    <div class="form-input bg-gray-100 text-gray-600">
+                        {product.product_type.name}
+                    </div>
+                    <input type="hidden" name="product_type" value={product.product_type.slug} />
+                </div>
+            </div>
+            
+            <!-- Positionnement -->
+            <div class="mt-6">
+                <label class="form-label">
+                    Positionnement <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                    <label class={`flex items-center gap-3 p-4 border-2 border-yellow-200 rounded-lg cursor-pointer hover:border-yellow-400 transition-colors ${product.position === 'best-value' ? 'border-yellow-500 bg-yellow-50' : ''}`}>
+                        <input 
+                            type="radio" 
+                            name="position" 
+                            value="best-value" 
+                            required 
+                            class="w-4 h-4 text-yellow-500"
+                            checked={product.position === 'best-value'}
+                        />
+                        <span class="text-2xl">⭐</span>
+                        <div>
+                            <p class="font-medium">Meilleur rapport Q/P</p>
+                        </div>
+                    </label>
+                    
+                    <label class={`flex items-center gap-3 p-4 border-2 border-purple-200 rounded-lg cursor-pointer hover:border-purple-400 transition-colors ${product.position === 'middle-ground' ? 'border-purple-500 bg-purple-50' : ''}`}>
+                        <input 
+                            type="radio" 
+                            name="position" 
+                            value="middle-ground" 
+                            class="w-4 h-4 text-purple-500"
+                            checked={product.position === 'middle-ground'}
+                        />
+                        <span class="text-2xl">⚖️</span>
+                        <div>
+                            <p class="font-medium">Juste milieu</p>
+                        </div>
+                    </label>
+                    
+                    <label class={`flex items-center gap-3 p-4 border-2 border-green-200 rounded-lg cursor-pointer hover:border-green-400 transition-colors ${product.position === 'budget' ? 'border-green-500 bg-green-50' : ''}`}>
+                        <input 
+                            type="radio" 
+                            name="position" 
+                            value="budget" 
+                            class="w-4 h-4 text-green-500"
+                            checked={product.position === 'budget'}
+                        />
+                        <span class="text-2xl">💸</span>
+                        <div>
+                            <p class="font-medium">Moins cher fiable</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Lien Amazon -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>🔗</span> Lien Amazon
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- URL Amazon -->
+                <div class="md:col-span-2">
+                    <label class="form-label" for="amazon_url">
+                        Lien affilié Amazon <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="url" 
+                        id="amazon_url" 
+                        name="amazon_url" 
+                        required
+                        value={product.amazon_url}
+                        class="form-input"
+                    />
+                </div>
+                
+                <!-- ASIN -->
+                <div>
+                    <label class="form-label" for="asin">
+                        ASIN
+                    </label>
+                    <input 
+                        type="text" 
+                        id="asin" 
+                        name="asin"
+                        value=""
+                        class="form-input"
+                        pattern="[A-Z0-9]{10}"
+                        placeholder="B0CWP7M17B"
+                    />
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Contenu -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📄</span> Contenu
+            </h2>
+            
+            <div class="space-y-6">
+                <!-- Résumé -->
+                <div>
+                    <label class="form-label" for="summary">
+                        Résumé / Description courte <span class="text-red-500">*</span>
+                    </label>
+                    <textarea 
+                        id="summary" 
+                        name="summary" 
+                        required
+                        rows="2"
+                        class="form-textarea"
+                    >{product.summary}</textarea>
+                </div>
+                
+                <!-- Verdict -->
+                <div>
+                    <label class="form-label" for="verdict">
+                        Verdict éditorial
+                    </label>
+                    <textarea 
+                        id="verdict" 
+                        name="verdict"
+                        rows="2"
+                        class="form-textarea"
+                    >{product.verdict || ''}</textarea>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Image -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>🖼️</span> Image
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="form-label" for="image_url">
+                        URL de l'image
+                    </label>
+                    <input 
+                        type="url" 
+                        id="image_url" 
+                        name="image_url"
+                        value={product.image_url || ''}
+                        class="form-input"
+                    />
+                </div>
+                
+                <div>
+                    <label class="form-label">Prévisualisation</label>
+                    <div id="image-preview" class="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
+                        {product.image_url ? (
+                            <img src={product.image_url} alt={product.name} class="w-full h-full object-cover rounded-lg" />
+                        ) : (
+                            <span class="text-4xl text-gray-400">📦</span>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Indicateurs -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📊</span> Indicateurs (1-5)
+            </h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div>
+                    <label class="form-label" for="rating_quality">
+                        ⭐ Qualité
+                    </label>
+                    <input 
+                        type="number" 
+                        id="rating_quality" 
+                        name="rating_quality"
+                        min="1" max="5" step="0.5"
+                        value={product.rating_quality || ''}
+                        class="form-input"
+                    />
+                </div>
+                
+                <div>
+                    <label class="form-label" for="rating_price">
+                        💰 Prix
+                    </label>
+                    <input 
+                        type="number" 
+                        id="rating_price" 
+                        name="rating_price"
+                        min="1" max="5" step="0.5"
+                        value={product.rating_price || ''}
+                        class="form-input"
+                    />
+                </div>
+                
+                <div>
+                    <label class="form-label" for="rating_durability">
+                        🔧 Durabilité
+                    </label>
+                    <input 
+                        type="number" 
+                        id="rating_durability" 
+                        name="rating_durability"
+                        min="1" max="5" step="0.5"
+                        value={product.rating_durability || ''}
+                        class="form-input"
+                    />
+                </div>
+                
+                <div>
+                    <label class="form-label" for="rating_reliability">
+                        ✅ Fiabilité
+                    </label>
+                    <input 
+                        type="number" 
+                        id="rating_reliability" 
+                        name="rating_reliability"
+                        min="1" max="5" step="0.5"
+                        value={product.rating_reliability || ''}
+                        class="form-input"
+                    />
+                </div>
+            </div>
+            
+            <!-- Note moyenne -->
+            <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                <span class="text-sm text-gray-600">Note moyenne actuelle: </span>
+                <span class="font-bold text-lg">{avgRating.toFixed(1)}/5</span>
+            </div>
+        </div>
+        
+        <!-- Section: Recommandations -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>👥</span> Recommandations
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="form-label" for="recommended_for">
+                        ✅ Recommandé pour
+                    </label>
+                    <input 
+                        type="text" 
+                        id="recommended_for" 
+                        name="recommended_for"
+                        value={product.recommended_for?.join(', ') || ''}
+                        class="form-input"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">Séparez par des virgules</p>
+                </div>
+                
+                <div>
+                    <label class="form-label" for="not_recommended_for">
+                        ⚠️ Non recommandé pour
+                    </label>
+                    <input 
+                        type="text" 
+                        id="not_recommended_for" 
+                        name="not_recommended_for"
+                        value={product.not_recommended_for?.join(', ') || ''}
+                        class="form-input"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">Séparez par des virgules</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Zone de danger -->
+        <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+            <h2 class="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
+                <span>⚠️</span> Zone de danger
+            </h2>
+            <p class="text-sm text-red-600 mb-4">
+                La suppression d'un produit est irréversible.
+            </p>
+            <button 
+                type="button" 
+                id="delete-btn"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+                🗑️ Supprimer ce produit
+            </button>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex items-center justify-between sticky bottom-4 bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-lg">
+            <a href="/admin/products" class="btn-secondary">
+                ← Retour à la liste
+            </a>
+            
+            <div class="flex items-center gap-4">
+                <span id="save-status" class="text-sm text-gray-500"></span>
+                <button type="submit" class="btn-primary">
+                    💾 Enregistrer les modifications
+                </button>
+            </div>
+        </div>
+    </form>
+    
+    <!-- Modal de confirmation suppression -->
+    <div id="delete-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 class="text-lg font-bold text-red-600 mb-4">🗑️ Confirmer la suppression</h3>
+            <p class="text-gray-600 mb-6">
+                Voulez-vous vraiment supprimer <strong>{product.name}</strong> ?
+                <br /><br />
+                Cette action est irréversible.
+            </p>
+            <div class="flex justify-end gap-4">
+                <button id="cancel-delete" class="btn-secondary">
+                    Annuler
+                </button>
+                <form method="POST" action={`/api/admin/products/${id}/delete`} class="inline">
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        Oui, supprimer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</AdminLayout>
+
+<script>
+    // Preview image
+    const imageUrlInput = document.getElementById('image_url');
+    const imagePreview = document.getElementById('image-preview');
+    
+    imageUrlInput?.addEventListener('input', () => {
+        const url = (imageUrlInput as HTMLInputElement).value;
+        if (url) {
+            imagePreview!.innerHTML = `<img src="${url}" alt="Preview" class="w-full h-full object-cover rounded-lg" onerror="this.parentElement.innerHTML='<span class=\\'text-4xl text-gray-400\\'>❌</span>'" />`;
+        } else {
+            imagePreview!.innerHTML = '<span class="text-4xl text-gray-400">📦</span>';
+        }
+    });
+    
+    // Modal suppression
+    const deleteBtn = document.getElementById('delete-btn');
+    const deleteModal = document.getElementById('delete-modal');
+    const cancelDelete = document.getElementById('cancel-delete');
+    
+    deleteBtn?.addEventListener('click', () => {
+        deleteModal?.classList.remove('hidden');
+        deleteModal?.classList.add('flex');
+    });
+    
+    cancelDelete?.addEventListener('click', () => {
+        deleteModal?.classList.add('hidden');
+        deleteModal?.classList.remove('flex');
+    });
+    
+    deleteModal?.addEventListener('click', (e) => {
+        if (e.target === deleteModal) {
+            deleteModal.classList.add('hidden');
+            deleteModal.classList.remove('flex');
+        }
+    });
+    
+    // Indicateur de modification
+    const form = document.getElementById('product-form');
+    const saveStatus = document.getElementById('save-status');
+    let hasChanges = false;
+    
+    form?.addEventListener('input', () => {
+        if (!hasChanges) {
+            hasChanges = true;
+            saveStatus!.textContent = '• Modifications non enregistrées';
+            saveStatus!.classList.add('text-orange-500');
+        }
+    });
+    
+    // Avertissement avant de quitter
+    window.addEventListener('beforeunload', (e) => {
+        if (hasChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+    
+    form?.addEventListener('submit', () => {
+        hasChanges = false;
+    });
+</script>

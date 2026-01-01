@@ -1,0 +1,256 @@
+---
+/**
+ * Gestion des marques - Admin
+ * Route: /admin/brands
+ */
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getBrands, getProducts, getCategories, getBrandCategories, type DbBrand, type DbCategory } from '../../../lib/db';
+
+// Récupérer les données depuis Supabase
+const brands = await getBrands();
+const products = await getProducts();
+const categories = await getCategories();
+
+// Message de succès/erreur depuis URL
+const url = new URL(Astro.request.url);
+const success = url.searchParams.get('success');
+const error = url.searchParams.get('error');
+const editId = url.searchParams.get('edit');
+
+// Enrichir les marques avec des stats et les catégories liées
+interface BrandWithStats extends DbBrand {
+    productCount: number;
+    linkedCategories: DbCategory[];
+}
+
+const brandsWithStats: BrandWithStats[] = await Promise.all(brands.map(async (brand) => {
+    const brandProducts = products.filter(p => p.brand_id === brand.id);
+    const linkedCategories = await getBrandCategories(brand.id);
+    
+    return {
+        ...brand,
+        productCount: brandProducts.length,
+        linkedCategories
+    };
+}));
+
+// Trier par nombre de produits décroissant
+brandsWithStats.sort((a, b) => b.productCount - a.productCount);
+
+// Trouver la marque à éditer
+const editBrand = editId ? brandsWithStats.find(b => b.id === editId) : null;
+const editBrandCategoryIds = editBrand ? editBrand.linkedCategories.map(c => c.id) : [];
+---
+
+<AdminLayout title="Gestion des marques">
+    {success && (
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6">
+            ✅ {success}
+        </div>
+    )}
+    
+    {error && (
+        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6">
+            ❌ {error}
+        </div>
+    )}
+
+    <!-- Toolbar -->
+    <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <p class="text-gray-600">
+                    <strong>{brands.length}</strong> marque(s) configurée(s)
+                </p>
+            </div>
+            <button 
+                type="button" 
+                class="btn-primary"
+                onclick="document.getElementById('add-modal')?.classList.remove('hidden')"
+            >
+                ➕ Nouvelle marque
+            </button>
+        </div>
+    </div>
+
+    <!-- Brands Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {brandsWithStats.map((brand) => (
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            {brand.logo_url ? (
+                                <img src={brand.logo_url} alt={brand.name} class="w-12 h-12 object-contain rounded-lg bg-gray-50 p-1" />
+                            ) : (
+                                <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                    <span class="text-xl font-bold text-indigo-600">{brand.name.charAt(0).toUpperCase()}</span>
+                                </div>
+                            )}
+                            <div>
+                                <h3 class="font-semibold text-gray-900">{brand.name}</h3>
+                                <code class="text-xs text-gray-500">{brand.slug}</code>
+                            </div>
+                        </div>
+                        {brand.is_active ? (
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Actif</span>
+                        ) : (
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactif</span>
+                        )}
+                    </div>
+                    
+                    {brand.description && (
+                        <p class="text-sm text-gray-500 mb-4 line-clamp-2">{brand.description}</p>
+                    )}
+                    
+                    <div class="flex items-center justify-between text-sm mb-3">
+                        <span class="text-gray-500">
+                            <strong class="text-indigo-600">{brand.productCount}</strong> produit(s)
+                        </span>
+                    </div>
+                    
+                    <!-- Catégories liées -->
+                    <div class="pt-3 border-t">
+                        <p class="text-xs text-gray-400 mb-2">Catégories liées :</p>
+                        {brand.linkedCategories.length > 0 ? (
+                            <div class="flex flex-wrap gap-1">
+                                {brand.linkedCategories.map(cat => (
+                                    <span class="inline-block text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">
+                                        {cat.icon} {cat.name}
+                                    </span>
+                                ))}
+                            </div>
+                        ) : (
+                            <p class="text-xs text-gray-400 italic">Aucune catégorie liée</p>
+                        )}
+                    </div>
+                </div>
+                
+                <div class="px-6 py-3 bg-gray-50 border-t flex items-center justify-end gap-2">
+                    <a href={`/admin/brands?edit=${brand.id}`} class="text-gray-400 hover:text-indigo-600 transition-colors p-2" title="Modifier">✏️</a>
+                    <form method="POST" action={`/api/admin/brands/${brand.id}`} class="inline" onsubmit="return confirm('Supprimer cette marque ?')">
+                        <input type="hidden" name="_method" value="DELETE" />
+                        <button type="submit" class="text-gray-400 hover:text-red-600 transition-colors p-2" title="Supprimer">🗑️</button>
+                    </form>
+                </div>
+            </div>
+        ))}
+    </div>
+    
+    {brands.length === 0 && (
+        <div class="bg-white rounded-xl shadow-sm p-12 text-center text-gray-500">
+            <p class="text-4xl mb-4">🏷️</p>
+            <p>Aucune marque configurée</p>
+        </div>
+    )}
+
+    <!-- Info Box -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="flex gap-3">
+            <span class="text-blue-500">ℹ️</span>
+            <div class="text-sm text-blue-700">
+                <p class="font-medium mb-1">À propos des marques</p>
+                <p>Les marques peuvent être liées à plusieurs catégories. Cela permet de les afficher dans les pages de catégories correspondantes.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajout -->
+    <div id="add-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b flex items-center justify-between">
+                <h3 class="text-lg font-semibold">Nouvelle marque</h3>
+                <button type="button" onclick="document.getElementById('add-modal')?.classList.add('hidden')" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <form method="POST" action="/api/admin/brands" class="p-6 space-y-4">
+                <div>
+                    <label class="form-label" for="add-name">Nom <span class="text-red-500">*</span></label>
+                    <input type="text" id="add-name" name="name" required class="form-input" placeholder="ex: Apple" />
+                </div>
+                <div>
+                    <label class="form-label" for="add-slug">Slug</label>
+                    <input type="text" id="add-slug" name="slug" class="form-input" placeholder="apple (auto si vide)" />
+                </div>
+                <div>
+                    <label class="form-label" for="add-logo_url">URL du logo</label>
+                    <input type="url" id="add-logo_url" name="logo_url" class="form-input" placeholder="https://..." />
+                </div>
+                <div>
+                    <label class="form-label" for="add-description">Description</label>
+                    <textarea id="add-description" name="description" rows="3" class="form-input"></textarea>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="btn-primary flex-1">Créer</button>
+                    <button type="button" class="btn-secondary flex-1" onclick="document.getElementById('add-modal')?.classList.add('hidden')">Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Édition -->
+    {editBrand && (
+        <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                <div class="p-6 border-b flex items-center justify-between">
+                    <h3 class="text-lg font-semibold">Modifier la marque : {editBrand.name}</h3>
+                    <a href="/admin/brands" class="text-gray-400 hover:text-gray-600">✕</a>
+                </div>
+                
+                <div class="p-6 space-y-6">
+                    <!-- Formulaire infos de base -->
+                    <form method="POST" action={`/api/admin/brands/${editBrand.id}`} class="space-y-4">
+                        <input type="hidden" name="_method" value="PUT" />
+                        <h4 class="font-medium text-gray-900 border-b pb-2">Informations</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="form-label" for="edit-name">Nom <span class="text-red-500">*</span></label>
+                                <input type="text" id="edit-name" name="name" required class="form-input" value={editBrand.name} />
+                            </div>
+                            <div>
+                                <label class="form-label" for="edit-slug">Slug</label>
+                                <input type="text" id="edit-slug" name="slug" class="form-input" value={editBrand.slug} />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label" for="edit-logo_url">URL du logo</label>
+                            <input type="url" id="edit-logo_url" name="logo_url" class="form-input" value={editBrand.logo_url || ''} />
+                        </div>
+                        <div>
+                            <label class="form-label" for="edit-description">Description</label>
+                            <textarea id="edit-description" name="description" rows="2" class="form-input">{editBrand.description || ''}</textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">Enregistrer les informations</button>
+                    </form>
+                    
+                    <!-- Formulaire liaisons catégories -->
+                    <form method="POST" action={`/api/admin/brands/${editBrand.id}/categories`} class="space-y-4 pt-4 border-t">
+                        <h4 class="font-medium text-gray-900 border-b pb-2">Catégories liées</h4>
+                        <p class="text-sm text-gray-500">Sélectionnez les catégories dans lesquelles cette marque apparaît.</p>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            {categories.map(cat => (
+                                <label class="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        name="category_ids" 
+                                        value={cat.id}
+                                        checked={editBrandCategoryIds.includes(cat.id)}
+                                        class="w-4 h-4 text-indigo-600 rounded border-gray-300"
+                                    />
+                                    <span class="text-lg">{cat.icon}</span>
+                                    <span class="text-gray-700">{cat.name}</span>
+                                </label>
+                            ))}
+                        </div>
+                        
+                        <button type="submit" class="btn-secondary">Mettre à jour les catégories</button>
+                    </form>
+                    
+                    <div class="flex justify-end pt-4 border-t">
+                        <a href="/admin/brands" class="btn-secondary">Fermer</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )}
+</AdminLayout>

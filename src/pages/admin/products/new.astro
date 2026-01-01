@@ -1,0 +1,571 @@
+---
+/**
+ * Formulaire création/édition produit - Admin
+ * Route: /admin/products/new
+ */
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getCategories, getBrandsByCategory, getProductTypesByCategoryAndBrand, POSITION_LABELS, generateSlug, type DbCategory, type DbBrand, type DbProductType } from '../../../lib/db';
+
+// Récupérer les données depuis Supabase
+const categories = await getCategories();
+
+// Préparer les données pour le JS client (sélecteurs cascadés)
+const brandsByCategory: Record<string, { id: string; slug: string; name: string }[]> = {};
+const typesByBrand: Record<string, { id: string; slug: string; name: string }[]> = {};
+
+for (const category of categories) {
+    const brands = await getBrandsByCategory(category.slug);
+    brandsByCategory[category.slug] = brands.map(brand => ({
+        id: brand.id,
+        slug: brand.slug,
+        name: brand.name
+    }));
+    
+    for (const brand of brands) {
+        const key = `${category.slug}__${brand.slug}`;
+        const productTypes = await getProductTypesByCategoryAndBrand(category.id, brand.id);
+        typesByBrand[key] = productTypes.map(pt => ({
+            id: pt.id,
+            slug: pt.slug,
+            name: pt.name
+        }));
+    }
+}
+
+// Message de succès/erreur depuis URL
+const url = new URL(Astro.request.url);
+const success = url.searchParams.get('success');
+const error = url.searchParams.get('error');
+---
+
+<AdminLayout title="Nouveau produit">
+    {success && (
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg mb-6">
+            ✅ {success}
+        </div>
+    )}
+    
+    {error && (
+        <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6">
+            ❌ {error}
+        </div>
+    )}
+
+    <form id="product-form" class="space-y-8" method="POST" action="/api/admin/products">
+        <!-- Section: Informations de base -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📝</span> Informations de base
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Nom -->
+                <div class="md:col-span-2">
+                    <label class="form-label" for="name">
+                        Nom du produit <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        required
+                        placeholder="ex: Philips Airfryer Série 2000 - Air Fryer 6.2L"
+                        class="form-input"
+                    />
+                </div>
+                
+                <!-- Slug (auto-généré) -->
+                <div>
+                    <label class="form-label" for="slug">
+                        Slug (URL)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="slug" 
+                        name="slug"
+                        placeholder="philips-airfryer-2000"
+                        class="form-input bg-gray-50"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">Laissez vide pour générer automatiquement</p>
+                </div>
+                
+                <!-- Prix indicatif -->
+                <div>
+                    <label class="form-label" for="price_display">
+                        Prix indicatif
+                    </label>
+                    <input 
+                        type="text" 
+                        id="price_display" 
+                        name="price_display"
+                        placeholder="149 €"
+                        class="form-input"
+                    />
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Classification -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📁</span> Classification
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Catégorie -->
+                <div>
+                    <label class="form-label" for="category">
+                        Catégorie <span class="text-red-500">*</span>
+                    </label>
+                    <select id="category" name="category" required class="form-select">
+                        <option value="">Sélectionner...</option>
+                        {categories.map(cat => (
+                            <option value={cat.slug}>
+                                {cat.icon} {cat.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                
+                <!-- Marque -->
+                <div>
+                    <label class="form-label" for="brand">
+                        Marque <span class="text-red-500">*</span>
+                    </label>
+                    <select id="brand" name="brand" required class="form-select" disabled>
+                        <option value="">Sélectionner une catégorie d'abord</option>
+                    </select>
+                </div>
+                
+                <!-- Type de produit -->
+                <div>
+                    <label class="form-label" for="product_type">
+                        Type de produit <span class="text-red-500">*</span>
+                    </label>
+                    <select id="product_type" name="product_type" required class="form-select" disabled>
+                        <option value="">Sélectionner une marque d'abord</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Positionnement -->
+            <div class="mt-6">
+                <label class="form-label">
+                    Positionnement <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                    <label class="flex items-center gap-3 p-4 border-2 border-yellow-200 rounded-lg cursor-pointer hover:border-yellow-400 transition-colors has-[:checked]:border-yellow-500 has-[:checked]:bg-yellow-50">
+                        <input type="radio" name="position" value="best-value" required class="w-4 h-4 text-yellow-500" />
+                        <span class="text-2xl">⭐</span>
+                        <div>
+                            <p class="font-medium">Meilleur rapport Q/P</p>
+                            <p class="text-xs text-gray-500">Le meilleur équilibre</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-center gap-3 p-4 border-2 border-purple-200 rounded-lg cursor-pointer hover:border-purple-400 transition-colors has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50">
+                        <input type="radio" name="position" value="middle-ground" class="w-4 h-4 text-purple-500" />
+                        <span class="text-2xl">⚖️</span>
+                        <div>
+                            <p class="font-medium">Juste milieu</p>
+                            <p class="text-xs text-gray-500">Compromis idéal</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-center gap-3 p-4 border-2 border-green-200 rounded-lg cursor-pointer hover:border-green-400 transition-colors has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+                        <input type="radio" name="position" value="budget" class="w-4 h-4 text-green-500" />
+                        <span class="text-2xl">💸</span>
+                        <div>
+                            <p class="font-medium">Moins cher fiable</p>
+                            <p class="text-xs text-gray-500">Petit budget</p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Lien Amazon -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>🔗</span> Lien Amazon
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- URL Amazon -->
+                <div class="md:col-span-2">
+                    <label class="form-label" for="amazon_url">
+                        Lien affilié Amazon <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="url" 
+                        id="amazon_url" 
+                        name="amazon_url" 
+                        required
+                        placeholder="https://www.amazon.fr/dp/B0CWP7M17B?tag=trouvetoutcon-21"
+                        class="form-input"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">Lien complet avec votre tag affilié</p>
+                </div>
+                
+                <!-- ASIN -->
+                <div>
+                    <label class="form-label" for="asin">
+                        ASIN (optionnel)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="asin" 
+                        name="asin"
+                        placeholder="B0CWP7M17B"
+                        class="form-input"
+                        pattern="[A-Z0-9]{10}"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">10 caractères (ex: B0CWP7M17B)</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Contenu -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📄</span> Contenu
+            </h2>
+            
+            <div class="space-y-6">
+                <!-- Résumé -->
+                <div>
+                    <label class="form-label" for="summary">
+                        Résumé / Description courte <span class="text-red-500">*</span>
+                    </label>
+                    <textarea 
+                        id="summary" 
+                        name="summary" 
+                        required
+                        rows="2"
+                        placeholder="13 modes de cuisson, technologie RapidAir, jusqu'à 90% de matières grasses en moins..."
+                        class="form-textarea"
+                    ></textarea>
+                    <p class="text-xs text-gray-500 mt-1">1-2 phrases décrivant les points clés du produit</p>
+                </div>
+                
+                <!-- Verdict -->
+                <div>
+                    <label class="form-label" for="verdict">
+                        Verdict éditorial
+                    </label>
+                    <textarea 
+                        id="verdict" 
+                        name="verdict"
+                        rows="2"
+                        placeholder="Airfryer très complet, facile à utiliser et recommandé pour tous types de cuissons rapides."
+                        class="form-textarea"
+                    ></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Votre avis en 1-2 phrases</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Image -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>🖼️</span> Image
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- URL Image -->
+                <div>
+                    <label class="form-label" for="image_url">
+                        URL de l'image
+                    </label>
+                    <input 
+                        type="url" 
+                        id="image_url" 
+                        name="image_url"
+                        placeholder="https://..."
+                        class="form-input"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">URL directe vers l'image</p>
+                </div>
+                
+                <!-- Preview -->
+                <div>
+                    <label class="form-label">Prévisualisation</label>
+                    <div id="image-preview" class="w-32 h-32 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
+                        <span class="text-4xl text-gray-400">📦</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Indicateurs -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>📊</span> Indicateurs (1-5)
+            </h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <!-- Qualité -->
+                <div>
+                    <label class="form-label" for="rating_quality">
+                        ⭐ Qualité
+                    </label>
+                    <input 
+                        type="number" 
+                        id="rating_quality" 
+                        name="rating_quality"
+                        min="1" max="5" step="0.5"
+                        placeholder="4.5"
+                        class="form-input"
+                    />
+                </div>
+                
+                <!-- Prix -->
+                <div>
+                    <label class="form-label" for="rating_price">
+                        💰 Prix
+                    </label>
+                    <input 
+                        type="number" 
+                        id="rating_price" 
+                        name="rating_price"
+                        min="1" max="5" step="0.5"
+                        placeholder="4"
+                        class="form-input"
+                    />
+                </div>
+                
+                <!-- Durabilité -->
+                <div>
+                    <label class="form-label" for="rating_durability">
+                        🔧 Durabilité
+                    </label>
+                    <input 
+                        type="number" 
+                        id="rating_durability" 
+                        name="rating_durability"
+                        min="1" max="5" step="0.5"
+                        placeholder="5"
+                        class="form-input"
+                    />
+                </div>
+                
+                <!-- Fiabilité -->
+                <div>
+                    <label class="form-label" for="rating_reliability">
+                        ✅ Fiabilité
+                    </label>
+                    <input 
+                        type="number" 
+                        id="rating_reliability" 
+                        name="rating_reliability"
+                        min="1" max="5" step="0.5"
+                        placeholder="5"
+                        class="form-input"
+                    />
+                </div>
+            </div>
+        </div>
+        
+        <!-- Section: Recommandations -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <span>👥</span> Recommandations
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Recommandé pour -->
+                <div>
+                    <label class="form-label" for="recommended_for">
+                        ✅ Recommandé pour
+                    </label>
+                    <input 
+                        type="text" 
+                        id="recommended_for" 
+                        name="recommended_for"
+                        placeholder="Familles, Débutants, Cuisiniers pressés"
+                        class="form-input"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">Séparez par des virgules</p>
+                </div>
+                
+                <!-- Non recommandé pour -->
+                <div>
+                    <label class="form-label" for="not_recommended_for">
+                        ⚠️ Non recommandé pour
+                    </label>
+                    <input 
+                        type="text" 
+                        id="not_recommended_for" 
+                        name="not_recommended_for"
+                        placeholder="Petits budgets stricts"
+                        class="form-input"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">Séparez par des virgules</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex items-center justify-between">
+            <a href="/admin/products" class="btn-secondary">
+                ← Retour à la liste
+            </a>
+            
+            <div class="flex items-center gap-4">
+                <button type="button" id="preview-btn" class="btn-secondary">
+                    👁️ Prévisualiser
+                </button>
+                <button type="submit" class="btn-primary">
+                    💾 Enregistrer le produit
+                </button>
+            </div>
+        </div>
+    </form>
+    
+    <!-- Modal Preview -->
+    <div id="preview-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Prévisualisation</h3>
+                    <button id="close-preview" class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                <div id="preview-content"></div>
+            </div>
+        </div>
+    </div>
+</AdminLayout>
+
+<script define:vars={{ brandsByCategory, typesByBrand }}>
+    // Auto-génération du slug
+    const nameInput = document.getElementById('name');
+    const slugInput = document.getElementById('slug');
+    
+    nameInput?.addEventListener('input', (e) => {
+        if (!slugInput.dataset.manual) {
+            const slug = e.target.value
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '');
+            slugInput.value = slug;
+        }
+    });
+    
+    slugInput?.addEventListener('input', () => {
+        slugInput.dataset.manual = 'true';
+    });
+    
+    // Cascade des selects
+    const categorySelect = document.getElementById('category');
+    const brandSelect = document.getElementById('brand');
+    const productTypeSelect = document.getElementById('product_type');
+    
+    categorySelect?.addEventListener('change', () => {
+        const category = categorySelect.value;
+        brandSelect.innerHTML = '<option value="">Sélectionner...</option>';
+        productTypeSelect.innerHTML = '<option value="">Sélectionner une marque d\'abord</option>';
+        productTypeSelect.disabled = true;
+        
+        if (category && brandsByCategory[category]) {
+            brandsByCategory[category].forEach(brand => {
+                const option = document.createElement('option');
+                option.value = brand.slug;
+                option.textContent = brand.name;
+                brandSelect.appendChild(option);
+            });
+            brandSelect.disabled = false;
+        } else {
+            brandSelect.disabled = true;
+        }
+    });
+    
+    brandSelect?.addEventListener('change', () => {
+        const category = categorySelect.value;
+        const brand = brandSelect.value;
+        productTypeSelect.innerHTML = '<option value="">Sélectionner...</option>';
+        
+        const key = `${category}__${brand}`;
+        if (typesByBrand[key]) {
+            typesByBrand[key].forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.slug;
+                option.textContent = type.name;
+                productTypeSelect.appendChild(option);
+            });
+            productTypeSelect.disabled = false;
+        } else {
+            productTypeSelect.disabled = true;
+        }
+    });
+    
+    // Preview image
+    const imageUrlInput = document.getElementById('image_url');
+    const imagePreview = document.getElementById('image-preview');
+    
+    imageUrlInput?.addEventListener('input', () => {
+        const url = imageUrlInput.value;
+        if (url) {
+            imagePreview.innerHTML = `<img src="${url}" alt="Preview" class="w-full h-full object-cover rounded-lg" onerror="this.parentElement.innerHTML='<span class=\\'text-4xl text-gray-400\\'>❌</span>'" />`;
+        } else {
+            imagePreview.innerHTML = '<span class="text-4xl text-gray-400">📦</span>';
+        }
+    });
+    
+    // Modal preview
+    const previewBtn = document.getElementById('preview-btn');
+    const previewModal = document.getElementById('preview-modal');
+    const closePreview = document.getElementById('close-preview');
+    const previewContent = document.getElementById('preview-content');
+    
+    previewBtn?.addEventListener('click', () => {
+        const formData = new FormData(document.getElementById('product-form'));
+        const data = Object.fromEntries(formData.entries());
+        
+        const positionLabels = {
+            'best-value': { label: 'Meilleur rapport Q/P', emoji: '⭐', color: 'bg-yellow-100 text-yellow-800' },
+            'middle-ground': { label: 'Juste milieu', emoji: '⚖️', color: 'bg-purple-100 text-purple-800' },
+            'budget': { label: 'Moins cher fiable', emoji: '💸', color: 'bg-green-100 text-green-800' }
+        };
+        
+        const position = positionLabels[data.position] || positionLabels['middle-ground'];
+        
+        previewContent.innerHTML = `
+            <div class="border rounded-xl overflow-hidden">
+                <div class="bg-gray-100 p-8 flex items-center justify-center">
+                    ${data.image_url 
+                        ? `<img src="${data.image_url}" alt="${data.name}" class="w-32 h-32 object-contain" />`
+                        : '<span class="text-6xl">📦</span>'
+                    }
+                </div>
+                <div class="p-4">
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${position.color}">
+                        ${position.emoji} ${position.label}
+                    </span>
+                    <h4 class="text-lg font-bold mt-2">${data.name || 'Nom du produit'}</h4>
+                    <p class="text-sm text-gray-600 mt-1">${data.summary || 'Description...'}</p>
+                    ${data.price_display ? `<p class="text-xl font-bold mt-2">${data.price_display}</p>` : ''}
+                    ${data.verdict ? `<div class="bg-gray-50 rounded-lg p-3 mt-3"><p class="text-sm">💬 ${data.verdict}</p></div>` : ''}
+                </div>
+            </div>
+        `;
+        
+        previewModal.classList.remove('hidden');
+        previewModal.classList.add('flex');
+    });
+    
+    closePreview?.addEventListener('click', () => {
+        previewModal.classList.add('hidden');
+        previewModal.classList.remove('flex');
+    });
+    
+    previewModal?.addEventListener('click', (e) => {
+        if (e.target === previewModal) {
+            previewModal.classList.add('hidden');
+            previewModal.classList.remove('flex');
+        }
+    });
+</script>

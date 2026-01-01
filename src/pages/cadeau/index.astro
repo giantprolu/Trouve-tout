@@ -1,6 +1,204 @@
 ---
-export const prerender = false; // Page dynamique
+export const prerender = false; // Page dynamique SSR
+
+import Layout from '../../layouts/Layout.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import { products, categories, formatPrice } from '../../data/products';
+
+const title = "Mode Cadeau 🎁 | Trouve-Tout";
+const description = "Trouvez le cadeau parfait pour vos proches. Sélectionnez le profil et le budget, nous vous proposons les meilleures idées.";
+
+// Récupérer les paramètres
+const url = new URL(Astro.request.url);
+const recipient = url.searchParams.get('recipient');
+const occasion = url.searchParams.get('occasion');
+const budget = url.searchParams.get('budget');
+
+let giftSuggestions: typeof products = [];
+
+const recipientProfiles: Record<string, string[]> = {
+    'tech-lover': ['high-tech'],
+    'home-maker': ['maison', 'cuisine'],
+    'foodie': ['cuisine'],
+    'athlete': ['sport'],
+    'beauty-fan': ['beaute'],
+    'all': ['high-tech', 'maison', 'cuisine', 'sport', 'beaute']
+};
+
+if (recipient && budget) {
+    const categories = recipientProfiles[recipient] || recipientProfiles['all'];
+    
+    giftSuggestions = products.filter(p => {
+        if (!categories.includes(p.category || '')) return false;
+        
+        const price = p.price || 0;
+        switch (budget) {
+            case 'small':
+                return price <= 100;
+            case 'medium':
+                return price > 100 && price <= 300;
+            case 'large':
+                return price > 300 && price <= 600;
+            case 'luxury':
+                return price > 600;
+            default:
+                return true;
+        }
+    });
+
+    // Trier par meilleur rapport qualité/prix
+    giftSuggestions.sort((a, b) => {
+        const scoreA = (a.quality_rating || 0) + (a.price_rating || 0);
+        const scoreB = (b.quality_rating || 0) + (b.price_rating || 0);
+        return scoreB - scoreA;
+    });
+}
+
+const occasions = [
+    { value: 'birthday', label: 'Anniversaire', emoji: '🎂' },
+    { value: 'christmas', label: 'Noël', emoji: '🎄' },
+    { value: 'valentine', label: 'Saint-Valentin', emoji: '❤️' },
+    { value: 'mother-father', label: 'Fête des mères/pères', emoji: '👨‍👩‍👧' },
+    { value: 'wedding', label: 'Mariage', emoji: '💍' },
+    { value: 'other', label: 'Autre occasion', emoji: '🎉' }
+];
+
+const recipients = [
+    { value: 'tech-lover', label: 'Geek / Fan de tech', emoji: '🤓' },
+    { value: 'home-maker', label: 'Casanier(e)', emoji: '🏠' },
+    { value: 'foodie', label: 'Gourmet / Cuisinier', emoji: '👨‍🍳' },
+    { value: 'athlete', label: 'Sportif(ve)', emoji: '🏃' },
+    { value: 'beauty-fan', label: 'Adepte beauté', emoji: '💅' },
+    { value: 'all', label: 'Je ne sais pas', emoji: '🤷' }
+];
+
+const budgets = [
+    { value: 'small', label: 'Petit budget', range: 'Moins de 100€', emoji: '🎁' },
+    { value: 'medium', label: 'Budget moyen', range: '100€ - 300€', emoji: '🎁🎁' },
+    { value: 'large', label: 'Beau cadeau', range: '300€ - 600€', emoji: '🎁🎁🎁' },
+    { value: 'luxury', label: 'Cadeau de luxe', range: 'Plus de 600€', emoji: '💎' }
+];
 ---
 
-<h1 class="text-2xl font-bold">Mode Cadeau</h1>
-<p>Contenu dynamique...</p>
+<Layout title={title} description={description}>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <div class="text-6xl mb-4">🎁</div>
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                Mode Cadeau
+            </h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Trouvez le cadeau parfait ! Dites-nous pour qui et nous vous proposons les meilleures idées.
+            </p>
+        </div>
+
+        {!recipient || !budget ? (
+            <!-- Selection Form -->
+            <div class="max-w-2xl mx-auto">
+                <form method="GET" class="space-y-8">
+                    <!-- Step 1: Occasion -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                            <span class="bg-pink-500 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                            Pour quelle occasion ?
+                        </h2>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {occasions.map((occ) => (
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="occasion" value={occ.value} class="peer sr-only" />
+                                    <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-pink-300 peer-checked:border-pink-500 peer-checked:bg-pink-50 transition-all">
+                                        <div class="text-3xl mb-2">{occ.emoji}</div>
+                                        <div class="font-medium text-sm">{occ.label}</div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Recipient -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                            <span class="bg-pink-500 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                            C'est pour qui ?
+                        </h2>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {recipients.map((rec) => (
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="recipient" value={rec.value} class="peer sr-only" required />
+                                    <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-pink-300 peer-checked:border-pink-500 peer-checked:bg-pink-50 transition-all">
+                                        <div class="text-3xl mb-2">{rec.emoji}</div>
+                                        <div class="font-medium text-sm">{rec.label}</div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Budget -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                            <span class="bg-pink-500 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">3</span>
+                            Votre budget ?
+                        </h2>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {budgets.map((bud) => (
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="budget" value={bud.value} class="peer sr-only" required />
+                                    <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-pink-300 peer-checked:border-pink-500 peer-checked:bg-pink-50 transition-all">
+                                        <div class="text-2xl mb-2">{bud.emoji}</div>
+                                        <div class="font-medium text-sm">{bud.label}</div>
+                                        <div class="text-xs text-gray-500">{bud.range}</div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <button 
+                        type="submit"
+                        class="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-xl font-bold text-xl transition-colors flex items-center justify-center"
+                    >
+                        🎁 Trouver des idées cadeaux
+                    </button>
+                </form>
+            </div>
+        ) : (
+            <!-- Results -->
+            <div>
+                <div class="bg-pink-50 border border-pink-200 rounded-xl p-6 mb-8 flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <h2 class="font-bold text-lg text-pink-800">
+                            {giftSuggestions.length} idée{giftSuggestions.length > 1 ? 's' : ''} cadeau{giftSuggestions.length > 1 ? 'x' : ''} !
+                        </h2>
+                        <p class="text-pink-600">
+                            Pour: {recipients.find(r => r.value === recipient)?.label} | 
+                            Budget: {budgets.find(b => b.value === budget)?.range}
+                        </p>
+                    </div>
+                    <a href="/cadeau" class="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                        Nouvelle recherche
+                    </a>
+                </div>
+
+                {giftSuggestions.length > 0 ? (
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {giftSuggestions.map((product) => (
+                            <ProductCard product={product} />
+                        ))}
+                    </div>
+                ) : (
+                    <div class="text-center py-16 bg-gray-50 rounded-2xl">
+                        <div class="text-6xl mb-4">😕</div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Aucune suggestion trouvée</h3>
+                        <p class="text-gray-600 mb-6">Essayez de modifier vos critères.</p>
+                        <a href="/cadeau" class="bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                            Modifier ma recherche
+                        </a>
+                    </div>
+                )}
+            </div>
+        )}
+    </div>
+</Layout>

@@ -1,6 +1,201 @@
 ---
-export const prerender = false; // Page dynamique
+export const prerender = false; // Page dynamique SSR
+
+import Layout from '../../layouts/Layout.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import { products, categories, formatPrice } from '../../data/products';
+import { supabase } from '../../lib/supabase';
+
+const title = "Choix Express ⚡ | Trouve-Tout";
+const description = "Trouvez le produit parfait en quelques clics. Répondez à quelques questions et obtenez une recommandation personnalisée.";
+
+// Récupérer les paramètres de recherche
+const url = new URL(Astro.request.url);
+const selectedCategory = url.searchParams.get('category');
+const selectedBudget = url.searchParams.get('budget');
+const selectedTier = url.searchParams.get('tier');
+
+let recommendations: typeof products = [];
+
+if (selectedCategory && selectedBudget) {
+    // Filtrer les produits
+    recommendations = products.filter(p => {
+        if (p.category !== selectedCategory) return false;
+        
+        const price = p.price || 0;
+        switch (selectedBudget) {
+            case 'low':
+                return price < 200;
+            case 'medium':
+                return price >= 200 && price < 500;
+            case 'high':
+                return price >= 500;
+            default:
+                return true;
+        }
+    });
+
+    if (selectedTier) {
+        recommendations = recommendations.filter(p => p.tier === selectedTier);
+    }
+
+    // Sauvegarder la recherche si l'utilisateur est connecté
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+        await supabase.from('search_history').insert({
+            user_id: user.id,
+            query: `Choix Express: ${selectedCategory} - Budget ${selectedBudget}`
+        });
+    }
+}
 ---
 
-<h1 class="text-2xl font-bold">Choix Express</h1>
-<p>Contenu dynamique...</p>
+<Layout title={title} description={description}>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <div class="text-6xl mb-4">⚡</div>
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                Choix Express
+            </h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Pas le temps de chercher ? Répondez à quelques questions et trouvez le produit parfait en moins d'une minute !
+            </p>
+        </div>
+
+        <!-- Form or Results -->
+        {!selectedCategory || !selectedBudget ? (
+            <!-- Selection Form -->
+            <div class="max-w-2xl mx-auto">
+                <form method="GET" class="space-y-8">
+                    <!-- Step 1: Category -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                            <span class="bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                            Que recherchez-vous ?
+                        </h2>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {categories.map((cat) => (
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="category" value={cat.slug} class="peer sr-only" required />
+                                    <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-primary-300 peer-checked:border-primary-600 peer-checked:bg-primary-50 transition-all">
+                                        <div class="text-3xl mb-2">{cat.icon}</div>
+                                        <div class="font-medium">{cat.name}</div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Budget -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                            <span class="bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                            Quel est votre budget ?
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="budget" value="low" class="peer sr-only" required />
+                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-primary-300 peer-checked:border-primary-600 peer-checked:bg-primary-50 transition-all">
+                                    <div class="text-3xl mb-2">💰</div>
+                                    <div class="font-medium">Petit budget</div>
+                                    <div class="text-sm text-gray-500">Moins de 200€</div>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="budget" value="medium" class="peer sr-only" />
+                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-primary-300 peer-checked:border-primary-600 peer-checked:bg-primary-50 transition-all">
+                                    <div class="text-3xl mb-2">💵</div>
+                                    <div class="font-medium">Budget moyen</div>
+                                    <div class="text-sm text-gray-500">200€ - 500€</div>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="budget" value="high" class="peer sr-only" />
+                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-primary-300 peer-checked:border-primary-600 peer-checked:bg-primary-50 transition-all">
+                                    <div class="text-3xl mb-2">💎</div>
+                                    <div class="font-medium">Sans limite</div>
+                                    <div class="text-sm text-gray-500">Plus de 500€</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Priority (optional) -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8">
+                        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                            <span class="bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">3</span>
+                            Votre priorité ? <span class="text-gray-400 text-sm ml-2">(optionnel)</span>
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="tier" value="best-value" class="peer sr-only" />
+                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-green-300 peer-checked:border-green-600 peer-checked:bg-green-50 transition-all">
+                                    <div class="text-3xl mb-2">🏆</div>
+                                    <div class="font-medium text-green-700">Meilleur rapport Q/P</div>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="tier" value="mid-range" class="peer sr-only" />
+                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-blue-300 peer-checked:border-blue-600 peer-checked:bg-blue-50 transition-all">
+                                    <div class="text-3xl mb-2">⚖️</div>
+                                    <div class="font-medium text-blue-700">Équilibré</div>
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="tier" value="budget" class="peer sr-only" />
+                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-orange-300 peer-checked:border-orange-600 peer-checked:bg-orange-50 transition-all">
+                                    <div class="text-3xl mb-2">💵</div>
+                                    <div class="font-medium text-orange-700">Le moins cher</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <button 
+                        type="submit"
+                        class="w-full bg-secondary-500 hover:bg-secondary-600 text-white py-4 rounded-xl font-bold text-xl transition-colors flex items-center justify-center"
+                    >
+                        ⚡ Trouver mon produit
+                    </button>
+                </form>
+            </div>
+        ) : (
+            <!-- Results -->
+            <div>
+                <div class="bg-secondary-50 border border-secondary-200 rounded-xl p-6 mb-8 flex items-center justify-between">
+                    <div>
+                        <h2 class="font-bold text-lg text-secondary-800">
+                            {recommendations.length} produit{recommendations.length > 1 ? 's' : ''} trouvé{recommendations.length > 1 ? 's' : ''} !
+                        </h2>
+                        <p class="text-secondary-600">
+                            Catégorie: {categories.find(c => c.slug === selectedCategory)?.name} | 
+                            Budget: {selectedBudget === 'low' ? '< 200€' : selectedBudget === 'medium' ? '200-500€' : '> 500€'}
+                        </p>
+                    </div>
+                    <a href="/choix-express" class="bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                        Nouvelle recherche
+                    </a>
+                </div>
+
+                {recommendations.length > 0 ? (
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {recommendations.map((product) => (
+                            <ProductCard product={product} />
+                        ))}
+                    </div>
+                ) : (
+                    <div class="text-center py-16 bg-gray-50 rounded-2xl">
+                        <div class="text-6xl mb-4">😕</div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Aucun produit trouvé</h3>
+                        <p class="text-gray-600 mb-6">Essayez d'élargir vos critères de recherche.</p>
+                        <a href="/choix-express" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                            Modifier ma recherche
+                        </a>
+                    </div>
+                )}
+            </div>
+        )}
+    </div>
+</Layout>

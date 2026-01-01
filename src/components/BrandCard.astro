@@ -1,0 +1,45 @@
+---
+import type { Brand } from '../types/db';
+
+interface Props {
+    brand: Brand;
+    categorySlug: string;
+}
+
+const { brand, categorySlug } = Astro.props;
+---
+
+<a 
+    href={`/categories/${categorySlug}/${brand.slug}`}
+    class="block bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+>
+    <div class="p-6">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                {brand.logo ? (
+                    <img 
+                        src={brand.logo} 
+                        alt={brand.name}
+                        class="w-12 h-12 object-contain"
+                    />
+                ) : (
+                    <span class="text-2xl font-bold text-gray-400">
+                        {brand.name.charAt(0)}
+                    </span>
+                )}
+            </div>
+            <div>
+                <h3 class="font-bold text-xl text-gray-900">{brand.name}</h3>
+            </div>
+        </div>
+        <p class="text-gray-600 text-sm line-clamp-2">
+            {brand.description}
+        </p>
+        <div class="mt-4 flex items-center text-primary-600 font-medium text-sm">
+            Voir les produits
+            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </div>
+    </div>
+</a>
