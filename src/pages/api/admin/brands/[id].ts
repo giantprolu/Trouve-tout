@@ -4,7 +4,7 @@
  * DELETE /api/admin/brands/[id] - Supprimer une marque
  */
 import type { APIRoute } from 'astro';
-import { updateBrand, deleteBrand, getBrandById } from '../../../../lib/db';
+import { updateBrand, deleteBrand, getBrandById, setBrandCategories } from '../../../../lib/db';
 
 export const POST: APIRoute = async ({ params, request, redirect }) => {
     const { id } = params;
@@ -31,6 +31,7 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         const slug = formData.get('slug') as string;
         const description = formData.get('description') as string | null;
         const logo_url = formData.get('logo_url') as string | null;
+        const categoryIds = formData.getAll('category_ids') as string[];
         
         if (!name) {
             return redirect('/admin/brands?error=Nom requis');
@@ -46,6 +47,9 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         if (!brand) {
             return redirect('/admin/brands?error=Erreur lors de la mise à jour');
         }
+        
+        // Mettre à jour les catégories liées
+        await setBrandCategories(id, categoryIds);
         
         return redirect('/admin/brands?success=Marque mise à jour');
         

@@ -3,6 +3,7 @@ export const prerender = true;
 
 import Layout from '../../layouts/Layout.astro';
 import ProductCard from '../../components/ProductCard.astro';
+import AddToCompare from '../../components/AddToCompare.astro';
 import { products, getProductById, getBrandBySlug, getCategoryBySlug, getProductsByBrand, formatPrice, getTierLabel } from '../../data/products';
 
 export function getStaticPaths() {
@@ -141,7 +142,7 @@ const description = product.description || `Découvrez ${product.name} : caract�
                 </div>
 
                 <!-- Price and CTA -->
-                <div class="flex items-center justify-between p-6 bg-primary-50 rounded-xl">
+                <div class="flex items-center justify-between p-6 bg-primary-50 rounded-xl mb-4">
                     <div>
                         <span class="text-sm text-gray-600">Prix constaté</span>
                         <div class="text-4xl font-bold text-primary-600">
@@ -151,6 +152,14 @@ const description = product.description || `Découvrez ${product.name} : caract�
                     <button class="bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors">
                         Voir l'offre
                     </button>
+                </div>
+
+                <!-- Bouton Comparateur -->
+                <div class="flex items-center gap-3">
+                    <AddToCompare productId={product.id} productName={product.name} variant="button" />
+                    <a href="/comparateur" class="text-sm text-gray-500 hover:text-blue-600 transition-colors">
+                        Voir le comparateur →
+                    </a>
                 </div>
             </div>
         </div>

@@ -16,6 +16,7 @@ const url = new URL(Astro.request.url);
 const success = url.searchParams.get('success');
 const error = url.searchParams.get('error');
 const editId = url.searchParams.get('edit');
+const categoryFilter = url.searchParams.get('category') || '';
 
 // Enrichir les marques avec des stats et les catégories liées
 interface BrandWithStats extends DbBrand {
@@ -34,8 +35,19 @@ const brandsWithStats: BrandWithStats[] = await Promise.all(brands.map(async (br
     };
 }));
 
+// Appliquer le filtre par catégorie
+let filteredBrands = brandsWithStats;
+if (categoryFilter) {
+    const cat = categories.find(c => c.slug === categoryFilter);
+    if (cat) {
+        filteredBrands = brandsWithStats.filter(brand => 
+            brand.linkedCategories.some(c => c.id === cat.id)
+        );
+    }
+}
+
 // Trier par nombre de produits décroissant
-brandsWithStats.sort((a, b) => b.productCount - a.productCount);
+filteredBrands.sort((a, b) => b.productCount - a.productCount);
 
 // Trouver la marque à éditer
 const editBrand = editId ? brandsWithStats.find(b => b.id === editId) : null;
@@ -57,11 +69,20 @@ const editBrandCategoryIds = editBrand ? editBrand.linkedCategories.map(c => c.i
 
     <!-- Toolbar -->
     <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
                 <p class="text-gray-600">
-                    <strong>{brands.length}</strong> marque(s) configurée(s)
+                    <strong>{filteredBrands.length}</strong> marque(s) {categoryFilter ? 'filtrée(s)' : 'configurée(s)'}
+                    {categoryFilter && <span class="text-gray-400">/ {brands.length} total</span>}
                 </p>
+                <form method="get" class="flex items-center gap-2">
+                    <select name="category" class="form-select w-48" onchange="this.form.submit()">
+                        <option value="">Toutes catégories</option>
+                        {categories.map(cat => (
+                            <option value={cat.slug} selected={cat.slug === categoryFilter}>{cat.icon} {cat.name}</option>
+                        ))}
+                    </select>
+                </form>
             </div>
             <button 
                 type="button" 
@@ -75,7 +96,7 @@ const editBrandCategoryIds = editBrand ? editBrand.linkedCategories.map(c => c.i
 
     <!-- Brands Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {brandsWithStats.map((brand) => (
+        {filteredBrands.map((brand) => (
             <div class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                 <div class="p-6">
                     <div class="flex items-start justify-between mb-4">
@@ -156,32 +177,60 @@ const editBrandCategoryIds = editBrand ? editBrand.linkedCategories.map(c => c.i
     </div>
 
     <!-- Modal Ajout -->
-    <div id="add-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div id="add-modal" class="modal-overlay hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="modal-content bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b flex items-center justify-between">
                 <h3 class="text-lg font-semibold">Nouvelle marque</h3>
-                <button type="button" onclick="document.getElementById('add-modal')?.classList.add('hidden')" class="text-gray-400 hover:text-gray-600">✕</button>
+                <button type="button" onclick="closeModal('add-modal')" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
-            <form method="POST" action="/api/admin/brands" class="p-6 space-y-4">
-                <div>
-                    <label class="form-label" for="add-name">Nom <span class="text-red-500">*</span></label>
-                    <input type="text" id="add-name" name="name" required class="form-input" placeholder="ex: Apple" />
+            <form method="POST" action="/api/admin/brands" class="p-6 space-y-6">
+                <!-- Informations de base -->
+                <div class="space-y-4">
+                    <h4 class="font-medium text-gray-900 border-b pb-2">Informations</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="form-label" for="add-name">Nom <span class="text-red-500">*</span></label>
+                            <input type="text" id="add-name" name="name" required class="form-input" placeholder="ex: Apple" />
+                        </div>
+                        <div>
+                            <label class="form-label" for="add-slug">Slug</label>
+                            <input type="text" id="add-slug" name="slug" class="form-input" placeholder="apple (auto si vide)" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label" for="add-logo_url">URL du logo</label>
+                        <input type="url" id="add-logo_url" name="logo_url" class="form-input" placeholder="https://..." />
+                    </div>
+                    <div>
+                        <label class="form-label" for="add-description">Description</label>
+                        <textarea id="add-description" name="description" rows="2" class="form-input"></textarea>
+                    </div>
                 </div>
-                <div>
-                    <label class="form-label" for="add-slug">Slug</label>
-                    <input type="text" id="add-slug" name="slug" class="form-input" placeholder="apple (auto si vide)" />
+                
+                <!-- Catégories liées -->
+                <div class="space-y-4 pt-4 border-t">
+                    <h4 class="font-medium text-gray-900 border-b pb-2">Catégories liées</h4>
+                    <p class="text-sm text-gray-500">Sélectionnez les catégories dans lesquelles cette marque apparaît.</p>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        {categories.map(cat => (
+                            <label class="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    name="category_ids" 
+                                    value={cat.id}
+                                    class="w-4 h-4 text-indigo-600 rounded border-gray-300"
+                                />
+                                <span class="text-lg">{cat.icon}</span>
+                                <span class="text-gray-700">{cat.name}</span>
+                            </label>
+                        ))}
+                    </div>
                 </div>
-                <div>
-                    <label class="form-label" for="add-logo_url">URL du logo</label>
-                    <input type="url" id="add-logo_url" name="logo_url" class="form-input" placeholder="https://..." />
-                </div>
-                <div>
-                    <label class="form-label" for="add-description">Description</label>
-                    <textarea id="add-description" name="description" rows="3" class="form-input"></textarea>
-                </div>
-                <div class="flex gap-3 pt-4">
-                    <button type="submit" class="btn-primary flex-1">Créer</button>
-                    <button type="button" class="btn-secondary flex-1" onclick="document.getElementById('add-modal')?.classList.add('hidden')">Annuler</button>
+                
+                <div class="flex gap-3 pt-4 border-t">
+                    <button type="submit" class="btn-primary flex-1">Créer la marque</button>
+                    <button type="button" class="btn-secondary flex-1" onclick="closeModal('add-modal')">Annuler</button>
                 </div>
             </form>
         </div>
@@ -189,17 +238,18 @@ const editBrandCategoryIds = editBrand ? editBrand.linkedCategories.map(c => c.i
 
     <!-- Modal Édition -->
     {editBrand && (
-        <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div id="edit-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="modal-content bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
                 <div class="p-6 border-b flex items-center justify-between">
                     <h3 class="text-lg font-semibold">Modifier la marque : {editBrand.name}</h3>
                     <a href="/admin/brands" class="text-gray-400 hover:text-gray-600">✕</a>
                 </div>
                 
-                <div class="p-6 space-y-6">
-                    <!-- Formulaire infos de base -->
-                    <form method="POST" action={`/api/admin/brands/${editBrand.id}`} class="space-y-4">
-                        <input type="hidden" name="_method" value="PUT" />
+                <form method="POST" action={`/api/admin/brands/${editBrand.id}`} class="p-6 space-y-6">
+                    <input type="hidden" name="_method" value="PUT" />
+                    
+                    <!-- Informations de base -->
+                    <div class="space-y-4">
                         <h4 class="font-medium text-gray-900 border-b pb-2">Informations</h4>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -219,11 +269,10 @@ const editBrandCategoryIds = editBrand ? editBrand.linkedCategories.map(c => c.i
                             <label class="form-label" for="edit-description">Description</label>
                             <textarea id="edit-description" name="description" rows="2" class="form-input">{editBrand.description || ''}</textarea>
                         </div>
-                        <button type="submit" class="btn-primary">Enregistrer les informations</button>
-                    </form>
+                    </div>
                     
-                    <!-- Formulaire liaisons catégories -->
-                    <form method="POST" action={`/api/admin/brands/${editBrand.id}/categories`} class="space-y-4 pt-4 border-t">
+                    <!-- Catégories liées -->
+                    <div class="space-y-4 pt-4 border-t">
                         <h4 class="font-medium text-gray-900 border-b pb-2">Catégories liées</h4>
                         <p class="text-sm text-gray-500">Sélectionnez les catégories dans lesquelles cette marque apparaît.</p>
                         
@@ -242,15 +291,59 @@ const editBrandCategoryIds = editBrand ? editBrand.linkedCategories.map(c => c.i
                                 </label>
                             ))}
                         </div>
-                        
-                        <button type="submit" class="btn-secondary">Mettre à jour les catégories</button>
-                    </form>
-                    
-                    <div class="flex justify-end pt-4 border-t">
-                        <a href="/admin/brands" class="btn-secondary">Fermer</a>
                     </div>
-                </div>
+                    
+                    <div class="flex gap-3 pt-4 border-t">
+                        <button type="submit" class="btn-primary flex-1">Enregistrer</button>
+                        <a href="/admin/brands" class="btn-secondary flex-1 text-center">Annuler</a>
+                    </div>
+                </form>
             </div>
         </div>
     )}
 </AdminLayout>
+
+<script>
+// Fonction pour fermer un modal
+function closeModal(modalId: string) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Rendre la fonction accessible globalement
+(window as any).closeModal = closeModal;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const modalOverlays = document.querySelectorAll('.modal-overlay') as NodeListOf<HTMLElement>;
+    
+    // Fermeture par clic sur l'overlay (extérieur du contenu)
+    modalOverlays.forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                if (overlay.id === 'edit-modal') {
+                    window.location.href = '/admin/brands';
+                } else {
+                    overlay.classList.add('hidden');
+                }
+            }
+        });
+    });
+    
+    // Fermeture par Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            modalOverlays.forEach(overlay => {
+                if (!overlay.classList.contains('hidden')) {
+                    if (overlay.id === 'edit-modal') {
+                        window.location.href = '/admin/brands';
+                    } else {
+                        overlay.classList.add('hidden');
+                    }
+                }
+            });
+        }
+    });
+});
+</script>

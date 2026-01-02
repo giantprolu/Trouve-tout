@@ -1003,6 +1003,82 @@ export async function setProductTypeBrands(productTypeId: string, brandIds: stri
 }
 
 // ============================================
+// LIAISONS TYPE DE PRODUIT <-> CATÉGORIES (MULTI-CATÉGORIES)
+// ============================================
+
+export async function getProductTypeCategories(productTypeId: string): Promise<DbCategory[]> {
+    const { data, error } = await supabase
+        .from('product_type_categories')
+        .select('category_id, categories(*)')
+        .eq('product_type_id', productTypeId)
+        .order('display_order', { ascending: true });
+    
+    if (error) {
+        // Table might not exist yet - fallback to category_id
+        console.log('Table product_type_categories non disponible, utilisation du fallback');
+        const { data: pt, error: ptError } = await supabase
+            .from('product_types')
+            .select('category_id, categories(*)')
+            .eq('id', productTypeId)
+            .single();
+        
+        if (ptError || !pt) return [];
+        return [(pt as any).categories].filter(Boolean);
+    }
+    
+    return (data || []).map((item: any) => item.categories).filter(Boolean);
+}
+
+export async function setProductTypeCategories(productTypeId: string, categoryIds: string[]): Promise<boolean> {
+    console.log('=== setProductTypeCategories appelé ===');
+    console.log('productTypeId:', productTypeId);
+    console.log('categoryIds:', categoryIds);
+    
+    // Supprimer toutes les liaisons existantes
+    const { error: deleteError } = await supabase
+        .from('product_type_categories')
+        .delete()
+        .eq('product_type_id', productTypeId);
+    
+    if (deleteError) {
+        console.error('Erreur suppression liaisons product_type-category:', deleteError);
+        // La table n'existe peut-être pas encore
+        return false;
+    }
+    console.log('Anciennes liaisons supprimées');
+    
+    // Créer les nouvelles liaisons
+    if (categoryIds.length > 0) {
+        const insertData = categoryIds.map((categoryId, index) => ({
+            product_type_id: productTypeId,
+            category_id: categoryId,
+            display_order: index
+        }));
+        console.log('Données à insérer:', insertData);
+        
+        const { error: insertError } = await supabase
+            .from('product_type_categories')
+            .insert(insertData);
+        
+        if (insertError) {
+            console.error('Erreur création liaisons product_type-category:', insertError);
+            return false;
+        }
+        console.log('Nouvelles liaisons créées avec succès');
+    }
+    
+    // Mettre à jour aussi le category_id principal (première catégorie)
+    if (categoryIds.length > 0) {
+        await supabase
+            .from('product_types')
+            .update({ category_id: categoryIds[0] })
+            .eq('id', productTypeId);
+    }
+    
+    return true;
+}
+
+// ============================================
 // CRUD TYPES DE PRODUITS (ADMIN)
 // ============================================
 

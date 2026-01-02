@@ -141,11 +141,11 @@ const editCategory = editId ? categoriesWithStats.find(c => c.id === editId) : n
     </div>
 
     <!-- Modal Ajout -->
-    <div id="add-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div id="add-modal" class="modal-overlay hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="modal-content bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b flex items-center justify-between">
                 <h3 class="text-lg font-semibold">Nouvelle catégorie</h3>
-                <button type="button" onclick="document.getElementById('add-modal')?.classList.add('hidden')" class="text-gray-400 hover:text-gray-600">✕</button>
+                <button type="button" onclick="closeModal('add-modal')" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <form method="POST" action="/api/admin/categories" class="p-6 space-y-4">
                 <div>
@@ -170,7 +170,7 @@ const editCategory = editId ? categoriesWithStats.find(c => c.id === editId) : n
                 </div>
                 <div class="flex gap-3 pt-4">
                     <button type="submit" class="btn-primary flex-1">Créer</button>
-                    <button type="button" class="btn-secondary flex-1" onclick="document.getElementById('add-modal')?.classList.add('hidden')">Annuler</button>
+                    <button type="button" class="btn-secondary flex-1" onclick="closeModal('add-modal')">Annuler</button>
                 </div>
             </form>
         </div>
@@ -178,8 +178,8 @@ const editCategory = editId ? categoriesWithStats.find(c => c.id === editId) : n
 
     <!-- Modal Édition -->
     {editCategory && (
-        <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div id="edit-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="modal-content bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
                 <div class="p-6 border-b flex items-center justify-between">
                     <h3 class="text-lg font-semibold">Modifier la catégorie</h3>
                     <a href="/admin/categories" class="text-gray-400 hover:text-gray-600">✕</a>
@@ -215,3 +215,48 @@ const editCategory = editId ? categoriesWithStats.find(c => c.id === editId) : n
         </div>
     )}
 </AdminLayout>
+
+<script>
+// Fonction pour fermer un modal
+function closeModal(modalId: string) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Rendre la fonction accessible globalement
+(window as any).closeModal = closeModal;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const modalOverlays = document.querySelectorAll('.modal-overlay') as NodeListOf<HTMLElement>;
+    
+    // Fermeture par clic sur l'overlay (extérieur du contenu)
+    modalOverlays.forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                if (overlay.id === 'edit-modal') {
+                    window.location.href = '/admin/categories';
+                } else {
+                    overlay.classList.add('hidden');
+                }
+            }
+        });
+    });
+    
+    // Fermeture par Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            modalOverlays.forEach(overlay => {
+                if (!overlay.classList.contains('hidden')) {
+                    if (overlay.id === 'edit-modal') {
+                        window.location.href = '/admin/categories';
+                    } else {
+                        overlay.classList.add('hidden');
+                    }
+                }
+            });
+        }
+    });
+});
+</script>

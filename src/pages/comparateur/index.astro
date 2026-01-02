@@ -1,0 +1,342 @@
+---
+export const prerender = false; // Page dynamique SSR
+
+import Layout from "../../layouts/Layout.astro";
+import ComparisonTable from "../../components/ComparisonTable.astro";
+import ProductVerdict from "../../components/ProductVerdict.astro";
+import AmazonCTA from "../../components/AmazonCTA.astro";
+import { supabase } from "../../lib/supabase";
+
+// Récupérer les paramètres
+const url = new URL(Astro.request.url);
+const productIds = url.searchParams.getAll('id').filter(id => id && id.trim() !== '');
+
+// Récupérer tous les produits avec leur type
+const { data: allProducts } = await supabase
+  .from('products')
+  .select(`
+    id,
+    name,
+    slug,
+    product_type_id,
+    brand:brands(name),
+    category:categories(name),
+    product_type:product_types(id, name, slug)
+  `)
+  .eq('is_active', true)
+  .order('name');
+
+// Si des produits sont sélectionnés, les récupérer en détail
+let selectedProducts: any[] = [];
+let fetchError: any = null;
+
+if (productIds.length > 0) {
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      id,
+      name,
+      slug,
+      summary,
+      verdict,
+      image_url,
+      image_alt,
+      amazon_url,
+      price_display,
+      position,
+      rating_quality,
+      rating_price,
+      rating_durability,
+      rating_reliability,
+      recommended_for,
+      not_recommended_for,
+      product_type_id,
+      brand:brands(name, slug),
+      category:categories(name, slug),
+      product_type:product_types(id, name, slug)
+    `)
+    .in('id', productIds);
+  
+  selectedProducts = data || [];
+  fetchError = error;
+}
+
+// Transformer les produits pour le tableau comparatif (max 4)
+const productsForTable = selectedProducts.slice(0, 4).map((p, index) => ({
+  name: p.name,
+  verdict: p.verdict || (index === 0 ? "Notre choix n°1" : "Alternative"),
+  forWhom: p.recommended_for?.join(', ') || "Tout le monde",
+  notForWhom: p.not_recommended_for?.join(', ') || "—",
+  amazonUrl: p.amazon_url,
+  imageUrl: p.image_url,
+  features: {
+    "Prix": p.price_display || "—",
+    "Qualité": p.rating_quality ? `${p.rating_quality}/5` : "—",
+    "Rapport Q/P": p.rating_price ? `${p.rating_price}/5` : "—",
+    "Durabilité": p.rating_durability ? `${p.rating_durability}/5` : "—",
+  }
+}));
+
+const features = ["Prix", "Qualité", "Rapport Q/P", "Durabilité"];
+
+// Validation : entre 2 et 4 produits
+const validCount = selectedProducts.length >= 2 && selectedProducts.length <= 4;
+const hasProducts = selectedProducts.length > 0;
+const errorMessage = hasProducts && selectedProducts.length < 2 
+  ? "Sélectionnez au moins 2 produits pour comparer" 
+  : null;
+
+// Grouper les produits par type pour le JS
+const productsByType = (allProducts || []).reduce((acc: any, p: any) => {
+  const typeId = p.product_type_id || 'other';
+  if (!acc[typeId]) acc[typeId] = [];
+  acc[typeId].push({
+    id: p.id,
+    name: p.name,
+    brand: p.brand?.name || '',
+    typeName: p.product_type?.name || 'Autre'
+  });
+  return acc;
+}, {});
+
+// Grouper pour l'affichage initial (par catégorie > type)
+const productsGrouped = (allProducts || []).reduce((acc: any, p: any) => {
+  const cat = p.category?.name || "Autres";
+  const type = p.product_type?.name || "Autres";
+  const key = `${cat} › ${type}`;
+  if (!acc[key]) acc[key] = [];
+  acc[key].push(p);
+  return acc;
+}, {});
+---
+
+<Layout title="Comparateur de produits | Trouve-Tout" description="Comparez jusqu'à 4 produits côte à côte pour faire le meilleur choix.">
+  <main class="max-w-4xl mx-auto px-4 py-8">
+    <h1 class="text-2xl md:text-3xl font-bold mb-2">🔍 Comparateur de produits</h1>
+    <p class="text-gray-600 mb-6">Sélectionnez entre 2 et 4 produits du même type pour les comparer.</p>
+
+    <!-- Sélecteur de produits -->
+    <section class="mb-8 bg-white border rounded-lg p-4 shadow-sm">
+      <h2 class="text-lg font-semibold mb-3">Choisissez vos produits à comparer</h2>
+      <p class="text-xs text-gray-500 mb-4" id="type-hint">
+        💡 Sélectionnez un premier produit, les autres sélecteurs afficheront uniquement les produits du même type.
+      </p>
+      
+      <form id="compare-form" method="GET" action="/comparateur" class="space-y-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((num, idx) => (
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">
+                Produit {num} {num <= 2 ? <span class="text-red-500">*</span> : <span class="text-gray-400">(opt.)</span>}
+              </label>
+              <select 
+                name="id" 
+                class="product-select w-full border border-gray-300 rounded-md px-2 py-2 text-xs md:text-sm focus:ring-2 focus:ring-blue-500"
+                data-index={idx}
+              >
+                <option value="" data-type="">-- Choisir --</option>
+                {Object.entries(productsGrouped).map(([group, products]: [string, any]) => (
+                  <optgroup label={group}>
+                    {products.map((p: any) => (
+                      <option 
+                        value={p.id} 
+                        data-type={p.product_type_id || ''}
+                        selected={productIds[idx] === p.id}
+                      >
+                        {p.brand?.name ? `${p.brand.name} ` : ''}{p.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+        
+        <div class="flex items-center gap-4">
+          <button 
+            type="submit" 
+            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-semibold transition-colors text-sm"
+          >
+            Comparer
+          </button>
+          <span class="text-xs text-gray-500">Minimum 2 produits du même type</span>
+        </div>
+      </form>
+    </section>
+
+    {errorMessage && (
+      <div class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
+        ⚠️ {errorMessage}
+      </div>
+    )}
+
+    {!hasProducts && (
+      <div class="text-center py-12 bg-gray-50 rounded-lg">
+        <div class="text-4xl mb-4">📊</div>
+        <p class="text-gray-600 text-lg mb-2">Commencez votre comparaison</p>
+        <p class="text-gray-500 text-sm">Sélectionnez au moins 2 produits du même type ci-dessus</p>
+      </div>
+    )}
+
+    {validCount ? (
+      <>
+        <!-- Tableau comparatif -->
+        <section class="mb-10">
+          <h2 class="text-xl font-semibold mb-4">📊 Tableau comparatif</h2>
+          <ComparisonTable products={productsForTable} features={features} />
+        </section>
+
+        <!-- Verdicts détaillés -->
+        <section class="mb-10">
+          <h2 class="text-xl font-semibold mb-4">🏆 Détails des produits</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {selectedProducts.map((product, index) => (
+              <div class="border rounded-lg p-4 bg-white shadow-sm">
+                <div class="flex gap-4 mb-3">
+                  {product.image_url && (
+                    <img 
+                      src={product.image_url} 
+                      alt={product.image_alt || product.name}
+                      class="w-20 h-20 object-contain rounded"
+                    />
+                  )}
+                  <div>
+                    <h3 class="text-lg font-semibold">{product.name}</h3>
+                    <p class="text-sm text-gray-500">{product.brand?.name}</p>
+                    {product.price_display && (
+                      <p class="text-lg font-bold text-green-600">{product.price_display}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <p class="text-sm text-gray-700 mb-3">{product.summary}</p>
+                
+                <ProductVerdict 
+                  verdict={product.verdict || (index === 0 ? "Notre choix n°1" : "Alternative")} 
+                  forWhom={product.recommended_for?.join(', ') || "Tout le monde"} 
+                  notForWhom={product.not_recommended_for?.join(', ') || "—"}
+                  isTopPick={index === 0}
+                />
+                
+                <div class="mt-3">
+                  <AmazonCTA url={product.amazon_url} label="Voir sur Amazon" size="md" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <!-- Partager la comparaison -->
+        <section class="bg-gray-50 rounded-lg p-6 text-center">
+          <p class="text-gray-600 mb-3 text-sm">
+            📤 Partagez cette comparaison avec vos proches
+          </p>
+          <div class="flex justify-center gap-3 flex-wrap">
+            <button 
+              id="copy-link"
+              class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              📋 Copier le lien
+            </button>
+          </div>
+          <p class="text-gray-500 mt-4 text-xs">
+            💡 Les liens vers Amazon sont des liens affiliés. Cela ne change pas le prix pour vous.
+          </p>
+        </section>
+      </>
+    ) : null}
+  </main>
+</Layout>
+
+<script>
+  // Copier le lien
+  document.getElementById('copy-link')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(window.location.href);
+    const btn = document.getElementById('copy-link');
+    if (btn) {
+      btn.textContent = '✅ Lien copié !';
+      setTimeout(() => { btn.textContent = '📋 Copier le lien'; }, 2000);
+    }
+  });
+
+  // Filtrage dynamique des produits par type
+  const selects = document.querySelectorAll('.product-select') as NodeListOf<HTMLSelectElement>;
+  let currentTypeId: string | null = null;
+
+  function getSelectedType(): string | null {
+    for (const select of selects) {
+      const selectedOption = select.options[select.selectedIndex];
+      if (selectedOption && selectedOption.value) {
+        return selectedOption.dataset.type || null;
+      }
+    }
+    return null;
+  }
+
+  function filterSelectsByType(typeId: string | null) {
+    selects.forEach((select, index) => {
+      const currentValue = select.value;
+      
+      Array.from(select.options).forEach(option => {
+        if (!option.value) {
+          // Option "-- Choisir --" toujours visible
+          option.style.display = '';
+          return;
+        }
+        
+        const optionType = option.dataset.type || '';
+        
+        if (!typeId || optionType === typeId) {
+          option.style.display = '';
+        } else {
+          option.style.display = 'none';
+          // Si l'option cachée est sélectionnée, réinitialiser
+          if (option.value === currentValue) {
+            select.value = '';
+          }
+        }
+      });
+
+      // Aussi masquer les optgroups vides
+      const optgroups = select.querySelectorAll('optgroup');
+      optgroups.forEach(optgroup => {
+        const visibleOptions = Array.from(optgroup.querySelectorAll('option')).filter(
+          opt => (opt as HTMLOptionElement).style.display !== 'none'
+        );
+        (optgroup as HTMLOptGroupElement).style.display = visibleOptions.length > 0 ? '' : 'none';
+      });
+    });
+  }
+
+  function updateFilters() {
+    const newTypeId = getSelectedType();
+    
+    if (newTypeId !== currentTypeId) {
+      currentTypeId = newTypeId;
+      filterSelectsByType(currentTypeId);
+      
+      // Mettre à jour le hint
+      const hint = document.getElementById('type-hint');
+      if (hint) {
+        if (currentTypeId) {
+          const firstSelect = selects[0];
+          const selectedOption = firstSelect.options[firstSelect.selectedIndex];
+          const typeName = selectedOption?.closest('optgroup')?.label || 'ce type';
+          hint.innerHTML = `✅ Affichage filtré : <strong>${typeName}</strong> uniquement. <a href="/comparateur" class="text-blue-600 hover:underline">Réinitialiser</a>`;
+        } else {
+          hint.innerHTML = '💡 Sélectionnez un premier produit, les autres sélecteurs afficheront uniquement les produits du même type.';
+        }
+      }
+    }
+  }
+
+  // Écouter les changements
+  selects.forEach(select => {
+    select.addEventListener('change', updateFilters);
+  });
+
+  // Initialiser au chargement (si des produits sont déjà sélectionnés)
+  updateFilters();
+</script>

@@ -4,7 +4,7 @@
  * GET /api/admin/brands - Lister les marques
  */
 import type { APIRoute } from 'astro';
-import { createBrand, getBrands, generateSlug } from '../../../../lib/db';
+import { createBrand, getBrands, generateSlug, setBrandCategories } from '../../../../lib/db';
 
 export const POST: APIRoute = async ({ request, redirect }) => {
     try {
@@ -14,6 +14,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
         const slug = (formData.get('slug') as string) || generateSlug(name);
         const description = formData.get('description') as string | null;
         const logo_url = formData.get('logo_url') as string | null;
+        const categoryIds = formData.getAll('category_ids') as string[];
         
         // Validation
         if (!name) {
@@ -29,6 +30,11 @@ export const POST: APIRoute = async ({ request, redirect }) => {
         
         if (!brand) {
             return redirect('/admin/brands?error=Erreur lors de la création');
+        }
+        
+        // Lier les catégories si des catégories ont été sélectionnées
+        if (categoryIds.length > 0) {
+            await setBrandCategories(brand.id, categoryIds);
         }
         
         return redirect('/admin/brands?success=Marque créée avec succès');

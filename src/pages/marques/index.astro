@@ -1,16 +1,29 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import BrandCard from '../../components/BrandCard.astro';
-import { brands, categories, getCategoryBySlug } from '../../data/products';
+import { getCategories, getBrandsByCategory, type DbCategory, type DbBrand } from '../../lib/db';
 
 const title = "Toutes les Marques | Trouve-Tout";
 const description = "Découvrez toutes les marques que nous recommandons. De Apple à Dyson, trouvez les meilleurs produits par marque.";
 
+// Récupérer les catégories depuis Supabase
+const categories = await getCategories();
+
+// Interface pour les marques avec categorySlug
+interface BrandWithCategory extends DbBrand {
+    categorySlug: string;
+}
+
 // Grouper les marques par catégorie
-const brandsByCategory = categories.map(cat => ({
-    category: cat,
-    brands: brands.filter(b => b.category === cat.slug)
-}));
+const brandsByCategory: { category: DbCategory; brands: BrandWithCategory[] }[] = await Promise.all(
+    categories.map(async (cat) => {
+        const catBrands = await getBrandsByCategory(cat.slug);
+        return {
+            category: cat,
+            brands: catBrands.map(b => ({ ...b, categorySlug: cat.slug }))
+        };
+    })
+);
 ---
 
 <Layout title={title} description={description}>

@@ -1,4 +1,7 @@
 ---
+import CompareFloatingBar from "../components/CompareFloatingBar.astro";
+import { getCategories } from "../lib/db";
+
 interface Props {
 	title?: string;
 	description?: string;
@@ -11,13 +14,8 @@ const {
 	canonical = Astro.url.href
 } = Astro.props;
 
-const categories = [
-	{ name: "High-Tech", slug: "high-tech", icon: "💻" },
-	{ name: "Maison", slug: "maison", icon: "🏠" },
-	{ name: "Cuisine", slug: "cuisine", icon: "🍳" },
-	{ name: "Sport", slug: "sport", icon: "⚽" },
-	{ name: "Beauté", slug: "beaute", icon: "💄" },
-];
+// Charger les catégories depuis Supabase
+const categories = await getCategories();
 ---
 
 <!doctype html>
@@ -74,6 +72,7 @@ const categories = [
 							</div>
 						</div>
 						<a href="/marques" class="px-3 py-2 text-gray-700 hover:text-primary-600 transition-colors">Marques</a>
+						<a href="/comparateur" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium">🔍 Comparateur</a>
 						<a href="/choix-express" class="px-4 py-2 bg-secondary-500 text-white rounded-lg hover:bg-secondary-600 transition-colors font-medium">⚡ Choix Express</a>
 						<a href="/cadeau" class="px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors font-medium">🎁 Mode Cadeau</a>
 						<a href="/blog" class="px-3 py-2 text-gray-700 hover:text-primary-600 transition-colors">Blog</a>
@@ -105,6 +104,7 @@ const categories = [
 					))}
 					<hr class="my-2" />
 					<a href="/marques" class="block px-3 py-2 text-gray-700 hover:bg-primary-50 rounded-lg">Marques</a>
+					<a href="/comparateur" class="block px-3 py-2 text-blue-600 font-medium hover:bg-blue-50 rounded-lg">🔍 Comparateur</a>
 					<a href="/choix-express" class="block px-3 py-2 text-secondary-600 font-medium hover:bg-secondary-50 rounded-lg">⚡ Choix Express</a>
 					<a href="/cadeau" class="block px-3 py-2 text-pink-600 font-medium hover:bg-pink-50 rounded-lg">🎁 Mode Cadeau</a>
 					<a href="/blog" class="block px-3 py-2 text-gray-700 hover:bg-primary-50 rounded-lg">Blog</a>
@@ -156,6 +156,9 @@ const categories = [
 				</div>
 			</div>
 		</footer>
+
+		<!-- Barre flottante du comparateur -->
+		<CompareFloatingBar />
 
 		<script>
 			const mobileMenuBtn = document.getElementById('mobile-menu-btn');

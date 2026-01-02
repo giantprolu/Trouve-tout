@@ -1,0 +1,2 @@
+- dans la navbar les route du choix express et du mode cadeau ne sont pas bonne
+- sur la page blog il faut que le filtre de categorie soit cliquable

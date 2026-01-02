@@ -1,0 +1,126 @@
+---
+/**
+ * ComparisonTable - Tableau comparatif responsive (2-4 produits)
+ * 
+ * Design en colonnes : chaque produit = 1 colonne
+ * Pas de scroll horizontal - tout s'adapte à l'écran
+ */
+
+interface Product {
+  name: string;
+  verdict?: string;
+  forWhom?: string;
+  notForWhom?: string;
+  amazonUrl: string;
+  imageUrl?: string;
+  features: Record<string, string>;
+}
+
+interface Props {
+  products: Product[];
+  features: string[];
+}
+
+const { products, features } = Astro.props;
+
+// Limiter entre 2 et 4 produits
+const displayProducts = products.slice(0, 4);
+const productCount = displayProducts.length;
+
+// Classes de grille selon le nombre de produits
+const gridCols = {
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-2 md:grid-cols-4'
+}[productCount] || 'grid-cols-2';
+
+// Couleurs des verdicts
+const getVerdictStyle = (verdict: string = '', index: number) => {
+  if (index === 0) return 'bg-green-500 text-white';
+  const v = verdict.toLowerCase();
+  if (v.includes('rapport') || v.includes('qualité')) return 'bg-blue-500 text-white';
+  if (v.includes('budget') || v.includes('économique')) return 'bg-yellow-500 text-black';
+  return 'bg-gray-500 text-white';
+};
+---
+
+<div class="w-full">
+  <!-- En-têtes produits (colonnes) -->
+  <div class={`grid ${gridCols} gap-2 md:gap-4 mb-4`}>
+    {displayProducts.map((product, index) => (
+      <div class={`text-center p-3 md:p-4 rounded-t-lg ${index === 0 ? 'bg-green-50 border-2 border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
+        {product.imageUrl && (
+          <img 
+            src={product.imageUrl} 
+            alt={product.name}
+            class="w-12 h-12 md:w-16 md:h-16 object-contain mx-auto mb-2"
+            loading="lazy"
+          />
+        )}
+        <h3 class="font-bold text-xs md:text-sm lg:text-base line-clamp-2">{product.name}</h3>
+        {index === 0 && <span class="text-xs text-green-600">🏆 N°1</span>}
+      </div>
+    ))}
+  </div>
+
+  <!-- Lignes de caractéristiques -->
+  <div class="space-y-1">
+    {features.map((feature, featureIndex) => (
+      <div class={`grid ${gridCols} gap-2 md:gap-4 ${featureIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
+        {displayProducts.map((product, index) => (
+          <div class={`p-2 md:p-3 text-center border-l border-r ${index === 0 ? 'border-green-200' : 'border-gray-200'}`}>
+            <span class="block text-[10px] md:text-xs text-gray-500 mb-0.5">{feature}</span>
+            <span class="block text-xs md:text-sm font-medium">{product.features[feature] || '—'}</span>
+          </div>
+        ))}
+      </div>
+    ))}
+  </div>
+
+  <!-- Verdict -->
+  <div class={`grid ${gridCols} gap-2 md:gap-4 mt-1`}>
+    {displayProducts.map((product, index) => (
+      <div class={`p-2 md:p-3 text-center border-l border-r ${index === 0 ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+        <span class={`inline-block px-2 py-1 rounded text-[10px] md:text-xs font-bold ${getVerdictStyle(product.verdict, index)}`}>
+          {product.verdict || 'Alternative'}
+        </span>
+      </div>
+    ))}
+  </div>
+
+  <!-- Pour qui / Pas pour qui -->
+  <div class={`grid ${gridCols} gap-2 md:gap-4 mt-1`}>
+    {displayProducts.map((product, index) => (
+      <div class={`p-2 md:p-3 text-left border-l border-r ${index === 0 ? 'border-green-200' : 'border-gray-200'}`}>
+        {product.forWhom && (
+          <div class="mb-2">
+            <span class="text-[10px] md:text-xs text-green-600 font-medium">✅ Pour :</span>
+            <p class="text-[10px] md:text-xs text-gray-700 line-clamp-2">{product.forWhom}</p>
+          </div>
+        )}
+        {product.notForWhom && (
+          <div>
+            <span class="text-[10px] md:text-xs text-red-600 font-medium">❌ Pas pour :</span>
+            <p class="text-[10px] md:text-xs text-gray-700 line-clamp-2">{product.notForWhom}</p>
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+
+  <!-- Boutons Amazon -->
+  <div class={`grid ${gridCols} gap-2 md:gap-4 mt-1`}>
+    {displayProducts.map((product, index) => (
+      <div class={`p-2 md:p-3 text-center rounded-b-lg ${index === 0 ? 'bg-green-50 border-2 border-t-0 border-green-200' : 'bg-gray-50 border border-t-0 border-gray-200'}`}>
+        <a 
+          href={product.amazonUrl} 
+          target="_blank" 
+          rel="nofollow noopener sponsored" 
+          class="inline-block w-full bg-yellow-400 hover:bg-yellow-500 text-black px-2 py-1.5 md:px-3 md:py-2 rounded text-[10px] md:text-xs font-semibold shadow-sm transition-all"
+        >
+          Voir sur Amazon
+        </a>
+      </div>
+    ))}
+  </div>
+</div>

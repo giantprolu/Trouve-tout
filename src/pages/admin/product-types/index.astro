@@ -4,13 +4,22 @@
  * Route: /admin/product-types
  */
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getProductTypes, getProducts, getCategories, getBrands, getProductTypeBrands, type DbProductType, type DbBrand } from '../../../lib/db';
+import { getProductTypes, getProducts, getCategories, getBrands, getProductTypeBrands, getBrandCategories, type DbProductType, type DbBrand, type DbCategory } from '../../../lib/db';
 
 // Récupérer les données depuis Supabase
 const productTypes = await getProductTypes();
 const products = await getProducts();
 const categories = await getCategories();
 const brands = await getBrands();
+
+// Enrichir les marques avec leurs catégories liées (pour le filtre)
+interface BrandWithCategories extends DbBrand {
+    linkedCategories: DbCategory[];
+}
+const brandsWithStats: BrandWithCategories[] = await Promise.all(brands.map(async (brand) => {
+    const linkedCategories = await getBrandCategories(brand.id);
+    return { ...brand, linkedCategories };
+}));
 
 // Message de succès/erreur depuis URL
 const url = new URL(Astro.request.url);
@@ -46,6 +55,9 @@ let productTypesWithStats: ProductTypeWithStats[] = await Promise.all(productTyp
     };
 }));
 
+// Sauvegarder la liste complète pour la recherche d'édition
+const allProductTypesWithStats = [...productTypesWithStats];
+
 // Appliquer le filtre de catégorie
 if (categoryFilter) {
     const cat = categories.find(c => c.slug === categoryFilter);
@@ -68,8 +80,8 @@ const groupedByCategory = productTypesWithStats.reduce((acc, pt) => {
     return acc;
 }, {} as Record<string, ProductTypeWithStats[]>);
 
-// Trouver le type à éditer
-const editProductType = editId ? productTypesWithStats.find(pt => pt.id === editId) : null;
+// Trouver le type à éditer (dans la liste complète, pas filtrée)
+const editProductType = editId ? allProductTypesWithStats.find(pt => pt.id === editId) : null;
 const editProductTypeBrandIds = editProductType ? editProductType.linkedBrands.map(b => b.id) : [];
 ---
 
@@ -201,11 +213,11 @@ const editProductTypeBrandIds = editProductType ? editProductType.linkedBrands.m
     </div>
 
     <!-- Modal Ajout -->
-    <div id="add-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div id="add-modal" class="modal-overlay hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="modal-content bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b flex items-center justify-between">
                 <h3 class="text-lg font-semibold">Nouveau type de produit</h3>
-                <button type="button" onclick="document.getElementById('add-modal')?.classList.add('hidden')" class="text-gray-400 hover:text-gray-600">✕</button>
+                <button type="button" onclick="closeModal('add-modal')" class="text-gray-400 hover:text-gray-600">✕</button>
             </div>
             <form method="POST" action="/api/admin/product-types" class="p-6 space-y-4">
                 <div>
@@ -225,17 +237,20 @@ const editProductTypeBrandIds = editProductType ? editProductType.linkedBrands.m
                     <select id="add-category_id" name="category_id" required class="form-select">
                         <option value="">Sélectionner...</option>
                         {categories.map(cat => (
-                            <option value={cat.id}>{cat.icon} {cat.name}</option>
+                            <option value={cat.id} data-slug={cat.slug}>{cat.icon} {cat.name}</option>
                         ))}
                     </select>
                 </div>
                 <div>
                     <label class="form-label" for="add-brand_id">Marque principale <span class="text-red-500">*</span></label>
                     <select id="add-brand_id" name="brand_id" required class="form-select">
-                        <option value="">Sélectionner...</option>
-                        {brands.map(brand => (
-                            <option value={brand.id}>{brand.name}</option>
-                        ))}
+                        <option value="">Sélectionner d'abord une catégorie...</option>
+                        {brandsWithStats.map(brand => {
+                            const catIds = brand.linkedCategories.map(c => c.id).join(',');
+                            return (
+                                <option value={brand.id} data-categories={catIds} class="add-brand-option" style="display: none;">{brand.name}</option>
+                            );
+                        })}
                     </select>
                     <p class="text-xs text-gray-500 mt-1">Vous pourrez ajouter d'autres marques après la création.</p>
                 </div>
@@ -245,7 +260,7 @@ const editProductTypeBrandIds = editProductType ? editProductType.linkedBrands.m
                 </div>
                 <div class="flex gap-3 pt-4">
                     <button type="submit" class="btn-primary flex-1">Créer</button>
-                    <button type="button" class="btn-secondary flex-1" onclick="document.getElementById('add-modal')?.classList.add('hidden')">Annuler</button>
+                    <button type="button" class="btn-secondary flex-1" onclick="closeModal('add-modal')">Annuler</button>
                 </div>
             </form>
         </div>
@@ -253,17 +268,18 @@ const editProductTypeBrandIds = editProductType ? editProductType.linkedBrands.m
 
     <!-- Modal Édition -->
     {editProductType && (
-        <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div id="edit-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="modal-content bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
                 <div class="p-6 border-b flex items-center justify-between">
                     <h3 class="text-lg font-semibold">Modifier : {editProductType.icon} {editProductType.name}</h3>
                     <a href="/admin/product-types" class="text-gray-400 hover:text-gray-600">✕</a>
                 </div>
                 
-                <div class="p-6 space-y-6">
-                    <!-- Formulaire infos de base -->
-                    <form method="POST" action={`/api/admin/product-types/${editProductType.id}`} class="space-y-4">
-                        <input type="hidden" name="_method" value="PUT" />
+                <form method="POST" action={`/api/admin/product-types/${editProductType.id}`} class="p-6 space-y-6">
+                    <input type="hidden" name="_method" value="PUT" />
+                    
+                    <!-- Informations de base -->
+                    <div class="space-y-4">
                         <h4 class="font-medium text-gray-900 border-b pb-2">Informations</h4>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -301,37 +317,173 @@ const editProductTypeBrandIds = editProductType ? editProductType.linkedBrands.m
                             <label class="form-label" for="edit-description">Description</label>
                             <textarea id="edit-description" name="description" rows="2" class="form-input">{editProductType.description || ''}</textarea>
                         </div>
-                        <button type="submit" class="btn-primary">Enregistrer les informations</button>
-                    </form>
+                    </div>
                     
-                    <!-- Formulaire liaisons marques -->
-                    <form method="POST" action={`/api/admin/product-types/${editProductType.id}/brands`} class="space-y-4 pt-4 border-t">
+                    <!-- Marques associées -->
+                    <div class="space-y-4 pt-4 border-t">
                         <h4 class="font-medium text-gray-900 border-b pb-2">Marques associées</h4>
                         <p class="text-sm text-gray-500">Sélectionnez toutes les marques proposant ce type de produit.</p>
                         
-                        <div class="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
-                            {brands.map(brand => (
-                                <label class="flex items-center gap-2 p-2 border rounded hover:bg-gray-50 cursor-pointer text-sm">
-                                    <input 
-                                        type="checkbox" 
-                                        name="brand_ids" 
-                                        value={brand.id}
-                                        checked={editProductTypeBrandIds.includes(brand.id)}
-                                        class="w-4 h-4 text-indigo-600 rounded border-gray-300"
-                                    />
-                                    <span class="text-gray-700 truncate">{brand.name}</span>
-                                </label>
-                            ))}
+                        <!-- Filtre par catégorie -->
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-gray-600">Filtrer par catégorie :</label>
+                            <select id="brand-category-filter" class="form-select w-48 text-sm">
+                                <option value="">Toutes les marques</option>
+                                {categories.map(cat => (
+                                    <option value={cat.id}>{cat.icon} {cat.name}</option>
+                                ))}
+                            </select>
+                            <span id="brand-count" class="text-xs text-gray-400"></span>
                         </div>
                         
-                        <button type="submit" class="btn-secondary">Mettre à jour les marques</button>
-                    </form>
-                    
-                    <div class="flex justify-end pt-4 border-t">
-                        <a href="/admin/product-types" class="btn-secondary">Fermer</a>
+                        <div class="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto" id="brands-list">
+                            {brands.map(brand => {
+                                const brandCats = brandsWithStats.find(b => b.id === brand.id)?.linkedCategories || [];
+                                const catIds = brandCats.map(c => c.id).join(',');
+                                return (
+                                    <label class="brand-item flex items-center gap-2 p-2 border rounded hover:bg-gray-50 cursor-pointer text-sm" data-categories={catIds}>
+                                        <input 
+                                            type="checkbox" 
+                                            name="brand_ids" 
+                                            value={brand.id}
+                                            checked={editProductTypeBrandIds.includes(brand.id)}
+                                            class="w-4 h-4 text-indigo-600 rounded border-gray-300"
+                                        />
+                                        <span class="text-gray-700 truncate">{brand.name}</span>
+                                        {brandCats.length > 0 && (
+                                            <span class="text-xs text-gray-400 ml-auto">{brandCats.map(c => c.icon).join('')}</span>
+                                        )}
+                                    </label>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
+                    
+                    <div class="flex gap-3 pt-4 border-t">
+                        <button type="submit" class="btn-primary flex-1">Enregistrer</button>
+                        <a href="/admin/product-types" class="btn-secondary flex-1 text-center">Annuler</a>
+                    </div>
+                </form>
             </div>
         </div>
     )}
 </AdminLayout>
+
+<script>
+// Fonction pour fermer un modal
+function closeModal(modalId: string) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// Rendre la fonction accessible globalement
+(window as any).closeModal = closeModal;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // ==========================================
+    // Fermeture des modals par Escape ou clic extérieur
+    // ==========================================
+    const modalOverlays = document.querySelectorAll('.modal-overlay') as NodeListOf<HTMLElement>;
+    
+    // Fermeture par clic sur l'overlay (extérieur du contenu)
+    modalOverlays.forEach(overlay => {
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                if (overlay.id === 'edit-modal') {
+                    window.location.href = '/admin/product-types';
+                } else {
+                    overlay.classList.add('hidden');
+                }
+            }
+        });
+    });
+    
+    // Fermeture par Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            modalOverlays.forEach(overlay => {
+                if (!overlay.classList.contains('hidden')) {
+                    if (overlay.id === 'edit-modal') {
+                        window.location.href = '/admin/product-types';
+                    } else {
+                        overlay.classList.add('hidden');
+                    }
+                }
+            });
+        }
+    });
+    
+    // ==========================================
+    // Filtre dynamique des marques par catégorie (modal ajout)
+    // ==========================================
+    const addCategorySelect = document.getElementById('add-category_id') as HTMLSelectElement;
+    const addBrandSelect = document.getElementById('add-brand_id') as HTMLSelectElement;
+    const addBrandOptions = addBrandSelect?.querySelectorAll('.add-brand-option') as NodeListOf<HTMLOptionElement>;
+    
+    if (addCategorySelect && addBrandSelect && addBrandOptions) {
+        addCategorySelect.addEventListener('change', () => {
+            const selectedCategoryId = addCategorySelect.value;
+            
+            // Reset brand select
+            addBrandSelect.value = '';
+            
+            // Show/hide brand options based on category
+            addBrandOptions.forEach(option => {
+                const categories = option.dataset.categories || '';
+                const categoryIds = categories.split(',').filter(Boolean);
+                
+                if (!selectedCategoryId || categoryIds.includes(selectedCategoryId)) {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+            
+            // Update placeholder
+            const firstOption = addBrandSelect.querySelector('option:first-child');
+            if (firstOption) {
+                firstOption.textContent = selectedCategoryId 
+                    ? 'Sélectionner une marque...' 
+                    : 'Sélectionner d\'abord une catégorie...';
+            }
+        });
+    }
+    
+    // ==========================================
+    // Filtre dynamique des marques par catégorie (modal édition)
+    // ==========================================
+    const filter = document.getElementById('brand-category-filter') as HTMLSelectElement;
+    const brandItems = document.querySelectorAll('.brand-item') as NodeListOf<HTMLElement>;
+    const countSpan = document.getElementById('brand-count');
+    
+    if (!filter || !brandItems.length) return;
+    
+    function updateFilter() {
+        const selectedCategoryId = filter.value;
+        let visibleCount = 0;
+        
+        brandItems.forEach(item => {
+            const categories = item.dataset.categories || '';
+            const categoryIds = categories.split(',').filter(Boolean);
+            
+            if (!selectedCategoryId || categoryIds.includes(selectedCategoryId)) {
+                item.style.display = '';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        if (countSpan) {
+            countSpan.textContent = selectedCategoryId 
+                ? `${visibleCount} marque(s) affichée(s)` 
+                : '';
+        }
+    }
+    
+    filter.addEventListener('change', updateFilter);
+    updateFilter(); // Initial call
+});
+</script>

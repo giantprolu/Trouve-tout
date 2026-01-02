@@ -1,6 +1,7 @@
 ---
 import type { Product } from '../types/db';
 import { formatPrice, getRatingStars, getTierLabel } from '../data/products';
+import AddToCompare from './AddToCompare.astro';
 
 interface Props {
     product: Product;
@@ -29,6 +30,10 @@ const tierInfo = product.tier ? getTierLabel(product.tier) : null;
                 {tierInfo.label}
             </span>
         )}
+        <!-- Bouton comparateur -->
+        <div class="absolute top-2 left-2">
+            <AddToCompare productId={product.id} productName={product.name} variant="icon" />
+        </div>
     </div>
 
     <!-- Content -->

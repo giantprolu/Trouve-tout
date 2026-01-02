@@ -1,0 +1,130 @@
+---
+/**
+ * AddToCompare - Bouton pour ajouter un produit au comparateur
+ * Stocke les IDs en localStorage et affiche un badge avec le nombre de produits
+ */
+
+interface Props {
+  productId: string;
+  productName: string;
+  variant?: 'button' | 'icon' | 'card';
+}
+
+const { productId, productName, variant = 'button' } = Astro.props;
+---
+
+{variant === 'button' && (
+  <button 
+    class="add-to-compare inline-flex items-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+    data-product-id={productId}
+    data-product-name={productName}
+  >
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+    </svg>
+    <span class="compare-text">Ajouter au comparateur</span>
+  </button>
+)}
+
+{variant === 'icon' && (
+  <button 
+    class="add-to-compare p-2 bg-gray-100 hover:bg-blue-100 rounded-full transition-colors"
+    data-product-id={productId}
+    data-product-name={productName}
+    title="Ajouter au comparateur"
+  >
+    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+    </svg>
+  </button>
+)}
+
+{variant === 'card' && (
+  <div class="add-to-compare-card border border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors"
+    data-product-id={productId}
+    data-product-name={productName}
+  >
+    <svg class="w-8 h-8 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+    </svg>
+    <p class="text-sm text-gray-500 mt-2">Ajouter au comparateur</p>
+  </div>
+)}
+
+<script>
+  // Gestion du comparateur côté client
+  const STORAGE_KEY = 'trouve-tout-compare';
+  const MAX_PRODUCTS = 4;
+
+  function getCompareList(): string[] {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  function saveCompareList(list: string[]) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    updateCompareUI();
+    dispatchCompareEvent();
+  }
+
+  function addToCompare(productId: string, productName: string) {
+    const list = getCompareList();
+    
+    if (list.includes(productId)) {
+      // Retirer du comparateur
+      saveCompareList(list.filter(id => id !== productId));
+      return false;
+    }
+    
+    if (list.length >= MAX_PRODUCTS) {
+      alert(`Maximum ${MAX_PRODUCTS} produits dans le comparateur. Retirez-en un d'abord.`);
+      return false;
+    }
+    
+    list.push(productId);
+    saveCompareList(list);
+    return true;
+  }
+
+  function updateCompareUI() {
+    const list = getCompareList();
+    
+    document.querySelectorAll('.add-to-compare, .add-to-compare-card').forEach(btn => {
+      const id = btn.getAttribute('data-product-id');
+      const isInList = list.includes(id || '');
+      
+      if (btn.classList.contains('add-to-compare')) {
+        const textEl = btn.querySelector('.compare-text');
+        if (textEl) {
+          textEl.textContent = isInList ? 'Retirer du comparateur' : 'Ajouter au comparateur';
+        }
+        btn.classList.toggle('bg-blue-600', isInList);
+        btn.classList.toggle('text-white', isInList);
+        btn.classList.toggle('bg-blue-100', !isInList);
+        btn.classList.toggle('text-blue-800', !isInList);
+      }
+    });
+  }
+
+  function dispatchCompareEvent() {
+    window.dispatchEvent(new CustomEvent('compare-updated', { 
+      detail: { count: getCompareList().length } 
+    }));
+  }
+
+  // Attacher les événements
+  document.querySelectorAll('.add-to-compare, .add-to-compare-card').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const id = btn.getAttribute('data-product-id');
+      const name = btn.getAttribute('data-product-name');
+      if (id && name) addToCompare(id, name);
+    });
+  });
+
+  // Initialiser l'UI
+  updateCompareUI();
+</script>

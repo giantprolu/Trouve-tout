@@ -1,0 +1,82 @@
+---
+/**
+ * CompareFloatingBar - Barre flottante affichant les produits dans le comparateur
+ * S'affiche en bas de l'écran quand des produits sont sélectionnés
+ */
+---
+
+<div id="compare-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg transform translate-y-full transition-transform duration-300 z-50">
+  <div class="max-w-6xl mx-auto px-4 py-3">
+    <div class="flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-medium text-gray-700">
+          🔍 <span id="compare-count">0</span> produit(s) à comparer
+        </span>
+        <div id="compare-products" class="hidden sm:flex gap-2">
+          <!-- Badges des produits ajoutés dynamiquement -->
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <button 
+          id="clear-compare" 
+          class="text-sm text-gray-500 hover:text-red-600 transition-colors"
+        >
+          Vider
+        </button>
+        <a 
+          id="go-compare" 
+          href="/comparateur"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-semibold transition-colors"
+        >
+          Comparer →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'trouve-tout-compare';
+  
+  function getCompareList(): string[] {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    } catch {
+      return [];
+    }
+  }
+  
+  function clearCompareList() {
+    localStorage.removeItem(STORAGE_KEY);
+    updateBar();
+    window.dispatchEvent(new CustomEvent('compare-updated', { detail: { count: 0 } }));
+  }
+  
+  function updateBar() {
+    const list = getCompareList();
+    const bar = document.getElementById('compare-bar');
+    const countEl = document.getElementById('compare-count');
+    const linkEl = document.getElementById('go-compare') as HTMLAnchorElement;
+    
+    if (!bar || !countEl || !linkEl) return;
+    
+    countEl.textContent = list.length.toString();
+    
+    if (list.length > 0) {
+      bar.classList.remove('translate-y-full');
+      // Construire l'URL du comparateur
+      const params = list.map(id => `id=${id}`).join('&');
+      linkEl.href = `/comparateur?${params}`;
+    } else {
+      bar.classList.add('translate-y-full');
+    }
+  }
+  
+  // Événements
+  document.getElementById('clear-compare')?.addEventListener('click', clearCompareList);
+  window.addEventListener('compare-updated', updateBar);
+  
+  // Initialiser au chargement
+  updateBar();
+</script>

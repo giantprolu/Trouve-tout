@@ -1,12 +1,24 @@
 ---
-import type { Brand } from '../types/db';
+import type { DbBrand } from '../lib/db';
+
+// Interface flexible pour accepter Brand ou DbBrand
+interface BrandLike {
+    slug: string;
+    name: string;
+    description?: string | null;
+    logo_url?: string | null;
+    logo?: string;
+}
 
 interface Props {
-    brand: Brand;
+    brand: BrandLike;
     categorySlug: string;
 }
 
 const { brand, categorySlug } = Astro.props;
+
+// Compatibilité entre les deux types de brand
+const logo = 'logo' in brand ? brand.logo : ('logo_url' in brand ? brand.logo_url : null);
 ---
 
 <a 
@@ -16,9 +28,9 @@ const { brand, categorySlug } = Astro.props;
     <div class="p-6">
         <div class="flex items-center gap-4 mb-4">
             <div class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                {brand.logo ? (
+                {logo ? (
                     <img 
-                        src={brand.logo} 
+                        src={logo} 
                         alt={brand.name}
                         class="w-12 h-12 object-contain"
                     />

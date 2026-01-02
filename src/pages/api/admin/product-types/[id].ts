@@ -4,7 +4,7 @@
  * DELETE /api/admin/product-types/[id] - Supprimer un type de produit
  */
 import type { APIRoute } from 'astro';
-import { updateProductType, deleteProductType, getProductTypeById } from '../../../../lib/db';
+import { updateProductType, deleteProductType, getProductTypeById, setProductTypeBrands } from '../../../../lib/db';
 
 export const POST: APIRoute = async ({ params, request, redirect }) => {
     const { id } = params;
@@ -33,6 +33,7 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         const description = formData.get('description') as string | null;
         const category_id = formData.get('category_id') as string;
         const brand_id = formData.get('brand_id') as string;
+        const brandIds = formData.getAll('brand_ids') as string[];
         
         if (!name || !icon) {
             return redirect('/admin/product-types?error=Nom et icône requis');
@@ -50,6 +51,9 @@ export const POST: APIRoute = async ({ params, request, redirect }) => {
         if (!productType) {
             return redirect('/admin/product-types?error=Erreur lors de la mise à jour');
         }
+        
+        // Mettre à jour les marques liées
+        await setProductTypeBrands(id, brandIds);
         
         return redirect('/admin/product-types?success=Type de produit mis à jour');
         
