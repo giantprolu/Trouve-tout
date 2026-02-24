@@ -1,0 +1,52 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+<Layout title="Choix Express" description="Répondez à 3 questions, on vous trouve le meilleur produit.">
+  <div class="max-w-xl mx-auto px-4 py-12">
+    <h1 class="text-3xl font-bold mb-2">⚡ Choix Express</h1>
+    <p class="text-gray-500 mb-8">3 questions, 1 recommandation. Sans compte.</p>
+
+    <form method="POST" action="/api/choix-express" class="space-y-6">
+      <div>
+        <label class="block font-medium mb-2">Quelle catégorie ?</label>
+        <select name="categorie" required
+          class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="">Choisir…</option>
+          <option value="high-tech">High-Tech</option>
+          <option value="maison">Maison</option>
+          <option value="cuisine">Cuisine</option>
+          <option value="sport">Sport</option>
+          <option value="beaute">Beauté</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-medium mb-2">Budget maximum ?</label>
+        <select name="budget" required
+          class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="50">Moins de 50 €</option>
+          <option value="150">50 – 150 €</option>
+          <option value="300">150 – 300 €</option>
+          <option value="9999">+ de 300 €</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-medium mb-2">Priorité ?</label>
+        <div class="flex gap-4">
+          {[['prix', '💸 Prix bas'], ['equilibre', '⚖️ Équilibré'], ['qualite', '⭐ Qualité max']].map(([val, label]) => (
+            <label class="flex-1 border border-gray-200 rounded-xl p-3 text-center cursor-pointer hover:border-indigo-400 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50">
+              <input type="radio" name="priorite" value={val} class="sr-only" required />
+              <span class="text-sm font-medium">{label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <button type="submit"
+        class="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition">
+        Trouver mon produit →
+      </button>
+    </form>
+  </div>
+</Layout>

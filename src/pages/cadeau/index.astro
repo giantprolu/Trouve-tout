@@ -1,0 +1,74 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+<Layout title="Mode Cadeau" description="Trouvez le cadeau idéal en répondant à quelques questions.">
+  <div class="max-w-xl mx-auto px-4 py-12">
+    <h1 class="text-3xl font-bold mb-2">🎁 Mode Cadeau</h1>
+    <p class="text-gray-500 mb-8">Dites-nous tout sur la personne, on trouve le cadeau parfait.</p>
+
+    <form method="POST" action="/api/cadeau" class="space-y-6">
+      <div>
+        <label class="block font-medium mb-2">Pour qui ?</label>
+        <select name="destinataire" required
+          class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400">
+          <option value="">Choisir…</option>
+          <option value="ami">Ami(e)</option>
+          <option value="parent">Parent</option>
+          <option value="enfant">Enfant</option>
+          <option value="conjoint">Conjoint(e)</option>
+          <option value="collegue">Collègue</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-medium mb-2">Tranche d'âge ?</label>
+        <select name="age" required
+          class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400">
+          <option value="enfant">Enfant (< 12 ans)</option>
+          <option value="ado">Ado (12–18 ans)</option>
+          <option value="adulte">Adulte (18–60 ans)</option>
+          <option value="senior">Senior (60+)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-medium mb-2">Budget ?</label>
+        <select name="budget" required
+          class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400">
+          <option value="30">Moins de 30 €</option>
+          <option value="80">30 – 80 €</option>
+          <option value="200">80 – 200 €</option>
+          <option value="9999">+ de 200 €</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-medium mb-2">Occasion ?</label>
+        <select name="occasion" required
+          class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400">
+          <option value="noel">Noël</option>
+          <option value="anniversaire">Anniversaire</option>
+          <option value="fete">Fête</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block font-medium mb-2">Niveau tech de la personne ?</label>
+        <div class="flex gap-4">
+          {[['debutant', '🐣 Débutant'], ['moyen', '👤 Moyen'], ['expert', '🚀 Expert']].map(([val, label]) => (
+            <label class="flex-1 border border-gray-200 rounded-xl p-3 text-center cursor-pointer hover:border-pink-400 has-[:checked]:border-pink-500 has-[:checked]:bg-pink-50">
+              <input type="radio" name="niveau_tech" value={val} class="sr-only" required />
+              <span class="text-sm font-medium">{label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <button type="submit"
+        class="w-full bg-pink-500 text-white py-3 rounded-xl font-semibold hover:bg-pink-600 transition">
+        Trouver le cadeau idéal →
+      </button>
+    </form>
+  </div>
+</Layout>
