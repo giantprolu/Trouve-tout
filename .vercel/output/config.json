@@ -1,0 +1,75 @@
+{
+	"version": 3,
+	"routes": [
+		{
+			"handle": "filesystem"
+		},
+		{
+			"src": "^/_astro/(.*)$",
+			"headers": {
+				"cache-control": "public, max-age=31536000, immutable"
+			},
+			"continue": true
+		},
+		{
+			"src": "^/_server-islands/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/_image/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/blog/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/blog/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/cadeau/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/categories/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/categories/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/choix-express/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/marques/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/marques/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/produits/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/produits/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/profil/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/sitemap\\.xml/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/$",
+			"dest": "_render"
+		}
+	]
+}

@@ -1,0 +1,27 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { guides, getCategorieBySlug } from '../../lib/data';
+---
+<Layout title="Guides d'achat" description="Guides honnêtes pour choisir le bon produit rapidement.">
+  <div class="max-w-3xl mx-auto px-4 py-12">
+    <h1 class="text-3xl font-bold mb-2">Guides d'achat</h1>
+    <p class="text-gray-500 mb-8">Des articles clairs pour vous aider à décider vite et bien.</p>
+
+    <div class="space-y-4">
+      {guides.map(g => {
+        const cat = getCategorieBySlug(g.categorieSlug);
+        return (
+          <a href={`/blog/${g.slug}`}
+            class="flex gap-4 bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition group">
+            <div class="text-3xl flex-shrink-0">{cat?.emoji}</div>
+            <div>
+              <div class="text-xs text-indigo-600 font-semibold mb-1">{cat?.nom}</div>
+              <h2 class="font-semibold group-hover:text-indigo-600">{g.titre}</h2>
+              <p class="text-sm text-gray-500 mt-1">{g.description}</p>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  </div>
+</Layout>
