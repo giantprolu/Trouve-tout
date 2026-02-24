@@ -2,8 +2,19 @@
 interface Props {
   title: string;
   description?: string;
+  ogImage?: string;
+  canonicalPath?: string;
 }
-const { title, description = 'Trouve le meilleur produit sans perdre de temps.' } = Astro.props;
+const {
+  title,
+  description = 'Trouve le meilleur produit sans perdre de temps — comparatifs honnêtes, verdict clair.',
+  ogImage = '/og-default.png',
+  canonicalPath,
+} = Astro.props;
+
+const siteUrl = 'https://trouve-tout.fr';
+const canonical = canonicalPath ? `${siteUrl}${canonicalPath}` : `${siteUrl}${Astro.url.pathname}`;
+const fullTitle = `${title} — Trouve-Tout`;
 ---
 <!doctype html>
 <html lang="fr">
@@ -11,8 +22,35 @@ const { title, description = 'Trouve le meilleur produit sans perdre de temps.' 
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- SEO -->
+    <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    <title>{title} — Trouve-Tout</title>
+    <link rel="canonical" href={canonical} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={`${siteUrl}${ogImage}`} />
+    <meta property="og:site_name" content="Trouve-Tout" />
+    <meta property="og:locale" content="fr_FR" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={`${siteUrl}${ogImage}`} />
+
+    <!-- Schema.org WebSite -->
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Trouve-Tout',
+      url: siteUrl,
+      description: 'Comparatif produits honnête — verdict clair en 30 secondes.',
+    })} />
   </head>
   <body class="bg-gray-50 text-gray-900 min-h-screen">
     <nav class="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-6 text-sm font-medium">
@@ -20,14 +58,22 @@ const { title, description = 'Trouve le meilleur produit sans perdre de temps.' 
       <a href="/categories" class="hover:text-indigo-600">Catégories</a>
       <a href="/choix-express" class="hover:text-indigo-600">Choix Express</a>
       <a href="/cadeau" class="hover:text-indigo-600">Mode Cadeau</a>
-      <a href="/blog" class="hover:text-indigo-600">Guide</a>
+      <a href="/blog" class="hover:text-indigo-600">Guides</a>
       <a href="/profil" class="ml-auto hover:text-indigo-600">Mon profil</a>
     </nav>
     <main>
       <slot />
     </main>
-    <footer class="mt-16 border-t border-gray-200 py-6 text-center text-xs text-gray-400">
-      © {new Date().getFullYear()} Trouve-Tout · Comparatif produits indépendant
+    <footer class="mt-16 border-t border-gray-200 py-8 px-4">
+      <div class="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between gap-4 text-xs text-gray-400">
+        <div>© {new Date().getFullYear()} Trouve-Tout · Comparatif produits indépendant</div>
+        <div class="flex gap-4">
+          <a href="/categories" class="hover:text-gray-600">Catégories</a>
+          <a href="/blog" class="hover:text-gray-600">Guides</a>
+          <a href="/sitemap.xml" class="hover:text-gray-600">Sitemap</a>
+        </div>
+        <div>Ce site contient des liens affiliés Amazon. Votre prix ne change pas.</div>
+      </div>
     </footer>
   </body>
 </html>

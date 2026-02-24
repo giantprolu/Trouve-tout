@@ -1,0 +1,30 @@
+---
+interface Props {
+  lien: string;
+  label?: string;
+  variant?: 'primary' | 'small';
+}
+const { lien, label = 'Voir sur Amazon', variant = 'primary' } = Astro.props;
+---
+{variant === 'primary' ? (
+  <a
+    href={lien}
+    target="_blank"
+    rel="noopener noreferrer nofollow"
+    class="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-500 text-gray-900 font-semibold px-5 py-3 rounded-xl transition text-sm"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+    </svg>
+    {label}
+  </a>
+) : (
+  <a
+    href={lien}
+    target="_blank"
+    rel="noopener noreferrer nofollow"
+    class="text-amber-600 hover:text-amber-700 text-sm font-medium underline underline-offset-2"
+  >
+    {label} ↗
+  </a>
+)}

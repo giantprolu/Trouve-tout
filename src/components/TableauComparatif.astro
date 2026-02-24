@@ -1,0 +1,76 @@
+---
+import type { Produit } from '../lib/data';
+import CTAAmazon from './CTAAmazon.astro';
+
+interface Props {
+  produits: Produit[];
+}
+const { produits } = Astro.props;
+
+const segmentLabel: Record<string, string> = {
+  meilleur_rapport: '⭐ Premium',
+  milieu: '💡 Équilibre',
+  moins_cher: '💸 Budget',
+};
+---
+<div class="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="bg-gray-50 border-b border-gray-100">
+        <th class="text-left px-4 py-3 font-semibold text-gray-700">Produit</th>
+        <th class="text-center px-3 py-3 font-semibold text-gray-700">Prix</th>
+        <th class="text-center px-3 py-3 font-semibold text-gray-700">⭐ Qualité</th>
+        <th class="text-center px-3 py-3 font-semibold text-gray-700">🔧 Durabilité</th>
+        <th class="text-center px-3 py-3 font-semibold text-gray-700">🛠 Fiabilité</th>
+        <th class="text-center px-3 py-3 font-semibold text-gray-700">Segment</th>
+        <th class="px-3 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {produits.map((p, i) => (
+        <tr class={`border-b border-gray-50 ${i === 0 ? 'bg-indigo-50/40' : 'bg-white hover:bg-gray-50'} transition`}>
+          <td class="px-4 py-4">
+            <a href={`/produits/${p.slug}`} class="font-medium hover:text-indigo-600 transition">
+              {p.nom}
+            </a>
+            {i === 0 && (
+              <span class="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">
+                Recommandé
+              </span>
+            )}
+          </td>
+          <td class="text-center px-3 py-4 font-bold text-indigo-600">
+            {p.prix.toLocaleString('fr-FR')} €
+          </td>
+          <td class="text-center px-3 py-4">
+            <div class="flex justify-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, j) => (
+                <div class={`w-2 h-2 rounded-full ${j < p.qualite ? 'bg-yellow-400' : 'bg-gray-200'}`} />
+              ))}
+            </div>
+          </td>
+          <td class="text-center px-3 py-4">
+            <div class="flex justify-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, j) => (
+                <div class={`w-2 h-2 rounded-full ${j < p.durabilite ? 'bg-blue-400' : 'bg-gray-200'}`} />
+              ))}
+            </div>
+          </td>
+          <td class="text-center px-3 py-4">
+            <div class="flex justify-center gap-0.5">
+              {Array.from({ length: 5 }).map((_, j) => (
+                <div class={`w-2 h-2 rounded-full ${j < p.fiabilite ? 'bg-green-400' : 'bg-gray-200'}`} />
+              ))}
+            </div>
+          </td>
+          <td class="text-center px-3 py-4 text-xs font-medium text-gray-600">
+            {segmentLabel[p.segment]}
+          </td>
+          <td class="px-3 py-4">
+            <CTAAmazon lien={p.lienAmazon} variant="small" label="Amazon" />
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

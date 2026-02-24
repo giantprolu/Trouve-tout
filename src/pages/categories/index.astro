@@ -1,13 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-
-const categories = [
-  { slug: 'high-tech', nom: 'High-Tech', emoji: '📱', desc: 'Smartphones, laptops, casques, enceintes…' },
-  { slug: 'maison',    nom: 'Maison',    emoji: '🏠', desc: 'Aspirateurs, robots, literie, déco…' },
-  { slug: 'cuisine',   nom: 'Cuisine',   emoji: '🍳', desc: 'Friteuses à air, blenders, cafetières…' },
-  { slug: 'sport',     nom: 'Sport',     emoji: '🏃', desc: 'Montres connectées, vélos, équipements…' },
-  { slug: 'beaute',    nom: 'Beauté',    emoji: '✨', desc: 'Soin peau, lisseurs, rasoirs…' },
-];
+import { categories } from '../../lib/data';
 ---
 <Layout title="Catégories" description="Toutes les catégories de produits comparés sur Trouve-Tout.">
   <div class="max-w-4xl mx-auto px-4 py-12">
@@ -18,7 +11,7 @@ const categories = [
           class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition group">
           <div class="text-4xl mb-3">{cat.emoji}</div>
           <h2 class="font-semibold text-lg mb-1 group-hover:text-indigo-600">{cat.nom}</h2>
-          <p class="text-sm text-gray-500">{cat.desc}</p>
+          <p class="text-sm text-gray-500">{cat.description}</p>
         </a>
       ))}
     </div>
