@@ -14,7 +14,7 @@ const marque = getMarqueBySlug(slug!);
 if (!marque) return Astro.redirect('/categories');
 
 const produitsDuMarque = getProduitsByMarque(slug!);
-const categorie = getCategorieBySlug(marque.categorieSlug);
+const categorie = getCategorieBySlug(marque.categorieSlugs[0]);
 
 export const prerender = true;
 

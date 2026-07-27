@@ -1,0 +1,72 @@
+/**
+ * Génération des liens d'affiliation.
+ *
+ * RÈGLE ABSOLUE : aucun identifiant d'affilié en dur dans le code.
+ * La version précédente du site utilisait `tag=trouvetout-21`, un identifiant
+ * inventé — tous les clics ont donc rapporté 0 €. On lit désormais l'ID depuis
+ * l'environnement, et le build hurle s'il est absent.
+ *
+ * Variables à définir dans Vercel → Settings → Environment Variables :
+ *   PUBLIC_AWIN_AFFILIATE_ID   → ton identifiant éditeur Awin (chiffres)
+ *   PUBLIC_AMAZON_PARTNER_TAG  → optionnel, ton tag Amazon Partenaires
+ */
+
+/** ID marchand ManoMano France sur Awin. */
+export const AWIN_MERCHANT_MANOMANO_FR = 17547;
+
+const AWIN_ID = import.meta.env.PUBLIC_AWIN_AFFILIATE_ID?.trim() ?? '';
+const AMAZON_TAG = import.meta.env.PUBLIC_AMAZON_PARTNER_TAG?.trim() ?? '';
+
+export const affiliationConfiguree = AWIN_ID.length > 0;
+
+if (!affiliationConfiguree) {
+  console.warn(
+    '\n⚠️  PUBLIC_AWIN_AFFILIATE_ID absent : les liens ManoMano pointeront vers\n' +
+      '    le site sans tracking. Aucune commission ne sera attribuée.\n' +
+      '    → Vercel > Settings > Environment Variables\n',
+  );
+}
+
+/**
+ * Transforme une URL ManoMano en lien tracké Awin.
+ * Si l'ID n'est pas configuré, renvoie l'URL brute (le visiteur arrive bien
+ * sur la bonne page, mais la vente n'est pas attribuée).
+ */
+export function lienManoMano(urlProduit: string): string {
+  if (!affiliationConfiguree) return urlProduit;
+  const ued = encodeURIComponent(urlProduit);
+  return `https://www.awin1.com/cread.php?awinmid=${AWIN_MERCHANT_MANOMANO_FR}&awinaffid=${AWIN_ID}&ued=${ued}`;
+}
+
+/** Lien Amazon tracké — utilisé seulement en secours quand ManoMano n'a pas le produit. */
+export function lienAmazon(urlProduit: string): string {
+  if (!AMAZON_TAG) return urlProduit;
+  const sep = urlProduit.includes('?') ? '&' : '?';
+  return `${urlProduit}${sep}tag=${encodeURIComponent(AMAZON_TAG)}`;
+}
+
+export type Marchand = 'manomano' | 'amazon';
+
+export function lienAffilie(marchand: Marchand, url: string): string {
+  return marchand === 'amazon' ? lienAmazon(url) : lienManoMano(url);
+}
+
+export const nomMarchand: Record<Marchand, string> = {
+  manomano: 'ManoMano',
+  amazon: 'Amazon',
+};
+
+/**
+ * Tranche de budget affichée à la place d'un prix exact.
+ *
+ * Amazon comme Awin interdisent d'afficher un prix figé : il devient faux en
+ * quelques jours et engage ta responsabilité. On affiche une fourchette, qui
+ * reste utile au lecteur sans jamais mentir.
+ */
+export function trancheBudget(prixIndicatif: number): string {
+  if (prixIndicatif < 80) return 'moins de 80 €';
+  if (prixIndicatif < 150) return '80 – 150 €';
+  if (prixIndicatif < 250) return '150 – 250 €';
+  if (prixIndicatif < 400) return '250 – 400 €';
+  return 'plus de 400 €';
+}

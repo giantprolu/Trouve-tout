@@ -2,7 +2,8 @@
 import Layout from '../../layouts/Layout.astro';
 import VerdictProduit from '../../components/VerdictProduit.astro';
 import TableauComparatif from '../../components/TableauComparatif.astro';
-import CTAAmazon from '../../components/CTAAmazon.astro';
+import CTAAffilie from '../../components/CTAAffilie.astro';
+import { trancheBudget } from '../../lib/affiliation';
 import {
   getProduitBySlug,
   getMarqueBySlug,
@@ -26,20 +27,11 @@ const schema = JSON.stringify({
   name: produit.nom,
   description: produit.description,
   brand: { '@type': 'Brand', name: marque?.nom },
-  offers: {
-    '@type': 'Offer',
-    priceCurrency: 'EUR',
-    price: produit.prix,
-    availability: 'https://schema.org/InStock',
-    url: produit.lienAmazon,
-  },
-  aggregateRating: {
-    '@type': 'AggregateRating',
-    ratingValue: ((produit.qualite + produit.durabilite + produit.fiabilite) / 3).toFixed(1),
-    bestRating: 5,
-    worstRating: 1,
-    ratingCount: 1,
-  },
+  // Pas de bloc `offers` : declarer un prix fige et `InStock` sans flux
+  // marchand temps reel, c'est du balisage faux (risque d'action manuelle Google).
+  // Pas de bloc `aggregateRating` non plus : une note editoriale maison avec
+  // ratingCount:1 est consideree comme un avis auto-attribue et sanctionnee.
+  // A remettre quand un flux produit reel alimentera la page.
 });
 
 export const prerender = true;
@@ -50,7 +42,7 @@ export function getStaticPaths() {
 ---
 <Layout
   title={`${produit.nom} — Avis et comparatif`}
-  description={`${produit.verdict} — ${produit.description} Prix : ${produit.prix} €.`}
+  description={`${produit.verdict} — ${produit.description}`}
 >
   <script is:inline type="application/ld+json" set:html={schema} />
 
@@ -67,7 +59,7 @@ export function getStaticPaths() {
     <div class="lg:col-span-2 space-y-8">
       <div>
         <h1 class="text-3xl font-bold mb-1">{produit.nom}</h1>
-        <div class="text-3xl font-bold text-indigo-600 mb-3">{produit.prix.toLocaleString('fr-FR')} €</div>
+        <div class="text-3xl font-bold text-indigo-600 mb-3">{trancheBudget(produit.prixIndicatif)}</div>
         <p class="text-gray-600">{produit.description}</p>
       </div>
 
@@ -114,8 +106,8 @@ export function getStaticPaths() {
       <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm sticky top-4">
         <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Notre verdict</div>
         <div class="text-lg font-bold text-indigo-600 mb-3">{produit.verdict}</div>
-        <div class="text-3xl font-bold mb-4">{produit.prix.toLocaleString('fr-FR')} €</div>
-        <CTAAmazon lien={produit.lienAmazon} label={`Voir sur Amazon`} />
+        <div class="text-3xl font-bold mb-4">{trancheBudget(produit.prixIndicatif)}</div>
+        <CTAAffilie url={produit.urlMarchand} marchand={produit.marchand} />
         <p class="text-xs text-gray-400 mt-3">
           Lien affilié — votre prix ne change pas.
         </p>

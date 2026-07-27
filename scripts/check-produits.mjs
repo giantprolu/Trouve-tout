@@ -1,0 +1,33 @@
+/**
+ * Liste les fiches produits dont l'URL marchand est encore generique.
+ * Tant qu'une fiche est `verifie: false`, elle envoie le visiteur sur une page
+ * de recherche : la conversion s'effondre.
+ *
+ *   npm run check:produits
+ */
+import { readFileSync } from 'node:fs';
+
+const src = readFileSync(new URL('../src/lib/data.ts', import.meta.url), 'utf8');
+
+const blocs = src.split(/\n  \{\n/).slice(1);
+const aFaire = [];
+let total = 0;
+
+for (const b of blocs) {
+  if (!b.includes('urlMarchand')) continue;
+  total++;
+  const nom = b.match(/nom:\s*'([^']+)'/)?.[1] ?? '?';
+  if (/verifie:\s*false/.test(b)) aFaire.push(nom);
+}
+
+console.log(`\n${total - aFaire.length}/${total} fiches verifiees.\n`);
+if (aFaire.length) {
+  console.log('URL marchand encore generique :');
+  for (const n of aFaire) console.log(`  · ${n}`);
+  console.log(
+    '\n→ Ouvre la fiche sur manomano.fr, colle son URL dans urlMarchand, passe verifie a true.\n',
+  );
+  process.exitCode = 1;
+} else {
+  console.log('Toutes les fiches pointent vers une URL produit reelle.\n');
+}

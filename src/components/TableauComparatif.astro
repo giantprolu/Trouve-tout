@@ -1,6 +1,7 @@
 ---
 import type { Produit } from '../lib/data';
-import CTAAmazon from './CTAAmazon.astro';
+import CTAAffilie from './CTAAffilie.astro';
+import { trancheBudget } from '../lib/affiliation';
 
 interface Props {
   produits: Produit[];
@@ -40,7 +41,7 @@ const segmentLabel: Record<string, string> = {
             )}
           </td>
           <td class="text-center px-3 py-4 font-bold text-indigo-600">
-            {p.prix.toLocaleString('fr-FR')} €
+            {trancheBudget(p.prixIndicatif)}
           </td>
           <td class="text-center px-3 py-4">
             <div class="flex justify-center gap-0.5">
@@ -67,7 +68,7 @@ const segmentLabel: Record<string, string> = {
             {segmentLabel[p.segment]}
           </td>
           <td class="px-3 py-4">
-            <CTAAmazon lien={p.lienAmazon} variant="small" label="Amazon" />
+            <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir" />
           </td>
         </tr>
       ))}

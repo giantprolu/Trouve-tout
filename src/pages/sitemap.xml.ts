@@ -20,8 +20,9 @@ export const GET: APIRoute = () => {
     url('/', '1.0', 'weekly'),
     url('/categories', '0.9', 'weekly'),
     url('/choix-express', '0.8', 'monthly'),
-    url('/cadeau', '0.8', 'monthly'),
     url('/blog', '0.7', 'weekly'),
+    url('/mentions-legales', '0.2', 'yearly'),
+    url('/confidentialite', '0.2', 'yearly'),
   ];
 
   const catPages = categories.map(c => url(`/categories/${c.slug}`, '0.8', 'weekly'));
