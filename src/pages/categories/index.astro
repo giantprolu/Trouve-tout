@@ -1,6 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { categories } from '../../lib/data';
+
+export const prerender = true;
 ---
 <Layout title="Catégories" description="Toutes les catégories de produits comparés sur Trouve-Tout.">
   <div class="max-w-4xl mx-auto px-4 py-12">

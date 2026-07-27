@@ -1,6 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { guides, getCategorieBySlug } from '../../lib/data';
+
+export const prerender = true;
 ---
 <Layout title="Guides d'achat" description="Guides honnêtes pour choisir le bon produit rapidement.">
   <div class="max-w-3xl mx-auto px-4 py-12">

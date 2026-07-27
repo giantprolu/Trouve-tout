@@ -1,4 +1,6 @@
 ---
+import { SITE_URL } from '../lib/site';
+
 interface Props {
   title: string;
   description?: string;
@@ -12,8 +14,12 @@ const {
   canonicalPath,
 } = Astro.props;
 
-const siteUrl = 'https://trouve-tout.fr';
-const canonical = canonicalPath ? `${siteUrl}${canonicalPath}` : `${siteUrl}${Astro.url.pathname}`;
+const siteUrl = SITE_URL;
+// On normalise le chemin : pas de slash final parasite, pas de query string
+// (sinon Google voit autant de "pages" que de variantes d'URL).
+const rawPath = canonicalPath ?? Astro.url.pathname;
+const cleanPath = rawPath !== '/' ? rawPath.replace(/\/+$/, '') : '/';
+const canonical = `${siteUrl}${cleanPath}`;
 const fullTitle = `${title} — Trouve-Tout`;
 ---
 <!doctype html>

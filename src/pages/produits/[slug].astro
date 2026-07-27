@@ -8,6 +8,7 @@ import {
   getMarqueBySlug,
   getCategorieBySlug,
   getProduitsByMarque,
+  produits,
 } from '../../lib/data';
 
 const { slug } = Astro.params;
@@ -40,6 +41,12 @@ const schema = JSON.stringify({
     ratingCount: 1,
   },
 });
+
+export const prerender = true;
+
+export function getStaticPaths() {
+  return produits.map((item) => ({ params: { slug: item.slug } }));
+}
 ---
 <Layout
   title={`${produit.nom} — Avis et comparatif`}

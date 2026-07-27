@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://trouve-tout.fr/sitemap.xml
+Sitemap: https://www.trouve-tout-conseil.fr/sitemap.xml

@@ -7,6 +7,7 @@ import {
   getMarquesByCategorie,
   getProduitsByMarque,
   getGuidesByCategorie,
+  categories,
 } from '../../lib/data';
 
 const { slug } = Astro.params;
@@ -15,6 +16,12 @@ if (!categorie) return Astro.redirect('/categories');
 
 const marquesListe = getMarquesByCategorie(slug!);
 const guides = getGuidesByCategorie(slug!);
+
+export const prerender = true;
+
+export function getStaticPaths() {
+  return categories.map((item) => ({ params: { slug: item.slug } }));
+}
 ---
 <Layout
   title={`${categorie.nom} — ${categorie.sousTitre}`}

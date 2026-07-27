@@ -16,6 +16,12 @@ const schema = JSON.stringify({
   author: { '@type': 'Organization', name: 'Trouve-Tout' },
   publisher: { '@type': 'Organization', name: 'Trouve-Tout' },
 });
+
+export const prerender = true;
+
+export function getStaticPaths() {
+  return guides.map((item) => ({ params: { slug: item.slug } }));
+}
 ---
 <Layout title={guide.titre} description={guide.description}>
   <script is:inline type="application/ld+json" set:html={schema} />

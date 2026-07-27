@@ -1,7 +1,10 @@
 import type { APIRoute } from 'astro';
 import { categories, marques, produits, guides } from '../lib/data';
+import { SITE_URL } from '../lib/site';
 
-const siteUrl = 'https://trouve-tout.fr';
+export const prerender = false;
+
+const siteUrl = SITE_URL;
 
 function url(path: string, priority: string, changefreq: string): string {
   return `
