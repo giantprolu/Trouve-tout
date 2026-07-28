@@ -647,6 +647,12 @@ export const guides: Guide[] = [
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+export const SEGMENT_LABEL: Record<Produit['segment'], string> = {
+  meilleur_rapport: 'Premium',
+  milieu: 'Équilibre',
+  moins_cher: 'Budget',
+};
+
 export function getCategorieBySlug(slug: string): Categorie | undefined {
   return categories.find(c => c.slug === slug);
 }
@@ -686,6 +692,16 @@ export function niveauConfiance(p: Produit): number {
 
 export function getGuidesByCategorie(categorieSlug: string): Guide[] {
   return guides.filter(g => g.categorieSlug === categorieSlug);
+}
+
+/**
+ * Temps de lecture estimé à partir du vrai contenu du guide (≈ 200 mots/min),
+ * jamais un chiffre inventé : voir la règle d'honnêteté du contenu dans CLAUDE.md.
+ */
+export function tempsLectureGuide(guide: Guide): number {
+  const texte = guide.intro + ' ' + guide.sections.map((s) => s.contenu).join(' ');
+  const mots = texte.split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(mots / 200));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

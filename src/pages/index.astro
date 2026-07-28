@@ -1,11 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import EnteteCoque from '../components/EnteteCoque.astro';
 import {
-  categories,
   guides,
   produits,
   getGuideBySlug,
   getProduitsByCategorie,
+  tempsLectureGuide,
 } from '../lib/data';
 import { BORNES_BUDGET } from '../lib/affiliation';
 
@@ -20,14 +21,6 @@ const produitsJardin = getProduitsByCategorie(guideVedette.categorieSlug);
 const prixMin = Math.min(...produitsJardin.map((p) => p.prixIndicatif));
 const prixMax = Math.max(...produitsJardin.map((p) => p.prixIndicatif));
 
-// Temps de lecture estimé à partir du vrai contenu (≈ 200 mots/min), pas un
-// chiffre inventé : voir la règle d'honnêteté du contenu dans CLAUDE.md.
-function tempsLecture(guide: typeof guideVedette): number {
-  const texte = guide.intro + ' ' + guide.sections.map((s) => s.contenu).join(' ');
-  const mots = texte.split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.round(mots / 200));
-}
-
 const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
   i === 0 ? `moins de ${borne} €` : `${BORNES_BUDGET[i - 1]} – ${borne} €`,
 ).concat(`plus de ${BORNES_BUDGET[BORNES_BUDGET.length - 1]} €`);
@@ -38,25 +31,7 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
   hideHeader
 >
   <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
-    <div class="flex flex-wrap items-center gap-3 mb-4">
-      <a href="/" class="flex items-center rounded-full bg-white/95 shadow-tile px-5 py-2.5">
-        <span class="font-display font-bold text-body-lg text-ink lowercase">trouve-tout.</span>
-      </a>
-      <a
-        href="/categories"
-        class="flex-1 min-w-[200px] flex items-center justify-between gap-3 rounded-full bg-white/95 shadow-tile pl-6 pr-1.5 py-1.5 hover:bg-white transition-colors"
-      >
-        <span class="text-body text-ink/55">Parcourir tous les guides</span>
-        <span class="grid h-[42px] w-[42px] flex-none place-items-center rounded-full bg-ink text-bg" aria-hidden="true">→</span>
-      </a>
-      <div class="flex items-center gap-6 px-3 font-display font-semibold text-body">
-        {categories.map((c) => (
-          <a href={`/categories/${c.slug}`} class="text-ink hover:text-accent transition-colors whitespace-nowrap">
-            {c.nom}
-          </a>
-        ))}
-      </div>
-    </div>
+    <EnteteCoque />
 
     <div class="flex flex-col lg:flex-row gap-4">
       <div class="flex-[3] min-w-0 flex flex-col gap-4">
@@ -85,7 +60,7 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
                 <span class="font-display font-bold text-body-lg text-bg">Lire le guide tondeuses</span>
                 <span class="grid h-11 w-11 place-items-center rounded-full bg-ink text-bg" aria-hidden="true">↗</span>
               </a>
-              <span class="font-mono text-data text-ink/55">{tempsLecture(guideVedette)} min de lecture</span>
+              <span class="font-mono text-data text-ink/55">{tempsLectureGuide(guideVedette)} min de lecture</span>
             </div>
           </div>
           <div class="flex-1 min-w-[220px] min-h-[280px] rounded-lg bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_14px,#F0F3E8_14px,#F0F3E8_28px)]"></div>

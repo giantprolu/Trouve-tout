@@ -1,6 +1,6 @@
 ---
 import type { Produit } from '../lib/data';
-import { niveauConfiance } from '../lib/data';
+import { niveauConfiance, SEGMENT_LABEL } from '../lib/data';
 import { trancheBudget } from '../lib/affiliation';
 import CTAAffilie from './CTAAffilie.astro';
 import Cote from './Cote.astro';
@@ -9,12 +9,6 @@ interface Props {
   produits: Produit[];
 }
 const { produits } = Astro.props;
-
-const segmentLabel: Record<string, string> = {
-  meilleur_rapport: 'Premium',
-  milieu: 'Équilibre',
-  moins_cher: 'Budget',
-};
 
 // Le produit recommandé est celui à la plus haute confiance éditoriale du
 // lot — sa ligne est mise en avant par le fond, pas par un badge doré.
@@ -52,7 +46,7 @@ const slugRecommande = produits.reduce((meilleur, p) =>
               <Cote valeur={score} max={10} label={`${score}/10`} class="mx-auto max-w-[8rem]" />
             </td>
             <td class="text-right px-3 py-4 font-mono text-data text-ink">
-              {segmentLabel[p.segment]}
+              {SEGMENT_LABEL[p.segment]}
             </td>
             <td class="px-3 py-4 text-center">
               <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir" />

@@ -1,12 +1,29 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getGuideBySlug, guides, getCategorieBySlug } from '../../lib/data';
+import EnteteCoque from '../../components/EnteteCoque.astro';
+import TableauComparatif from '../../components/TableauComparatif.astro';
+import {
+  getGuideBySlug,
+  guides,
+  getCategorieBySlug,
+  getProduitsByCategorie,
+  niveauConfiance,
+  tempsLectureGuide,
+} from '../../lib/data';
 
 const { slug } = Astro.params;
 const guide = getGuideBySlug(slug!);
 if (!guide) return Astro.redirect('/blog');
 
 const categorie = getCategorieBySlug(guide.categorieSlug);
+const produitsCategorie = getProduitsByCategorie(guide.categorieSlug)
+  .slice()
+  .sort((a, b) => niveauConfiance(b) - niveauConfiance(a));
+const produitRecommande = produitsCategorie[0];
+
+function ancre(titre: string): string {
+  return titre.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
 
 const schema = JSON.stringify({
   '@context': 'https://schema.org',
@@ -23,54 +40,94 @@ export function getStaticPaths() {
   return guides.map((item) => ({ params: { slug: item.slug } }));
 }
 ---
-<Layout title={guide.titre} description={guide.description}>
+<Layout title={guide.titre} description={guide.description} hideHeader>
   <script is:inline type="application/ld+json" set:html={schema} />
 
-  <nav class="font-mono text-small text-ink mb-6" aria-label="Fil d'ariane">
-    <a href="/" class="hover:text-accent transition-colors">Accueil</a> ›
-    <a href="/blog" class="hover:text-accent transition-colors mx-1">Guides</a> ›
-    <span class="text-ink">{guide.titre}</span>
-  </nav>
+  <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
+    <EnteteCoque />
 
-  <article class="max-w-3xl">
-    <p class="font-mono text-label uppercase text-ink mb-3">{categorie?.nom}</p>
-    <h1 class="font-display text-display-l text-ink mb-6">{guide.titre}</h1>
+    <div class="flex flex-wrap gap-4">
+      <div class="flex-[3] min-w-0 flex flex-col gap-4">
+        <div class="rounded-panel bg-gradient-to-br from-[#F6F8F0] to-[#EDF0E4] shadow-tile p-6 sm:p-8 lg:p-11 flex flex-wrap gap-8">
+          <div class="flex-1 min-w-[280px] flex flex-col">
+            <span class="self-start rounded-full bg-white/90 px-4 py-2 font-mono text-label uppercase text-accent">
+              Guide d'achat · {categorie?.nom}
+            </span>
+            <h1 class="mt-6 font-display font-extrabold text-[clamp(2rem,4.4vw,3.125rem)] leading-[1.04] tracking-[-0.035em] text-ink text-balance">
+              {guide.titre}
+            </h1>
+            <p class="mt-4 max-w-[460px] text-body-lg text-ink/70">
+              {tempsLectureGuide(guide)} minutes de lecture. {guide.intro}
+            </p>
+            <div class="mt-7 flex flex-wrap gap-2.5">
+              {guide.sections.map((s) => (
+                <a href={`#${ancre(s.titre)}`} class="rounded-full bg-white px-4.5 py-2 text-small font-semibold text-ink hover:bg-surface transition-colors">
+                  {s.titre}
+                </a>
+              ))}
+              {produitRecommande && (
+                <a href="#notre-choix" class="rounded-full bg-white px-4.5 py-2 text-small font-semibold text-ink hover:bg-surface transition-colors">
+                  Notre choix
+                </a>
+              )}
+            </div>
+          </div>
+          <div class="flex-1 min-w-[240px] min-h-[280px] rounded-lg bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_14px,#F0F3E8_14px,#F0F3E8_28px)]"></div>
+        </div>
 
-    <nav class="mb-10 border-y border-ink py-4" aria-label="Sommaire du guide">
-      <p class="font-mono text-label uppercase text-ink mb-2">Sommaire</p>
-      <ul class="flex flex-col gap-1">
-        {guide.sections.map(s => (
-          <li>
-            <a href={`#${s.titre.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} class="font-body text-body text-accent hover:text-ink transition-colors">
-              {s.titre}
-            </a>
-          </li>
+        {guide.sections.map((s) => (
+          <section id={ancre(s.titre)} class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-wrap gap-6">
+            <h2 class="flex-1 min-w-[200px] self-start m-0 font-display font-bold text-display-m text-ink">{s.titre}</h2>
+            <div class="flex-[2] min-w-[280px]">
+              <p
+                class="m-0 text-body text-ink leading-[1.7] max-w-[68ch]"
+                set:html={s.contenu.replace(/\*\*(.*?)\*\*/g, '<span class="font-mono text-accent">$1</span>')}
+              />
+            </div>
+          </section>
         ))}
-      </ul>
-    </nav>
 
-    <p class="font-body text-body-lg text-ink mb-10 border-l-2 border-accent pl-5">{guide.intro}</p>
+        {produitsCategorie.length > 1 && (
+          <div id="notre-choix" class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-wrap-reverse gap-6">
+            <div class="flex-[2] min-w-[280px]">
+              <TableauComparatif produits={produitsCategorie} />
+            </div>
+            <div class="flex-1 min-w-[200px]">
+              <h2 class="m-0 font-display font-bold text-display-m text-ink">Le comparatif</h2>
+              <p class="mt-3 text-small text-ink/70">
+                {produitsCategorie.length} outils comparés sur les critères qui changent vraiment à l'usage.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
-    <div class="space-y-10">
-      {guide.sections.map(s => (
-        <section id={s.titre.toLowerCase().replace(/[^a-z0-9]+/g, '-')} class="border-t border-ink pt-8">
-          <h2 class="font-display text-display-m text-ink mb-4">{s.titre}</h2>
-          <p class="font-body text-body text-ink leading-relaxed max-w-[68ch]"
-            set:html={s.contenu.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')} />
-        </section>
-      ))}
-    </div>
-
-    <div class="mt-14 bg-surface border-t-[3px] border-accent px-6 py-8 text-center">
-      <p class="font-display text-display-m text-ink mb-5">Prêt à choisir ?</p>
-      <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="/choix-express" class="border border-accent text-accent font-mono text-label uppercase px-5 py-3 hover:bg-accent/10 transition-colors">
-          Faire le Choix Express →
-        </a>
-        <a href={`/categories/${guide.categorieSlug}`} class="font-mono text-label uppercase text-ink px-5 py-3 hover:text-accent transition-colors">
-          Voir les comparatifs {categorie?.nom}
+      <div class="flex-1 min-w-[260px] flex flex-col gap-4">
+        {produitRecommande && (
+          <div class="rounded-tile bg-card shadow-tile p-6">
+            <p class="mb-1.5 font-mono text-label uppercase text-accent">Notre choix</p>
+            <p class="m-0 font-display font-bold text-block-title text-ink">{produitRecommande.nom}</p>
+            <p class="mt-2 mb-5 text-small text-ink/70">{produitRecommande.verdict}</p>
+            <a
+              href={`/produits/${produitRecommande.slug}`}
+              class="w-full flex items-center justify-between gap-3 rounded-full bg-signal pl-5 pr-1.5 py-1.5 transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <span class="font-display font-bold text-body text-ink">Voir la fiche</span>
+              <span class="grid h-[42px] w-[42px] flex-none place-items-center rounded-full bg-ink text-bg" aria-hidden="true">↗</span>
+            </a>
+          </div>
+        )}
+        <a
+          href="/choix-express"
+          class="flex-1 min-h-[220px] rounded-tile bg-[repeating-linear-gradient(45deg,#DCE1D2,#DCE1D2_16px,#E8ECDD_16px,#E8ECDD_32px)] shadow-tile p-6 flex flex-col justify-between transition hover:-translate-y-0.5"
+        >
+          <span class="self-end grid h-11 w-11 place-items-center rounded-full bg-card text-ink" aria-hidden="true">↗</span>
+          <span>
+            <span class="block font-display font-bold text-display-m text-ink">Pas le temps de tout lire ?</span>
+            <span class="mt-2 block text-body text-ink/70">Trois questions et on tranche pour toi.</span>
+          </span>
         </a>
       </div>
     </div>
-  </article>
+  </section>
 </Layout>
