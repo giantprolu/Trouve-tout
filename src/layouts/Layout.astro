@@ -8,9 +8,12 @@ import '@fontsource/public-sans/500';
 import '@fontsource/public-sans/700';
 import '@fontsource/ibm-plex-mono/500';
 import '@fontsource/ibm-plex-mono/600';
+import '@fontsource/big-shoulders-display/700';
+import '@fontsource/big-shoulders-display/800';
 import '../styles/global.css';
 import { SITE_URL } from '../lib/site';
 import { GOOGLE_ADSENSE_CLIENT_ID, publiciteConfiguree } from '../lib/publicite';
+import Logo from '../components/Logo.astro';
 
 interface Props {
   title: string;
@@ -89,7 +92,7 @@ const fullTitle = `${title} — Trouve-Tout`;
     {!hideHeader && (
       <header class="border-b border-line/40">
         <nav class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-6">
-          <a href="/" class="font-display text-display-m text-ink tracking-tight">TROUVE-TOUT</a>
+          <a href="/" aria-label="Trouve-Tout — accueil"><Logo size={30} /></a>
           <div class="hidden sm:flex items-center gap-6 font-mono text-label uppercase text-ink">
             <a href="/categories" class="hover:text-accent transition-colors">Catégories</a>
             <a href="/blog" class="hover:text-accent transition-colors">Guides</a>
