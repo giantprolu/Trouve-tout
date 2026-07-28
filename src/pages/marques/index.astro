@@ -1,22 +1,46 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { marques } from '../../lib/data';
+import EnteteCoque from '../../components/EnteteCoque.astro';
+import { marques, getProduitsByMarque } from '../../lib/data';
 
 export const prerender = true;
 ---
-<Layout title="Marques" description="Bosch, Makita, Ryobi, Einhell : à quoi correspond chaque marque, et pour qui.">
-  <p class="font-mono text-label uppercase text-ink mb-4">Marques</p>
-  <h1 class="font-display text-display-l text-ink mb-10">Toutes les marques</h1>
+<Layout title="Marques" description="Bosch, Makita, Ryobi, Einhell : à quoi correspond chaque marque, et pour qui." hideHeader>
+  <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
+    <EnteteCoque />
 
-  <div class="flex flex-col divide-y divide-line/30">
-    {marques.map(m => (
-      <a href={`/marques/${m.slug}`} class="py-6 block group">
-        <div class="flex items-baseline justify-between gap-4">
-          <h2 class="font-display text-display-m text-ink group-hover:text-accent transition-colors">{m.nom}</h2>
-          <span class="font-mono text-label uppercase text-ink shrink-0">{m.positionnement}</span>
-        </div>
-        <p class="font-body text-body text-ink mt-2 max-w-2xl">{m.description}</p>
-      </a>
-    ))}
-  </div>
+    <div class="rounded-panel bg-gradient-to-br from-[#F6F8F0] to-[#EDF0E4] shadow-tile p-6 sm:p-8 lg:p-11 mb-4">
+      <span class="inline-block rounded-full bg-white/90 px-4 py-2 font-mono text-label uppercase text-accent">
+        Marques
+      </span>
+      <h1 class="mt-6 font-display font-extrabold text-[clamp(1.875rem,3.8vw,2.75rem)] leading-[1.05] tracking-[-0.03em] text-ink">
+        Toutes les marques
+      </h1>
+      <p class="mt-4 max-w-[520px] text-body-lg text-ink/70">
+        Quatre marques, quatre positionnements différents — jamais la même conclusion pour tout le monde.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-4">
+      {marques.map((m, i) => {
+        const nbProduits = getProduitsByMarque(m.slug).length;
+        return (
+          <a
+            href={`/marques/${m.slug}`}
+            class={`${i === 0 ? 'flex-[2] min-w-[320px]' : 'flex-1 min-w-[260px]'} rounded-tile bg-card shadow-tile p-6 sm:p-7 flex flex-col justify-between gap-6 transition hover:-translate-y-0.5 hover:shadow-tile-hover`}
+          >
+            <div>
+              <span class="font-mono text-label uppercase text-accent">{m.positionnement}</span>
+              <p class="mt-4 font-display font-bold text-display-m text-ink">{m.nom}</p>
+              <p class="mt-2 text-body text-ink/70">{m.description}</p>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <span class="font-mono text-small text-line">{nbProduits} modèles analysés</span>
+              <span class="grid h-11 w-11 flex-none place-items-center rounded-full bg-surface text-ink" aria-hidden="true">↗</span>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  </section>
 </Layout>
