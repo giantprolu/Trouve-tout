@@ -1,28 +1,47 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { guides, getCategorieBySlug } from '../../lib/data';
+import EnteteCoque from '../../components/EnteteCoque.astro';
+import { categories, getGuidesByCategorie } from '../../lib/data';
 
 export const prerender = true;
 ---
-<Layout title="Guides d'achat" description="Guides honnêtes pour choisir le bon produit rapidement.">
-  <p class="font-mono text-label uppercase text-ink mb-4">Guides</p>
-  <h1 class="font-display text-display-l text-ink mb-3">Guides d'achat</h1>
-  <p class="font-body text-body-lg text-ink mb-10 max-w-2xl">
-    Des articles qui expliquent les critères de choix — pas un classement de produits.
-  </p>
+<Layout title="Guides d'achat" description="Guides honnêtes pour choisir le bon produit rapidement." hideHeader>
+  <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
+    <EnteteCoque />
 
-  <div class="flex flex-col divide-y divide-line/30">
-    {guides.map(g => {
-      const cat = getCategorieBySlug(g.categorieSlug);
-      return (
-        <a href={`/blog/${g.slug}`} class="py-6 block group">
-          <p class="font-mono text-label uppercase text-ink mb-2">{cat?.nom}</p>
-          <h2 class="font-display text-display-m text-ink group-hover:text-accent transition-colors mb-2">
-            {g.titre}
-          </h2>
-          <p class="font-body text-body text-ink max-w-2xl">{g.description}</p>
-        </a>
-      );
-    })}
-  </div>
+    <div class="rounded-panel bg-gradient-to-br from-[#F6F8F0] to-[#EDF0E4] shadow-tile p-6 sm:p-8 lg:p-11 mb-4">
+      <span class="inline-block rounded-full bg-white/90 px-4 py-2 font-mono text-label uppercase text-accent">
+        Guides d'achat
+      </span>
+      <h1 class="mt-6 font-display font-extrabold text-[clamp(1.875rem,3.8vw,2.75rem)] leading-[1.05] tracking-[-0.03em] text-ink">
+        Tous les guides
+      </h1>
+      <p class="mt-4 max-w-[520px] text-body-lg text-ink/70">
+        Des articles qui expliquent les critères de choix — pas un classement de produits.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      {categories.map((cat) => {
+        const guidesCategorie = getGuidesByCategorie(cat.slug);
+        if (guidesCategorie.length === 0) return null;
+        return (
+          <div class="rounded-tile bg-card shadow-tile p-6 sm:p-7">
+            <p class="m-0 mb-4 font-mono text-label uppercase text-accent">{cat.emoji} {cat.nom}</p>
+            <div class="flex flex-wrap gap-4">
+              {guidesCategorie.map((g) => (
+                <a
+                  href={`/blog/${g.slug}`}
+                  class="flex-1 min-w-[240px] block hover:opacity-75 transition-opacity"
+                >
+                  <p class="m-0 font-display font-bold text-block-title text-ink">{g.titre}</p>
+                  <p class="mt-2 text-small text-ink/70">{g.description}</p>
+                </a>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </section>
 </Layout>

@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import EnteteCoque from '../../components/EnteteCoque.astro';
 import TableauComparatif from '../../components/TableauComparatif.astro';
 import VerdictProduit from '../../components/VerdictProduit.astro';
 import {
@@ -22,41 +23,66 @@ export function getStaticPaths() {
   return marques.map((item) => ({ params: { slug: item.slug } }));
 }
 ---
-<Layout
-  title={`${marque.nom} — ${marque.positionnement}`}
-  description={marque.description}
->
-  <nav class="font-mono text-small text-ink mb-6" aria-label="Fil d'ariane">
-    <a href="/" class="hover:text-accent transition-colors">Accueil</a> ›
-    <a href="/marques" class="hover:text-accent transition-colors mx-1">Marques</a> ›
-    <span class="text-ink">{marque.nom}</span>
-  </nav>
+<Layout title={`${marque.nom} — ${marque.positionnement}`} description={marque.description} hideHeader>
+  <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
+    <EnteteCoque />
 
-  <div class="mb-12">
-    <p class="font-mono text-label uppercase text-ink mb-3">{marque.positionnement}</p>
-    <h1 class="font-display text-display-l text-ink mb-3">{marque.nom}</h1>
-    <p class="font-body text-body-lg text-ink max-w-2xl">{marque.description}</p>
-  </div>
+    <div class="flex flex-wrap gap-4">
+      <div class="flex-[3] min-w-0 flex flex-col gap-4">
+        <div class="rounded-panel bg-gradient-to-br from-[#F6F8F0] to-[#EDF0E4] shadow-tile p-6 sm:p-8 lg:p-11 flex flex-wrap gap-8">
+          <div class="flex-1 min-w-[280px] flex flex-col">
+            <span class="self-start rounded-full bg-white/90 px-4 py-2 font-mono text-label uppercase text-accent">
+              {marque.positionnement}
+            </span>
+            <h1 class="mt-6 font-display font-extrabold text-[clamp(2rem,4.4vw,3.125rem)] leading-[1.04] tracking-[-0.035em] text-ink">
+              {marque.nom}
+            </h1>
+            <p class="mt-4 max-w-[460px] text-body-lg text-ink/70">{marque.description}</p>
+          </div>
+          <div class="flex-1 min-w-[240px] min-h-[200px] rounded-lg bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_14px,#F0F3E8_14px,#F0F3E8_28px)] flex items-center justify-center p-4">
+            <span class="font-mono text-label text-line bg-white/90 rounded-full px-3.5 py-1.5">logo {marque.nom}</span>
+          </div>
+        </div>
 
-  <section class="mb-12 border-t border-ink pt-8">
-    <p class="font-mono text-label uppercase text-ink mb-6">
-      Comparatif des {produitsDuMarque.length} modèles
-    </p>
-    <TableauComparatif produits={produitsDuMarque} />
-  </section>
+        <div class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-col gap-6">
+          <h2 class="m-0 font-display font-bold text-display-m text-ink">
+            Comparatif des {produitsDuMarque.length} modèles
+          </h2>
+          <TableauComparatif produits={produitsDuMarque} />
+        </div>
 
-  <section class="border-t border-ink pt-8">
-    <p class="font-mono text-label uppercase text-ink mb-6">Détail de chaque modèle</p>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {produitsDuMarque.map((p, i) => (
-        <VerdictProduit produit={p} numero={i + 1} />
-      ))}
+        <div class="rounded-tile bg-card shadow-tile p-6 sm:p-8">
+          <h2 class="m-0 mb-6 font-display font-bold text-display-m text-ink">Détail de chaque modèle</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {produitsDuMarque.map((p, i) => (
+              <VerdictProduit produit={p} numero={i + 1} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div class="flex-1 min-w-[260px] flex flex-col gap-4">
+        <a
+          href={`/categories/${marque.categorieSlugs[0]}`}
+          class="rounded-tile bg-card shadow-tile p-6 flex items-center justify-between gap-5 transition hover:-translate-y-0.5 hover:shadow-tile-hover"
+        >
+          <div>
+            <p class="m-0 font-display font-bold text-display-m text-ink">{categorie?.nom}</p>
+            <p class="mt-2 text-body text-ink/65">Voir toute la catégorie et les autres marques.</p>
+          </div>
+          <span class="grid h-11 w-11 flex-none place-items-center rounded-full bg-surface text-ink" aria-hidden="true">↗</span>
+        </a>
+        <a
+          href="/choix-express"
+          class="flex-1 min-h-[200px] rounded-tile bg-[repeating-linear-gradient(45deg,#DCE1D2,#DCE1D2_16px,#E8ECDD_16px,#E8ECDD_32px)] shadow-tile p-6 flex flex-col justify-between transition hover:-translate-y-0.5"
+        >
+          <span class="self-end grid h-11 w-11 place-items-center rounded-full bg-card text-ink" aria-hidden="true">↗</span>
+          <span>
+            <span class="block font-display font-bold text-display-m text-ink">Pas sûr(e) que ce soit la bonne marque ?</span>
+            <span class="mt-2 block text-body text-ink/70">Trois questions et on tranche pour toi.</span>
+          </span>
+        </a>
+      </div>
     </div>
   </section>
-
-  <div class="mt-12 border-t border-ink pt-6">
-    <a href={`/categories/${marque.categorieSlugs[0]}`} class="font-mono text-label uppercase text-accent hover:text-ink transition-colors">
-      ← Voir la catégorie {categorie?.nom}
-    </a>
-  </div>
 </Layout>

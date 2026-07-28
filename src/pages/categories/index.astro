@@ -1,21 +1,47 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { categories } from '../../lib/data';
+import EnteteCoque from '../../components/EnteteCoque.astro';
+import { categories, getGuidesByCategorie, getProduitsByCategorie } from '../../lib/data';
 
 export const prerender = true;
 ---
-<Layout title="Catégories" description="Toutes les catégories d'outillage et jardin couvertes par Trouve-Tout.">
-  <p class="font-mono text-label uppercase text-ink mb-4">Catégories</p>
-  <h1 class="font-display text-display-l text-ink mb-10">Toutes les catégories</h1>
-  <div class="flex flex-col sm:flex-row flex-wrap gap-6">
-    {categories.map((cat, i) => (
-      <a
-        href={`/categories/${cat.slug}`}
-        class={`bg-surface border-t-[3px] border-accent px-6 py-6 block hover:bg-accent/10 transition-colors ${i === 0 ? 'sm:flex-[1.6] sm:basis-full' : 'sm:flex-1 sm:basis-[calc(50%-1.5rem)]'}`}
-      >
-        <h2 class="font-display text-display-m text-ink mb-2">{cat.nom}</h2>
-        <p class="font-body text-body text-ink">{cat.description}</p>
-      </a>
-    ))}
-  </div>
+<Layout title="Catégories" description="Toutes les catégories d'outillage et jardin couvertes par Trouve-Tout." hideHeader>
+  <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
+    <EnteteCoque />
+
+    <div class="rounded-panel bg-gradient-to-br from-[#F6F8F0] to-[#EDF0E4] shadow-tile p-6 sm:p-8 lg:p-11 mb-4">
+      <span class="inline-block rounded-full bg-white/90 px-4 py-2 font-mono text-label uppercase text-accent">
+        Catégories
+      </span>
+      <h1 class="mt-6 font-display font-extrabold text-[clamp(1.875rem,3.8vw,2.75rem)] leading-[1.05] tracking-[-0.03em] text-ink">
+        Toutes les catégories
+      </h1>
+      <p class="mt-4 max-w-[520px] text-body-lg text-ink/70">
+        Quatre familles d'outils, chacune avec ses guides et ses comparatifs — pas de rayon générique.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-4">
+      {categories.map((cat, i) => {
+        const nbGuides = getGuidesByCategorie(cat.slug).length;
+        const nbProduits = getProduitsByCategorie(cat.slug).length;
+        return (
+          <a
+            href={`/categories/${cat.slug}`}
+            class={`${i === 0 ? 'flex-[2] min-w-[320px]' : 'flex-1 min-w-[260px]'} rounded-tile bg-card shadow-tile p-6 sm:p-7 flex flex-col justify-between gap-6 transition hover:-translate-y-0.5 hover:shadow-tile-hover`}
+          >
+            <div>
+              <span class="font-mono text-label uppercase text-accent">{cat.sousTitre}</span>
+              <p class="mt-4 font-display font-bold text-display-m text-ink">{cat.emoji} {cat.nom}</p>
+              <p class="mt-2 text-body text-ink/70">{cat.description}</p>
+            </div>
+            <div class="flex items-center justify-between gap-3">
+              <span class="font-mono text-small text-line">{nbGuides} guide{nbGuides > 1 ? 's' : ''} · {nbProduits} outils</span>
+              <span class="grid h-11 w-11 flex-none place-items-center rounded-full bg-surface text-ink" aria-hidden="true">↗</span>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  </section>
 </Layout>

@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import EnteteCoque from '../../components/EnteteCoque.astro';
 import TableauComparatif from '../../components/TableauComparatif.astro';
 import VerdictProduit from '../../components/VerdictProduit.astro';
 import {
@@ -15,7 +16,11 @@ const categorie = getCategorieBySlug(slug!);
 if (!categorie) return Astro.redirect('/categories');
 
 const marquesListe = getMarquesByCategorie(slug!);
-const guides = getGuidesByCategorie(slug!);
+const guidesCategorie = getGuidesByCategorie(slug!);
+
+function ancre(nom: string): string {
+  return nom.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
 
 export const prerender = true;
 
@@ -23,59 +28,86 @@ export function getStaticPaths() {
   return categories.map((item) => ({ params: { slug: item.slug } }));
 }
 ---
-<Layout
-  title={`${categorie.nom} — ${categorie.sousTitre}`}
-  description={categorie.description}
->
-  <nav class="font-mono text-small text-ink mb-6" aria-label="Fil d'ariane">
-    <a href="/" class="hover:text-accent transition-colors">Accueil</a> ›
-    <a href="/categories" class="hover:text-accent transition-colors mx-1">Catégories</a> ›
-    <span class="text-ink">{categorie.nom}</span>
-  </nav>
+<Layout title={`${categorie.nom} — ${categorie.sousTitre}`} description={categorie.description} hideHeader>
+  <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
+    <EnteteCoque />
 
-  <div class="mb-12">
-    <p class="font-mono text-label uppercase text-ink mb-3">{categorie.sousTitre}</p>
-    <h1 class="font-display text-display-l text-ink mb-3">{categorie.nom}</h1>
-    <p class="font-body text-body-lg text-ink max-w-2xl">{categorie.description}</p>
-  </div>
-
-  {marquesListe.map(marque => {
-    const produitsDuMarque = getProduitsByMarque(marque.slug);
-    const meilleur = produitsDuMarque.find(p => p.segment === 'meilleur_rapport');
-    return (
-      <section class="mb-16 border-t border-ink pt-8">
-        <div class="flex flex-wrap items-baseline justify-between gap-4 mb-5">
-          <div>
-            <h2 class="font-display text-display-m text-ink">{marque.nom}</h2>
-            <p class="font-body text-small text-ink mt-1 max-w-xl">{marque.description}</p>
+    <div class="flex flex-wrap gap-4">
+      <div class="flex-[3] min-w-0 flex flex-col gap-4">
+        <div class="rounded-panel bg-gradient-to-br from-[#F6F8F0] to-[#EDF0E4] shadow-tile p-6 sm:p-8 lg:p-11 flex flex-wrap gap-8">
+          <div class="flex-1 min-w-[280px] flex flex-col">
+            <span class="self-start rounded-full bg-white/90 px-4 py-2 font-mono text-label uppercase text-accent">
+              {categorie.sousTitre}
+            </span>
+            <h1 class="mt-6 font-display font-extrabold text-[clamp(2rem,4.4vw,3.125rem)] leading-[1.04] tracking-[-0.035em] text-ink">
+              {categorie.emoji} {categorie.nom}
+            </h1>
+            <p class="mt-4 max-w-[460px] text-body-lg text-ink/70">{categorie.description}</p>
+            {marquesListe.length > 0 && (
+              <div class="mt-7 flex flex-wrap gap-2.5">
+                {marquesListe.map((m) => (
+                  <a href={`#${ancre(m.nom)}`} class="rounded-full bg-white px-4.5 py-2 text-small font-semibold text-ink hover:bg-surface transition-colors">
+                    {m.nom}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
-          <a href={`/marques/${marque.slug}`} class="font-mono text-label uppercase text-accent hover:text-ink transition-colors shrink-0">
-            Voir tous les produits →
-          </a>
+          <div class="flex-1 min-w-[240px] min-h-[240px] rounded-lg bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_14px,#F0F3E8_14px,#F0F3E8_28px)]"></div>
         </div>
 
-        <TableauComparatif produits={produitsDuMarque} />
+        {marquesListe.map((marque) => {
+          const produitsDuMarque = getProduitsByMarque(marque.slug);
+          const meilleur = produitsDuMarque.find(p => p.segment === 'meilleur_rapport') ?? produitsDuMarque[0];
+          return (
+            <div id={ancre(marque.nom)} class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-col gap-6">
+              <div class="flex flex-wrap items-baseline justify-between gap-3">
+                <div>
+                  <h2 class="m-0 font-display font-bold text-display-m text-ink">{marque.nom}</h2>
+                  <p class="mt-1.5 max-w-xl text-small text-ink/70">{marque.description}</p>
+                </div>
+                <a href={`/marques/${marque.slug}`} class="shrink-0 text-small font-semibold text-accent hover:text-ink transition-colors">
+                  Voir tous les produits →
+                </a>
+              </div>
 
-        {meilleur && (
-          <div class="mt-6 max-w-md">
-            <VerdictProduit produit={meilleur} />
+              <TableauComparatif produits={produitsDuMarque} />
+
+              {meilleur && (
+                <div class="max-w-md">
+                  <VerdictProduit produit={meilleur} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div class="flex-1 min-w-[260px] flex flex-col gap-4">
+        {guidesCategorie.length > 0 && (
+          <div class="rounded-tile bg-card shadow-tile p-6">
+            <p class="m-0 mb-4 font-display font-bold text-block-title text-ink">Guides {categorie.nom.toLowerCase()}</p>
+            <div class="flex flex-col gap-4">
+              {guidesCategorie.map((g) => (
+                <a href={`/blog/${g.slug}`} class="block hover:opacity-75 transition-opacity">
+                  <p class="m-0 font-body font-semibold text-body text-ink">{g.titre}</p>
+                  <p class="mt-1 text-small text-ink/65">{g.description}</p>
+                </a>
+              ))}
+            </div>
           </div>
         )}
-      </section>
-    );
-  })}
-
-  {guides.length > 0 && (
-    <section class="mt-16 border-t border-ink pt-8">
-      <p class="font-mono text-label uppercase text-ink mb-6">Guides d'achat {categorie.nom}</p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {guides.map(g => (
-          <a href={`/blog/${g.slug}`} class="bg-surface border-t-[3px] border-accent px-5 py-5 block hover:bg-accent/10 transition-colors">
-            <h3 class="font-display text-display-m text-ink mb-2">{g.titre}</h3>
-            <p class="font-body text-small text-ink">{g.description}</p>
-          </a>
-        ))}
+        <a
+          href="/choix-express"
+          class="flex-1 min-h-[200px] rounded-tile bg-[repeating-linear-gradient(45deg,#DCE1D2,#DCE1D2_16px,#E8ECDD_16px,#E8ECDD_32px)] shadow-tile p-6 flex flex-col justify-between transition hover:-translate-y-0.5"
+        >
+          <span class="self-end grid h-11 w-11 place-items-center rounded-full bg-card text-ink" aria-hidden="true">↗</span>
+          <span>
+            <span class="block font-display font-bold text-display-m text-ink">Pas le temps de comparer ?</span>
+            <span class="mt-2 block text-body text-ink/70">Trois questions et on tranche pour toi.</span>
+          </span>
+        </a>
       </div>
-    </section>
-  )}
+    </div>
+  </section>
 </Layout>
