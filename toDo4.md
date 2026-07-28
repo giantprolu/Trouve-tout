@@ -3,10 +3,10 @@ Cette semaine, concentre-toi sur l'implémentation du **Choix Express** (sans co
 
 Tâches :
 1. Créer formulaire dynamique avec 2-3 questions :
-   - Budget
+   - Budget ( barre slide deplaçable )
    - Usage principal
    - Priorité (prix vs qualité)
-2. Générer 1 produit recommandé selon réponses.
+2. Générer 1 à X produit recommandé selon réponses.
 3. Afficher verdict + CTA affilié Amazon.
 4. Utiliser SSR pour calculer et afficher le produit recommandé.
 5. Fournir snippets Astro avec logique de calcul de recommandation et affichage dynamique.

@@ -1,16 +1,27 @@
 ---
+export const prerender = false;
+
 import Layout from '../../layouts/Layout.astro';
-import ProductCard from '../../components/ProductCard.astro';
-import { products, categories, formatPrice } from '../../data/products';
+import DbProductCard from '../../components/DbProductCard.astro';
+import { getCategories, getProducts, type DbCategory, type ProductFull } from '../../lib/db';
 
 const title = "Tous les Produits | Trouve-Tout";
 const description = "Découvrez notre sélection complète de produits recommandés. Smartphones, électroménager, sport, beauté et plus encore.";
 
+// Récupérer les données depuis Supabase
+const categories = await getCategories();
+const allProducts = await getProducts();
+
 // Grouper les produits par catégorie
 const productsByCategory = categories.map(cat => ({
     category: cat,
-    products: products.filter(p => p.category === cat.slug)
-}));
+    products: allProducts.filter(p => p.category_id === cat.id)
+})).filter(group => group.products.length > 0);
+
+// Stats
+const totalProducts = allProducts.length;
+const bestValueCount = allProducts.filter(p => p.position === 'best-value').length;
+const budgetCount = allProducts.filter(p => p.position === 'budget').length;
 ---
 
 <Layout title={title} description={description}>
@@ -21,18 +32,18 @@ const productsByCategory = categories.map(cat => ({
                 Tous nos Produits
             </h1>
             <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-                Explorez notre sélection de {products.length} produits soigneusement évalués et recommandés.
+                Explorez notre sélection de {totalProducts} produits soigneusement évalués et recommandés.
             </p>
         </div>
 
         <!-- Stats -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
             <div class="bg-white rounded-xl shadow p-4 text-center">
-                <div class="text-3xl font-bold text-primary-600">{products.length}</div>
+                <div class="text-3xl font-bold text-primary-600">{totalProducts}</div>
                 <div class="text-gray-600 text-sm">Produits</div>
             </div>
             <div class="bg-white rounded-xl shadow p-4 text-center">
-                <div class="text-3xl font-bold text-green-600">{products.filter(p => p.tier === 'best-value').length}</div>
+                <div class="text-3xl font-bold text-green-600">{bestValueCount}</div>
                 <div class="text-gray-600 text-sm">Meilleurs rapports Q/P</div>
             </div>
             <div class="bg-white rounded-xl shadow p-4 text-center">
@@ -40,31 +51,47 @@ const productsByCategory = categories.map(cat => ({
                 <div class="text-gray-600 text-sm">Catégories</div>
             </div>
             <div class="bg-white rounded-xl shadow p-4 text-center">
-                <div class="text-3xl font-bold text-orange-600">{products.filter(p => p.tier === 'budget').length}</div>
+                <div class="text-3xl font-bold text-orange-600">{budgetCount}</div>
                 <div class="text-gray-600 text-sm">Options Budget</div>
             </div>
         </div>
 
         <!-- Products by Category -->
-        {productsByCategory.map(({ category, products: catProducts }) => (
-            <section class="mb-16">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900">
-                        {category.icon} {category.name}
-                    </h2>
-                    <a href={`/categories/${category.slug}`} class="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center">
-                        Voir tout
-                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </a>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {catProducts.slice(0, 4).map((product) => (
-                        <ProductCard product={product} />
-                    ))}
-                </div>
-            </section>
-        ))}
+        {productsByCategory.length > 0 ? (
+            productsByCategory.map(({ category, products }) => (
+                <section class="mb-16">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900">
+                            {category.icon} {category.name}
+                        </h2>
+                        <a href={`/categories/${category.slug}`} class="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center">
+                            Voir tout
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {products.slice(0, 4).map((product) => (
+                            <DbProductCard product={product} showBrand={true} />
+                        ))}
+                    </div>
+                </section>
+            ))
+        ) : (
+            <div class="text-center py-16 bg-white rounded-2xl shadow-lg">
+                <div class="text-8xl mb-6">📦</div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-3">Aucun produit pour l'instant</h3>
+                <p class="text-gray-600 mb-8 max-w-md mx-auto">
+                    Les produits sont en cours d'ajout. Revenez bientôt pour découvrir notre sélection !
+                </p>
+                <a 
+                    href="/" 
+                    class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors"
+                >
+                    🏠 Retour à l'accueil
+                </a>
+            </div>
+        )}
     </div>
 </Layout>

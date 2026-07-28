@@ -1,0 +1,3121 @@
+From c2046ab9caf2046f10b9613132ff6b46f348668c Mon Sep 17 00:00:00 2001
+From: giantprolu <nathnathchav@gmail.com>
+Date: Mon, 27 Jul 2026 21:41:49 +0000
+Subject: [PATCH 1/2] fix(seo): corriger le domaine canonique et prerendre les
+ pages statiques
+
+Le site declarait https://trouve-tout.fr comme URL canonique sur chaque
+page alors que le domaine reel est www.trouve-tout-conseil.fr. Google
+suivait donc la canonique vers un domaine inexistant et n'indexait
+aucune page.
+
+- src/lib/site.ts : source unique de verite pour l'URL du site
+- astro.config.mjs : ajout de 'site' (base des canonical / sitemap)
+- Layout.astro : canonical, og:url, og:image et JSON-LD sur le bon domaine
+  + normalisation du chemin (pas de slash final ni de query string)
+- sitemap.xml.ts : les 86 <loc> pointent enfin sur le bon domaine
+- robots.txt : directive Sitemap corrigee
+- public/og-default.png : ajout de l'image OG (elle renvoyait 404)
+- prerender + getStaticPaths sur les 95 pages statiques : HTML servi
+  depuis le CDN au lieu d'une fonction serverless a chaque crawl
+---
+ astro.config.mjs                  |   3 +++
+ public/og-default.png             | Bin 0 -> 25470 bytes
+ public/robots.txt                 |   2 +-
+ src/layouts/Layout.astro          |  10 ++++++++--
+ src/lib/site.ts                   |  15 +++++++++++++++
+ src/pages/blog/[slug].astro       |   6 ++++++
+ src/pages/blog/index.astro        |   2 ++
+ src/pages/categories/[slug].astro |   7 +++++++
+ src/pages/categories/index.astro  |   2 ++
+ src/pages/index.astro             |   2 ++
+ src/pages/marques/[slug].astro    |   7 +++++++
+ src/pages/marques/index.astro     |   2 ++
+ src/pages/produits/[slug].astro   |   7 +++++++
+ src/pages/produits/index.astro    |   2 ++
+ src/pages/sitemap.xml.ts          |   5 ++++-
+ 15 files changed, 68 insertions(+), 4 deletions(-)
+ create mode 100644 public/og-default.png
+ create mode 100644 src/lib/site.ts
+
+diff --git a/astro.config.mjs b/astro.config.mjs
+index 46fd34d..74c295a 100644
+--- a/astro.config.mjs
++++ b/astro.config.mjs
+@@ -4,6 +4,9 @@ import tailwind from '@astrojs/tailwind';
+ import vercel from '@astrojs/vercel';
+ 
+ export default defineConfig({
++  // Domaine de production réel — sert de base à Astro.site,
++  // aux canonical et au sitemap.
++  site: 'https://www.trouve-tout-conseil.fr',
+   output: 'server',
+   adapter: vercel(),
+   integrations: [tailwind()],
+diff --git a/public/og-default.png b/public/og-default.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..3ad83d8c089dda5bef322aecb847137742316d0e
+GIT binary patch
+literal 25470
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/public/robots.txt b/public/robots.txt
+index e61b36e..add23da 100644
+--- a/public/robots.txt
++++ b/public/robots.txt
+@@ -1,4 +1,4 @@
+ User-agent: *
+ Allow: /
+ 
+-Sitemap: https://trouve-tout.fr/sitemap.xml
++Sitemap: https://www.trouve-tout-conseil.fr/sitemap.xml
+diff --git a/src/layouts/Layout.astro b/src/layouts/Layout.astro
+index b5cbd2d..a4ad984 100644
+--- a/src/layouts/Layout.astro
++++ b/src/layouts/Layout.astro
+@@ -1,4 +1,6 @@
+ ---
++import { SITE_URL } from '../lib/site';
++
+ interface Props {
+   title: string;
+   description?: string;
+@@ -12,8 +14,12 @@ const {
+   canonicalPath,
+ } = Astro.props;
+ 
+-const siteUrl = 'https://trouve-tout.fr';
+-const canonical = canonicalPath ? `${siteUrl}${canonicalPath}` : `${siteUrl}${Astro.url.pathname}`;
++const siteUrl = SITE_URL;
++// On normalise le chemin : pas de slash final parasite, pas de query string
++// (sinon Google voit autant de "pages" que de variantes d'URL).
++const rawPath = canonicalPath ?? Astro.url.pathname;
++const cleanPath = rawPath !== '/' ? rawPath.replace(/\/+$/, '') : '/';
++const canonical = `${siteUrl}${cleanPath}`;
+ const fullTitle = `${title} — Trouve-Tout`;
+ ---
+ <!doctype html>
+diff --git a/src/lib/site.ts b/src/lib/site.ts
+new file mode 100644
+index 0000000..4f021ae
+--- /dev/null
++++ b/src/lib/site.ts
+@@ -0,0 +1,15 @@
++/**
++ * Source unique de vérité pour l'URL du site.
++ * Doit correspondre EXACTEMENT au domaine servi en production
++ * (et à `site` dans astro.config.mjs).
++ *
++ * Ne jamais mettre ici un domaine qu'on ne possède pas :
++ * les balises canonical pointeraient ailleurs et Google
++ * n'indexerait aucune page.
++ */
++export const SITE_URL = 'https://www.trouve-tout-conseil.fr';
++
++/** Construit une URL absolue à partir d'un chemin racine ("/blog", "/og.png"...). */
++export function absoluteUrl(path: string): string {
++  return `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;
++}
+diff --git a/src/pages/blog/[slug].astro b/src/pages/blog/[slug].astro
+index 20f60b6..a59f758 100644
+--- a/src/pages/blog/[slug].astro
++++ b/src/pages/blog/[slug].astro
+@@ -16,6 +16,12 @@ const schema = JSON.stringify({
+   author: { '@type': 'Organization', name: 'Trouve-Tout' },
+   publisher: { '@type': 'Organization', name: 'Trouve-Tout' },
+ });
++
++export const prerender = true;
++
++export function getStaticPaths() {
++  return guides.map((item) => ({ params: { slug: item.slug } }));
++}
+ ---
+ <Layout title={guide.titre} description={guide.description}>
+   <script is:inline type="application/ld+json" set:html={schema} />
+diff --git a/src/pages/blog/index.astro b/src/pages/blog/index.astro
+index 3d3c320..e07015c 100644
+--- a/src/pages/blog/index.astro
++++ b/src/pages/blog/index.astro
+@@ -1,6 +1,8 @@
+ ---
+ import Layout from '../../layouts/Layout.astro';
+ import { guides, getCategorieBySlug } from '../../lib/data';
++
++export const prerender = true;
+ ---
+ <Layout title="Guides d'achat" description="Guides honnêtes pour choisir le bon produit rapidement.">
+   <div class="max-w-3xl mx-auto px-4 py-12">
+diff --git a/src/pages/categories/[slug].astro b/src/pages/categories/[slug].astro
+index 05c5458..38fa723 100644
+--- a/src/pages/categories/[slug].astro
++++ b/src/pages/categories/[slug].astro
+@@ -7,6 +7,7 @@ import {
+   getMarquesByCategorie,
+   getProduitsByMarque,
+   getGuidesByCategorie,
++  categories,
+ } from '../../lib/data';
+ 
+ const { slug } = Astro.params;
+@@ -15,6 +16,12 @@ if (!categorie) return Astro.redirect('/categories');
+ 
+ const marquesListe = getMarquesByCategorie(slug!);
+ const guides = getGuidesByCategorie(slug!);
++
++export const prerender = true;
++
++export function getStaticPaths() {
++  return categories.map((item) => ({ params: { slug: item.slug } }));
++}
+ ---
+ <Layout
+   title={`${categorie.nom} — ${categorie.sousTitre}`}
+diff --git a/src/pages/categories/index.astro b/src/pages/categories/index.astro
+index 2a36b8b..09a1d96 100644
+--- a/src/pages/categories/index.astro
++++ b/src/pages/categories/index.astro
+@@ -1,6 +1,8 @@
+ ---
+ import Layout from '../../layouts/Layout.astro';
+ import { categories } from '../../lib/data';
++
++export const prerender = true;
+ ---
+ <Layout title="Catégories" description="Toutes les catégories de produits comparés sur Trouve-Tout.">
+   <div class="max-w-4xl mx-auto px-4 py-12">
+diff --git a/src/pages/index.astro b/src/pages/index.astro
+index f16f0a1..6db3a07 100644
+--- a/src/pages/index.astro
++++ b/src/pages/index.astro
+@@ -1,5 +1,7 @@
+ ---
+ import Layout from '../layouts/Layout.astro';
++
++export const prerender = true;
+ ---
+ <Layout title="Accueil" description="Trouve le meilleur produit sans perdre de temps — comparatifs honnêtes, verdict clair.">
+   <section class="max-w-3xl mx-auto px-4 py-16 text-center">
+diff --git a/src/pages/marques/[slug].astro b/src/pages/marques/[slug].astro
+index 1f4cbd6..788d0ee 100644
+--- a/src/pages/marques/[slug].astro
++++ b/src/pages/marques/[slug].astro
+@@ -6,6 +6,7 @@ import {
+   getMarqueBySlug,
+   getProduitsByMarque,
+   getCategorieBySlug,
++  marques,
+ } from '../../lib/data';
+ 
+ const { slug } = Astro.params;
+@@ -14,6 +15,12 @@ if (!marque) return Astro.redirect('/categories');
+ 
+ const produitsDuMarque = getProduitsByMarque(slug!);
+ const categorie = getCategorieBySlug(marque.categorieSlug);
++
++export const prerender = true;
++
++export function getStaticPaths() {
++  return marques.map((item) => ({ params: { slug: item.slug } }));
++}
+ ---
+ <Layout
+   title={`${marque.nom} — Comparatif ${categorie?.sousTitre ?? ''}`}
+diff --git a/src/pages/marques/index.astro b/src/pages/marques/index.astro
+index cd06247..615bf60 100644
+--- a/src/pages/marques/index.astro
++++ b/src/pages/marques/index.astro
+@@ -1,5 +1,7 @@
+ ---
+ 
++
++export const prerender = true;
+ ---
+ 
+ <h1 class="text-2xl font-bold">Marques</h1>
+diff --git a/src/pages/produits/[slug].astro b/src/pages/produits/[slug].astro
+index 9816f80..1e7008c 100644
+--- a/src/pages/produits/[slug].astro
++++ b/src/pages/produits/[slug].astro
+@@ -8,6 +8,7 @@ import {
+   getMarqueBySlug,
+   getCategorieBySlug,
+   getProduitsByMarque,
++  produits,
+ } from '../../lib/data';
+ 
+ const { slug } = Astro.params;
+@@ -40,6 +41,12 @@ const schema = JSON.stringify({
+     ratingCount: 1,
+   },
+ });
++
++export const prerender = true;
++
++export function getStaticPaths() {
++  return produits.map((item) => ({ params: { slug: item.slug } }));
++}
+ ---
+ <Layout
+   title={`${produit.nom} — Avis et comparatif`}
+diff --git a/src/pages/produits/index.astro b/src/pages/produits/index.astro
+index 5d2af9c..f7563ae 100644
+--- a/src/pages/produits/index.astro
++++ b/src/pages/produits/index.astro
+@@ -1,5 +1,7 @@
+ ---
+ 
++
++export const prerender = true;
+ ---
+ 
+ <h1 class="text-2xl font-bold">Produits</h1>
+diff --git a/src/pages/sitemap.xml.ts b/src/pages/sitemap.xml.ts
+index 7151620..3b8008a 100644
+--- a/src/pages/sitemap.xml.ts
++++ b/src/pages/sitemap.xml.ts
+@@ -1,7 +1,10 @@
+ import type { APIRoute } from 'astro';
+ import { categories, marques, produits, guides } from '../lib/data';
++import { SITE_URL } from '../lib/site';
+ 
+-const siteUrl = 'https://trouve-tout.fr';
++export const prerender = false;
++
++const siteUrl = SITE_URL;
+ 
+ function url(path: string, priority: string, changefreq: string): string {
+   return `
+-- 
+2.43.0
+
+
+From de93bf17bbef49989985d7a34fd0f17b338a7f66 Mon Sep 17 00:00:00 2001
+From: giantprolu <nathnathchav@gmail.com>
+Date: Mon, 27 Jul 2026 21:58:05 +0000
+Subject: [PATCH 2/2] feat: pivot vers la niche bricolage/outillage avec
+ affiliation ManoMano
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Changement de niche et de modele economique : ManoMano (7% via Awin)
+remplace Amazon (3%) comme marchand principal.
+
+Affiliation
+- src/lib/affiliation.ts : liens Awin generes a l'affichage, ID lu depuis
+  PUBLIC_AWIN_AFFILIATE_ID. Plus aucun identifiant en dur (l'ancien
+  tag=trouvetout-21 etait un placeholder : tous les clics rapportaient 0)
+- le build averti si l'ID est absent
+- rel="sponsored" sur les liens commerciaux
+- prix exacts remplaces par des tranches de budget (Amazon et Awin
+  interdisent d'afficher un prix figé)
+
+Contenu
+- 4 categories outillage, 4 marques, 19 produits reels
+- 5 guides d'achat de fond, orientes criteres et non classement
+- suppression des 60 fiches high-tech generiques et du Mode Cadeau
+
+Conformite
+- pages mentions legales et politique de confidentialite
+- mention d'affiliation conforme a la formulation imposee par Amazon
+- suppression du JSON-LD offers (prix fictif) et aggregateRating
+  (note auto-attribuee avec ratingCount:1 = balisage sanctionne)
+
+Mesure
+- Vercel Web Analytics + evenement clic_affilie sur chaque CTA
+
+Outillage projet
+- npm run check:produits : liste les fiches dont l'URL marchand est
+  encore une recherche generique
+---
+ package.json                                  |    3 +-
+ scripts/check-produits.mjs                    |   33 +
+ .../{CTAAmazon.astro => CTAAffilie.astro}     |   27 +-
+ src/components/TableauComparatif.astro        |    7 +-
+ src/components/VerdictProduit.astro           |    7 +-
+ src/layouts/Layout.astro                      |   50 +-
+ src/lib/affiliation.ts                        |   72 +
+ src/lib/data.ts                               | 1447 +++++++----------
+ src/pages/cadeau/index.astro                  |  118 --
+ src/pages/confidentialite.astro               |   67 +
+ src/pages/index.astro                         |   57 +-
+ src/pages/marques/[slug].astro                |    2 +-
+ src/pages/mentions-legales.astro              |   72 +
+ src/pages/produits/[slug].astro               |   30 +-
+ src/pages/sitemap.xml.ts                      |    3 +-
+ 15 files changed, 910 insertions(+), 1085 deletions(-)
+ create mode 100644 scripts/check-produits.mjs
+ rename src/components/{CTAAmazon.astro => CTAAffilie.astro} (55%)
+ create mode 100644 src/lib/affiliation.ts
+ delete mode 100644 src/pages/cadeau/index.astro
+ create mode 100644 src/pages/confidentialite.astro
+ create mode 100644 src/pages/mentions-legales.astro
+
+diff --git a/package.json b/package.json
+index 9283cb8..95abe1a 100644
+--- a/package.json
++++ b/package.json
+@@ -8,7 +8,8 @@
+     "preview": "astro preview",
+     "astro": "astro",
+     "db:push": "drizzle-kit push",
+-    "db:studio": "drizzle-kit studio"
++    "db:studio": "drizzle-kit studio",
++    "check:produits": "node scripts/check-produits.mjs"
+   },
+   "dependencies": {
+     "@astrojs/vercel": "^9.0.4",
+diff --git a/scripts/check-produits.mjs b/scripts/check-produits.mjs
+new file mode 100644
+index 0000000..115372e
+--- /dev/null
++++ b/scripts/check-produits.mjs
+@@ -0,0 +1,33 @@
++/**
++ * Liste les fiches produits dont l'URL marchand est encore generique.
++ * Tant qu'une fiche est `verifie: false`, elle envoie le visiteur sur une page
++ * de recherche : la conversion s'effondre.
++ *
++ *   npm run check:produits
++ */
++import { readFileSync } from 'node:fs';
++
++const src = readFileSync(new URL('../src/lib/data.ts', import.meta.url), 'utf8');
++
++const blocs = src.split(/\n  \{\n/).slice(1);
++const aFaire = [];
++let total = 0;
++
++for (const b of blocs) {
++  if (!b.includes('urlMarchand')) continue;
++  total++;
++  const nom = b.match(/nom:\s*'([^']+)'/)?.[1] ?? '?';
++  if (/verifie:\s*false/.test(b)) aFaire.push(nom);
++}
++
++console.log(`\n${total - aFaire.length}/${total} fiches verifiees.\n`);
++if (aFaire.length) {
++  console.log('URL marchand encore generique :');
++  for (const n of aFaire) console.log(`  · ${n}`);
++  console.log(
++    '\n→ Ouvre la fiche sur manomano.fr, colle son URL dans urlMarchand, passe verifie a true.\n',
++  );
++  process.exitCode = 1;
++} else {
++  console.log('Toutes les fiches pointent vers une URL produit reelle.\n');
++}
+diff --git a/src/components/CTAAmazon.astro b/src/components/CTAAffilie.astro
+similarity index 55%
+rename from src/components/CTAAmazon.astro
+rename to src/components/CTAAffilie.astro
+index d1cd3ec..475f414 100644
+--- a/src/components/CTAAmazon.astro
++++ b/src/components/CTAAffilie.astro
+@@ -1,30 +1,41 @@
+ ---
++import { lienAffilie, nomMarchand, type Marchand } from '../lib/affiliation';
++
+ interface Props {
+-  lien: string;
++  url: string;
++  marchand: Marchand;
+   label?: string;
+   variant?: 'primary' | 'small';
+ }
+-const { lien, label = 'Voir sur Amazon', variant = 'primary' } = Astro.props;
++const { url, marchand, label, variant = 'primary' } = Astro.props;
++
++const href = lienAffilie(marchand, url);
++const texte = label ?? `Voir sur ${nomMarchand[marchand]}`;
++
++// rel="sponsored" est la valeur attendue par Google pour un lien commercial.
++const rel = 'sponsored nofollow noopener noreferrer';
+ ---
+ {variant === 'primary' ? (
+   <a
+-    href={lien}
++    href={href}
+     target="_blank"
+-    rel="noopener noreferrer nofollow"
++    rel={rel}
++    data-affilie={marchand}
+     class="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-500 text-gray-900 font-semibold px-5 py-3 rounded-xl transition text-sm"
+   >
+     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+     </svg>
+-    {label}
++    {texte}
+   </a>
+ ) : (
+   <a
+-    href={lien}
++    href={href}
+     target="_blank"
+-    rel="noopener noreferrer nofollow"
++    rel={rel}
++    data-affilie={marchand}
+     class="text-amber-600 hover:text-amber-700 text-sm font-medium underline underline-offset-2"
+   >
+-    {label} ↗
++    {texte} ↗
+   </a>
+ )}
+diff --git a/src/components/TableauComparatif.astro b/src/components/TableauComparatif.astro
+index c7363a8..c28319f 100644
+--- a/src/components/TableauComparatif.astro
++++ b/src/components/TableauComparatif.astro
+@@ -1,6 +1,7 @@
+ ---
+ import type { Produit } from '../lib/data';
+-import CTAAmazon from './CTAAmazon.astro';
++import CTAAffilie from './CTAAffilie.astro';
++import { trancheBudget } from '../lib/affiliation';
+ 
+ interface Props {
+   produits: Produit[];
+@@ -40,7 +41,7 @@ const segmentLabel: Record<string, string> = {
+             )}
+           </td>
+           <td class="text-center px-3 py-4 font-bold text-indigo-600">
+-            {p.prix.toLocaleString('fr-FR')} €
++            {trancheBudget(p.prixIndicatif)}
+           </td>
+           <td class="text-center px-3 py-4">
+             <div class="flex justify-center gap-0.5">
+@@ -67,7 +68,7 @@ const segmentLabel: Record<string, string> = {
+             {segmentLabel[p.segment]}
+           </td>
+           <td class="px-3 py-4">
+-            <CTAAmazon lien={p.lienAmazon} variant="small" label="Amazon" />
++            <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir" />
+           </td>
+         </tr>
+       ))}
+diff --git a/src/components/VerdictProduit.astro b/src/components/VerdictProduit.astro
+index c57450e..4352db2 100644
+--- a/src/components/VerdictProduit.astro
++++ b/src/components/VerdictProduit.astro
+@@ -1,6 +1,7 @@
+ ---
+ import type { Produit } from '../lib/data';
+-import CTAAmazon from './CTAAmazon.astro';
++import CTAAffilie from './CTAAffilie.astro';
++import { trancheBudget } from '../lib/affiliation';
+ 
+ interface Props {
+   produit: Produit;
+@@ -28,7 +29,7 @@ const segmentColor: Record<string, string> = {
+   </div>
+ 
+   <h3 class="text-xl font-bold mb-1">{produit.nom}</h3>
+-  <div class="text-2xl font-bold text-indigo-600 mb-3">{produit.prix.toLocaleString('fr-FR')} €</div>
++  <div class="text-2xl font-bold text-indigo-600 mb-3">{trancheBudget(produit.prixIndicatif)}</div>
+ 
+   <p class="text-gray-600 text-sm mb-4">{produit.description}</p>
+ 
+@@ -62,5 +63,5 @@ const segmentColor: Record<string, string> = {
+     </div>
+   </div>
+ 
+-  <CTAAmazon lien={produit.lienAmazon} />
++  <CTAAffilie url={produit.urlMarchand} marchand={produit.marchand} />
+ </div>
+diff --git a/src/layouts/Layout.astro b/src/layouts/Layout.astro
+index a4ad984..85b4d99 100644
+--- a/src/layouts/Layout.astro
++++ b/src/layouts/Layout.astro
+@@ -63,7 +63,6 @@ const fullTitle = `${title} — Trouve-Tout`;
+       <a href="/" class="text-lg font-bold text-indigo-600">Trouve-Tout</a>
+       <a href="/categories" class="hover:text-indigo-600">Catégories</a>
+       <a href="/choix-express" class="hover:text-indigo-600">Choix Express</a>
+-      <a href="/cadeau" class="hover:text-indigo-600">Mode Cadeau</a>
+       <a href="/blog" class="hover:text-indigo-600">Guides</a>
+       <a href="/profil" class="ml-auto hover:text-indigo-600">Mon profil</a>
+     </nav>
+@@ -71,15 +70,50 @@ const fullTitle = `${title} — Trouve-Tout`;
+       <slot />
+     </main>
+     <footer class="mt-16 border-t border-gray-200 py-8 px-4">
+-      <div class="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between gap-4 text-xs text-gray-400">
+-        <div>© {new Date().getFullYear()} Trouve-Tout · Comparatif produits indépendant</div>
+-        <div class="flex gap-4">
+-          <a href="/categories" class="hover:text-gray-600">Catégories</a>
+-          <a href="/blog" class="hover:text-gray-600">Guides</a>
+-          <a href="/sitemap.xml" class="hover:text-gray-600">Sitemap</a>
++      <div class="max-w-5xl mx-auto space-y-4 text-xs text-gray-500">
++        <div class="flex flex-col sm:flex-row justify-between gap-4">
++          <div>© {new Date().getFullYear()} Trouve-Tout · Guides d'achat outillage indépendants</div>
++          <div class="flex flex-wrap gap-4">
++            <a href="/categories" class="hover:text-gray-700">Catégories</a>
++            <a href="/blog" class="hover:text-gray-700">Guides</a>
++            <a href="/mentions-legales" class="hover:text-gray-700">Mentions légales</a>
++            <a href="/confidentialite" class="hover:text-gray-700">Confidentialité</a>
++            <a href="/sitemap.xml" class="hover:text-gray-700">Sitemap</a>
++          </div>
++        </div>
++        <div class="pt-4 border-t border-gray-100 text-gray-400 leading-relaxed">
++          <p>
++            Certains liens de ce site sont des liens d'affiliation : si tu achètes après avoir
++            cliqué, nous percevons une commission du marchand. <strong>Le prix que tu paies est
++            strictement identique.</strong> Cela ne change ni nos recommandations ni l'ordre des
++            produits présentés.
++          </p>
++          <p class="mt-2">
++            En tant que Partenaire Amazon, nous réalisons un bénéfice sur les achats remplissant
++            les conditions requises.
++          </p>
++          <p class="mt-2">
++            Les fourchettes de prix sont indicatives et peuvent varier. Seul le prix affiché sur
++            le site du marchand fait foi.
++          </p>
+         </div>
+-        <div>Ce site contient des liens affiliés Amazon. Votre prix ne change pas.</div>
+       </div>
+     </footer>
++    <!-- Vercel Web Analytics (a activer dans Vercel > Analytics) -->
++    <script defer src="/_vercel/insights/script.js"></script>
++
++    <!-- Tracking des clics affilies : sans ce compteur, impossible de savoir
++         si le probleme vient du trafic ou du contenu. -->
++    <script is:inline>
++      document.addEventListener('click', (e) => {
++        const a = e.target.closest('a[data-affilie]');
++        if (!a) return;
++        const payload = {
++          marchand: a.dataset.affilie,
++          page: location.pathname,
++        };
++        if (window.va) window.va('event', { name: 'clic_affilie', data: payload });
++      });
++    </script>
+   </body>
+ </html>
+diff --git a/src/lib/affiliation.ts b/src/lib/affiliation.ts
+new file mode 100644
+index 0000000..ef43b2f
+--- /dev/null
++++ b/src/lib/affiliation.ts
+@@ -0,0 +1,72 @@
++/**
++ * Génération des liens d'affiliation.
++ *
++ * RÈGLE ABSOLUE : aucun identifiant d'affilié en dur dans le code.
++ * La version précédente du site utilisait `tag=trouvetout-21`, un identifiant
++ * inventé — tous les clics ont donc rapporté 0 €. On lit désormais l'ID depuis
++ * l'environnement, et le build hurle s'il est absent.
++ *
++ * Variables à définir dans Vercel → Settings → Environment Variables :
++ *   PUBLIC_AWIN_AFFILIATE_ID   → ton identifiant éditeur Awin (chiffres)
++ *   PUBLIC_AMAZON_PARTNER_TAG  → optionnel, ton tag Amazon Partenaires
++ */
++
++/** ID marchand ManoMano France sur Awin. */
++export const AWIN_MERCHANT_MANOMANO_FR = 17547;
++
++const AWIN_ID = import.meta.env.PUBLIC_AWIN_AFFILIATE_ID?.trim() ?? '';
++const AMAZON_TAG = import.meta.env.PUBLIC_AMAZON_PARTNER_TAG?.trim() ?? '';
++
++export const affiliationConfiguree = AWIN_ID.length > 0;
++
++if (!affiliationConfiguree) {
++  console.warn(
++    '\n⚠️  PUBLIC_AWIN_AFFILIATE_ID absent : les liens ManoMano pointeront vers\n' +
++      '    le site sans tracking. Aucune commission ne sera attribuée.\n' +
++      '    → Vercel > Settings > Environment Variables\n',
++  );
++}
++
++/**
++ * Transforme une URL ManoMano en lien tracké Awin.
++ * Si l'ID n'est pas configuré, renvoie l'URL brute (le visiteur arrive bien
++ * sur la bonne page, mais la vente n'est pas attribuée).
++ */
++export function lienManoMano(urlProduit: string): string {
++  if (!affiliationConfiguree) return urlProduit;
++  const ued = encodeURIComponent(urlProduit);
++  return `https://www.awin1.com/cread.php?awinmid=${AWIN_MERCHANT_MANOMANO_FR}&awinaffid=${AWIN_ID}&ued=${ued}`;
++}
++
++/** Lien Amazon tracké — utilisé seulement en secours quand ManoMano n'a pas le produit. */
++export function lienAmazon(urlProduit: string): string {
++  if (!AMAZON_TAG) return urlProduit;
++  const sep = urlProduit.includes('?') ? '&' : '?';
++  return `${urlProduit}${sep}tag=${encodeURIComponent(AMAZON_TAG)}`;
++}
++
++export type Marchand = 'manomano' | 'amazon';
++
++export function lienAffilie(marchand: Marchand, url: string): string {
++  return marchand === 'amazon' ? lienAmazon(url) : lienManoMano(url);
++}
++
++export const nomMarchand: Record<Marchand, string> = {
++  manomano: 'ManoMano',
++  amazon: 'Amazon',
++};
++
++/**
++ * Tranche de budget affichée à la place d'un prix exact.
++ *
++ * Amazon comme Awin interdisent d'afficher un prix figé : il devient faux en
++ * quelques jours et engage ta responsabilité. On affiche une fourchette, qui
++ * reste utile au lecteur sans jamais mentir.
++ */
++export function trancheBudget(prixIndicatif: number): string {
++  if (prixIndicatif < 80) return 'moins de 80 €';
++  if (prixIndicatif < 150) return '80 – 150 €';
++  if (prixIndicatif < 250) return '150 – 250 €';
++  if (prixIndicatif < 400) return '250 – 400 €';
++  return 'plus de 400 €';
++}
+diff --git a/src/lib/data.ts b/src/lib/data.ts
+index a484019..81acae9 100644
+--- a/src/lib/data.ts
++++ b/src/lib/data.ts
+@@ -1,3 +1,5 @@
++import type { Marchand } from './affiliation';
++
+ // ─────────────────────────────────────────────────────────────────────────────
+ // Types
+ // ─────────────────────────────────────────────────────────────────────────────
+@@ -13,9 +15,10 @@ export interface Categorie {
+ export interface Marque {
+   slug: string;
+   nom: string;
+-  categorieSlug: string;
++  /** Une marque d'outillage couvre plusieurs familles d'outils. */
++  categorieSlugs: string[];
+   description: string;
+-  logo?: string;
++  positionnement: string;
+ }
+ 
+ export interface Produit {
+@@ -23,16 +26,21 @@ export interface Produit {
+   nom: string;
+   marqueSlug: string;
+   categorieSlug: string;
+-  prix: number;
++  /** Ordre de grandeur, usage INTERNE (filtrage budget). Jamais affiche tel quel. */
++  prixIndicatif: number;
+   segment: 'meilleur_rapport' | 'milieu' | 'moins_cher';
+-  qualite: number;      // 1–5
+-  durabilite: number;   // 1–5
+-  fiabilite: number;    // 1–5
++  qualite: number;
++  durabilite: number;
++  fiabilite: number;
+   verdict: string;
+   pourQui: string;
+   contreQui: string;
+   description: string;
+-  lienAmazon: string;
++  marchand: Marchand;
++  /** URL de la fiche produit chez le marchand. Le lien tracke est genere a l'affichage. */
++  urlMarchand: string;
++  /** false = URL encore generique et fiche non relue. */
++  verifie: boolean;
+ }
+ 
+ export interface Guide {
+@@ -44,53 +52,42 @@ export interface Guide {
+   sections: { titre: string; contenu: string }[];
+ }
+ 
+-export interface GiftProfile {
+-  destinataire: string;
+-  age: string;
+-  budget: number;
+-  occasion: string;
+-  niveauTech: string;
+-}
+-
+ // ─────────────────────────────────────────────────────────────────────────────
+-// Catégories
++// Categories
+ // ─────────────────────────────────────────────────────────────────────────────
+ 
+ export const categories: Categorie[] = [
+   {
+-    slug: 'high-tech',
+-    nom: 'High-Tech',
+-    emoji: '📱',
+-    sousTitre: 'Smartphones',
+-    description: 'Les meilleurs smartphones comparés par rapport qualité/prix, durabilité et fiabilité.',
+-  },
+-  {
+-    slug: 'maison',
+-    nom: 'Maison',
+-    emoji: '🏠',
+-    sousTitre: 'Aspirateurs sans fil',
+-    description: 'Aspirateurs sans fil : puissance, autonomie et rapport qualité/prix décortiqués.',
++    slug: 'percage-vissage',
++    nom: 'Perçage & vissage',
++    emoji: '🔩',
++    description:
++      "Perceuses-visseuses, perforateurs, visseuses à chocs. Le premier outil qu'on achète, et celui qu'on garde dix ans.",
++    sousTitre: "L'outil de base, celui qu'il ne faut pas rater",
+   },
+   {
+-    slug: 'cuisine',
+-    nom: 'Cuisine',
+-    emoji: '🍳',
+-    sousTitre: 'Friteuses à air',
+-    description: 'Friteuses à air : capacité, praticité et facilité de nettoyage comparées.',
++    slug: 'sciage',
++    nom: 'Sciage',
++    emoji: '🪚',
++    description:
++      'Scies circulaires, scies sauteuses, scies à onglet. Couper droit, couper propre, sans y laisser un doigt.',
++    sousTitre: 'Couper droit du premier coup',
+   },
+   {
+-    slug: 'sport',
+-    nom: 'Sport',
+-    emoji: '🏃',
+-    sousTitre: 'Montres connectées',
+-    description: 'Montres connectées sport : précision GPS, autonomie et fonctionnalités santé.',
++    slug: 'poncage-finition',
++    nom: 'Ponçage & finition',
++    emoji: '🎨',
++    description:
++      "Ponceuses excentriques, vibrantes, à bande. L'étape que tout le monde bâcle et qui fait 80 % du rendu final.",
++    sousTitre: 'Là où se joue le rendu final',
+   },
+   {
+-    slug: 'beaute',
+-    nom: 'Beauté',
+-    emoji: '✨',
+-    sousTitre: 'Épilation & lissage',
+-    description: 'Épilateurs et lisseurs : efficacité, douceur et longévité passés au crible.',
++    slug: 'jardin-exterieur',
++    nom: 'Jardin & extérieur',
++    emoji: '🌿',
++    description:
++      "Tondeuses, taille-haies, souffleurs, nettoyeurs. L'entretien extérieur sans y passer ses week-ends.",
++    sousTitre: 'Reprendre le dessus sur le jardin',
+   },
+ ];
+ 
+@@ -99,852 +96,549 @@ export const categories: Categorie[] = [
+ // ─────────────────────────────────────────────────────────────────────────────
+ 
+ export const marques: Marque[] = [
+-  // High-Tech
+-  { slug: 'apple', nom: 'Apple', categorieSlug: 'high-tech', description: 'La référence iOS, écosystème fermé mais performances hors pair et suivi logiciel long.' },
+-  { slug: 'samsung', nom: 'Samsung', categorieSlug: 'high-tech', description: 'Le plus grand choix Android, des entrées de gamme solides aux flagships ultra-puissants.' },
+-  { slug: 'google', nom: 'Google', categorieSlug: 'high-tech', description: 'Maître de la photo computationnelle et des mises à jour Android garanties 7 ans.' },
+-  { slug: 'xiaomi', nom: 'Xiaomi', categorieSlug: 'high-tech', description: 'Rapport qualité/prix imbattable, autonomie excellente, MIUI un peu touffue.' },
+-  // Maison
+-  { slug: 'dyson', nom: 'Dyson', categorieSlug: 'maison', description: 'La référence aspiration sans fil, filtration HEPA, design premium, prix élevé.' },
+-  { slug: 'irobot', nom: 'iRobot', categorieSlug: 'maison', description: 'Pionnier du robot aspirateur, navigation intelligente et app intuitive.' },
+-  { slug: 'miele', nom: 'Miele', categorieSlug: 'maison', description: 'Durabilité légendaire, SAV irréprochable, filtration médicale. Conçu pour durer 20 ans.' },
+-  { slug: 'rowenta', nom: 'Rowenta', categorieSlug: 'maison', description: 'Marque française accessible, bon rapport qualité/prix, SAV disponible.' },
+-  // Cuisine
+-  { slug: 'ninja', nom: 'Ninja', categorieSlug: 'cuisine', description: 'Innovation constante, doubles zones de cuisson, qualité build premium.' },
+-  { slug: 'philips', nom: 'Philips', categorieSlug: 'cuisine', description: 'Inventeur de la friteuse à air, fiable, paniers antiadhésifs faciles à nettoyer.' },
+-  { slug: 'cosori', nom: 'Cosori', categorieSlug: 'cuisine', description: 'Excellent rapport qualité/prix, grand choix de tailles, app connectée disponible.' },
+-  { slug: 'tefal', nom: 'Tefal', categorieSlug: 'cuisine', description: 'Marque de confiance française, pièces disponibles partout, SAV réactif.' },
+-  // Sport
+-  { slug: 'garmin', nom: 'Garmin', categorieSlug: 'sport', description: 'La référence sport sérieux : GPS ultra-précis, autonomie record, données complètes.' },
+-  { slug: 'apple-watch', nom: 'Apple Watch', categorieSlug: 'sport', description: 'Meilleure détection santé du marché, intégration iOS parfaite, autonomie limitée.' },
+-  { slug: 'samsung-watch', nom: 'Samsung Watch', categorieSlug: 'sport', description: 'Bel écran AMOLED, bon suivi santé Android, compatible tous smartphones Samsung.' },
+-  { slug: 'polar', nom: 'Polar', categorieSlug: 'sport', description: 'Expert cardio et endurance, capteurs précis, suivi récupération sérieux.' },
+-  // Beauté
+-  { slug: 'braun', nom: 'Braun', categorieSlug: 'beaute', description: 'Épilateurs référence : efficacité maximale, nombreux accessoires, durabilité.' },
+-  { slug: 'philips-lumea', nom: 'Philips Lumea', categorieSlug: 'beaute', description: 'Leader IPL maison, résultats durables en 8 semaines, 5 intensités.' },
+-  { slug: 'remington', nom: 'Remington', categorieSlug: 'beaute', description: 'Bon rapport qualité/prix sur lisseurs et épilation lumière pulsée.' },
+-  { slug: 'rowenta-beaute', nom: 'Rowenta Beauté', categorieSlug: 'beaute', description: 'Lisseurs fiables, plaque céramique, disponibles chez tous les revendeurs.' },
+-];
+-
+-// ─────────────────────────────────────────────────────────────────────────────
+-// Produits — 5 catégories × 4 marques × 3 produits = 60 produits
+-// ─────────────────────────────────────────────────────────────────────────────
+-
+-export const produits: Produit[] = [
+-  // ── HIGH-TECH : Apple ─────────────────────────────────────────────────────
+   {
+-    slug: 'iphone-16-pro-max',
+-    nom: 'iPhone 16 Pro Max',
+-    marqueSlug: 'apple', categorieSlug: 'high-tech',
+-    prix: 1329, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 5, fiabilite: 5,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Créateurs de contenu, professionnels, fans de l’écosystème Apple.',
+-    contreQui: 'Petit budget ou utilisateurs Android convaincus.',
+-    description: 'Puce A18 Pro, capteur 48 Mpx, 5x zoom optique, titanium. Le meilleur iPhone jamais produit.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=iPhone+16+Pro+Max&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'iphone-15',
+-    nom: 'iPhone 15',
+-    marqueSlug: 'apple', categorieSlug: 'high-tech',
+-    prix: 799, segment: 'milieu',
+-    qualite: 4, durabilite: 5, fiabilite: 5,
+-    verdict: 'Meilleur rapport qualité/prix Apple 💡',
+-    pourQui: 'Utilisateurs Apple cherchant un équilibre prix/performance.',
+-    contreQui: 'Ceux qui veulent le zoom téléphoto ou la puce A18.',
+-    description: 'Dynamic Island, USB-C, puce A16 Bionic. Parfait équilibre dans la gamme Apple.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=iPhone+15&tag=trouvetout-21',
++    slug: 'bosch',
++    nom: 'Bosch',
++    categorieSlugs: ['percage-vissage', 'sciage', 'poncage-finition', 'jardin-exterieur'],
++    description:
++      "Deux gammes distinctes qu'il ne faut surtout pas confondre : la verte (grand public) et la bleue Professional (chantier). Le SAV est parmi les meilleurs du marché et les pièces détachées restent disponibles longtemps.",
++    positionnement: 'La valeur sûre, à condition de choisir la bonne gamme',
+   },
+   {
+-    slug: 'iphone-se-3',
+-    nom: 'iPhone SE (3ème gen)',
+-    marqueSlug: 'apple', categorieSlug: 'high-tech',
+-    prix: 529, segment: 'moins_cher',
+-    qualite: 3, durabilite: 4, fiabilite: 5,
+-    verdict: 'L’option économique Apple 💸',
+-    pourQui: 'Budget serré mais attaché à iOS et Touch ID.',
+-    contreQui: 'Ceux qui veulent un grand écran ou Face ID.',
+-    description: 'Puce A15 Bionic dans un format compact 4,7". Le plus abordable pour entrer dans l’écosystème Apple.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=iPhone+SE+2022&tag=trouvetout-21',
++    slug: 'makita',
++    nom: 'Makita',
++    categorieSlugs: ['percage-vissage', 'sciage', 'poncage-finition', 'jardin-exterieur'],
++    description:
++      "Marque de professionnels. Plus chère à l'achat, mais l'écosystème de batteries LXT 18V est immense et la mécanique encaisse un usage quotidien pendant des années.",
++    positionnement: 'Le choix long terme si tu bricoles beaucoup',
+   },
+-  // ── HIGH-TECH : Samsung ──────────────────────────────────────────────────
+   {
+-    slug: 'samsung-galaxy-s25-ultra',
+-    nom: 'Samsung Galaxy S25 Ultra',
+-    marqueSlug: 'samsung', categorieSlug: 'high-tech',
+-    prix: 1299, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Power users Android, fans de S Pen, photographes exigeants.',
+-    contreQui: 'Ceux qui veulent un format compact ou un budget maîtrisé.',
+-    description: 'Snapdragon 8 Elite, S Pen intégré, zoom 200x, écran 6,9" QHD+. Le roi Android.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Samsung+Galaxy+S25+Ultra&tag=trouvetout-21',
++    slug: 'ryobi',
++    nom: 'Ryobi',
++    categorieSlugs: ['percage-vissage', 'sciage', 'poncage-finition', 'jardin-exterieur'],
++    description:
++      "Le système ONE+ 18V couvre plus de cent outils, tous sur la même batterie — outillage et jardin compris. C'est l'argument principal : tu achètes les batteries une seule fois.",
++    positionnement: 'Le meilleur écosystème pour un budget raisonnable',
+   },
+   {
+-    slug: 'samsung-galaxy-a55',
+-    nom: 'Samsung Galaxy A55 5G',
+-    marqueSlug: 'samsung', categorieSlug: 'high-tech',
+-    prix: 449, segment: 'milieu',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Samsung 💡',
+-    pourQui: 'Utilisateurs cherchant un bon Android milieu de gamme durable.',
+-    contreQui: 'Utilisateurs voulant des performances photo ultra-premium.',
+-    description: 'Exynos 1480, 5 ans de mises à jour, verre Gorilla Glass Victus+, 50 Mpx. Solide.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Samsung+Galaxy+A55&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'samsung-galaxy-a15',
+-    nom: 'Samsung Galaxy A15 5G',
+-    marqueSlug: 'samsung', categorieSlug: 'high-tech',
+-    prix: 189, segment: 'moins_cher',
+-    qualite: 3, durabilite: 3, fiabilite: 3,
+-    verdict: 'L’option économique Samsung 💸',
+-    pourQui: 'Premier smartphone ou usage basique avec budget très serré.',
+-    contreQui: 'Utilisateurs gourmands en performance ou en photo.',
+-    description: 'Écran AMOLED 90 Hz, 5G, batterie 5000 mAh. L’essentiel sans fioritures à moins de 200 €.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Samsung+Galaxy+A15+5G&tag=trouvetout-21',
+-  },
+-  // ── HIGH-TECH : Google ───────────────────────────────────────────────────
+-  {
+-    slug: 'google-pixel-9-pro',
+-    nom: 'Google Pixel 9 Pro',
+-    marqueSlug: 'google', categorieSlug: 'high-tech',
+-    prix: 1099, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Fans de photo IA et d’Android pur avec 7 ans de mises à jour.',
+-    contreQui: 'Utilisateurs hors écosystème Google ou voulant un zoom 10x.',
+-    description: 'Tensor G4, photo computationnelle IA de référence, 7 ans de mises à jour. Photo nocturne imbattable.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Google+Pixel+9+Pro&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'google-pixel-9',
+-    nom: 'Google Pixel 9',
+-    marqueSlug: 'google', categorieSlug: 'high-tech',
+-    prix: 799, segment: 'milieu',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Google 💡',
+-    pourQui: 'Utilisateurs cherchant la meilleure photo Android sans dépenser 1000 €.',
+-    contreQui: 'Ceux qui veulent le téléphoto ou l’écran 120 Hz du Pro.',
+-    description: 'Même Tensor G4 que le Pro, photo excellente, 7 ans de mises à jour. Un vrai premium accessible.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Google+Pixel+9&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'google-pixel-8a',
+-    nom: 'Google Pixel 8a',
+-    marqueSlug: 'google', categorieSlug: 'high-tech',
+-    prix: 549, segment: 'moins_cher',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'L’option économique Google 💸',
+-    pourQui: 'Utilisateurs voulant des fonctions IA Google et bonne photo à prix contenu.',
+-    contreQui: 'Ceux qui veulent le meilleur écran ou la charge rapide.',
+-    description: 'Tensor G3, 120 Hz, IP67, 7 ans de mises à jour. Le meilleur milieu de gamme Android.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Google+Pixel+8a&tag=trouvetout-21',
+-  },
+-  // ── HIGH-TECH : Xiaomi ───────────────────────────────────────────────────
+-  {
+-    slug: 'xiaomi-14t-pro',
+-    nom: 'Xiaomi 14T Pro',
+-    marqueSlug: 'xiaomi', categorieSlug: 'high-tech',
+-    prix: 799, segment: 'meilleur_rapport',
+-    qualite: 4, durabilite: 4, fiabilite: 3,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Chercheurs du meilleur rapport puissance/prix Android.',
+-    contreQui: 'Utilisateurs sensibles aux logiciels additionnels (MIUI/HyperOS).',
+-    description: 'Dimensity 9300+, Leica optics, 144 Hz AMOLED, 144W de charge. Formidable pour le prix.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Xiaomi+14T+Pro&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'xiaomi-redmi-note-13-pro-plus',
+-    nom: 'Redmi Note 13 Pro+',
+-    marqueSlug: 'xiaomi', categorieSlug: 'high-tech',
+-    prix: 349, segment: 'milieu',
+-    qualite: 4, durabilite: 3, fiabilite: 3,
+-    verdict: 'Meilleur rapport qualité/prix Xiaomi 💡',
+-    pourQui: 'Utilisateurs cherchant une bonne photo et une belle batterie sous 350 €.',
+-    contreQui: 'Utilisateurs voulant des mises à jour longues garanties.',
+-    description: 'Dimensity 1200 Ultra, 200 Mpx, IP68, 120W. Un monstre de fiche technique à petit prix.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Redmi+Note+13+Pro+Plus&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'xiaomi-redmi-13c',
+-    nom: 'Redmi 13C',
+-    marqueSlug: 'xiaomi', categorieSlug: 'high-tech',
+-    prix: 139, segment: 'moins_cher',
+-    qualite: 3, durabilite: 3, fiabilite: 3,
+-    verdict: 'L’option économique Xiaomi 💸',
+-    pourQui: 'Premier smartphone ou usage basique minimum.',
+-    contreQui: 'Utilisateurs cherchant performances, photo ou 5G.',
+-    description: 'MediaTek Helio G85, 50 Mpx, 5000 mAh. L’entrée de gamme honnête sous 140 €.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Redmi+13C&tag=trouvetout-21',
++    slug: 'einhell',
++    nom: 'Einhell',
++    categorieSlugs: ['percage-vissage', 'sciage', 'poncage-finition', 'jardin-exterieur'],
++    description:
++      "Entrée de gamme assumée, avec le système de batteries Power X-Change partagé sur toute la marque. Suffisant pour un usage occasionnel, à éviter si tu enchaînes les chantiers.",
++    positionnement: 'Le moins cher pour démarrer sans se ruiner',
+   },
++];
+ 
+-  // ── MAISON : Dyson ────────────────────────────────────────────────────────
+-  {
+-    slug: 'dyson-v15-detect-absolute',
+-    nom: 'Dyson V15 Detect Absolute',
+-    marqueSlug: 'dyson', categorieSlug: 'maison',
+-    prix: 699, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Personnes allergiques, maisons avec animaux, parquets et moquettes.',
+-    contreQui: 'Petit budget ou petits appartements sans besoins d’aspiration intensive.',
+-    description: 'Laser Detect, capteur de particules en temps réel, filtre HEPA, 60 min autonomie. Le summum Dyson.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Dyson+V15+Detect+Absolute&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'dyson-v12-detect-slim',
+-    nom: 'Dyson V12 Detect Slim',
+-    marqueSlug: 'dyson', categorieSlug: 'maison',
+-    prix: 549, segment: 'milieu',
+-    qualite: 5, durabilite: 4, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Dyson 💡',
+-    pourQui: 'Appartements et maisons de taille moyenne cherchant le meilleur Dyson accessible.',
+-    contreQui: 'Très grandes surfaces ou moquettes épaisses (préférer V15).',
+-    description: 'Laser Detect, 60 min, filtre HEPA, plus léger que le V15. Excellent compromis.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Dyson+V12+Detect+Slim&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'dyson-v8-absolute',
+-    nom: 'Dyson V8 Absolute',
+-    marqueSlug: 'dyson', categorieSlug: 'maison',
+-    prix: 349, segment: 'moins_cher',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'L’option économique Dyson 💸',
+-    pourQui: 'Petits espaces cherchant la qualité Dyson sans le prix premium.',
+-    contreQui: 'Grandes surfaces ou utilisation intensive (autonomie 40 min seulement).',
+-    description: '40 min d’autonomie, filtre HEPA, 2 modes aspiration. L’entrée dans l’univers Dyson.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Dyson+V8+Absolute&tag=trouvetout-21',
+-  },
+-  // ── MAISON : iRobot ───────────────────────────────────────────────────────
+-  {
+-    slug: 'irobot-roomba-j9-plus',
+-    nom: 'iRobot Roomba j9+',
+-    marqueSlug: 'irobot', categorieSlug: 'maison',
+-    prix: 799, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Personnes voulant un robot entièrement autonome avec vidage auto.',
+-    contreQui: 'Petits espaces ou budget limité.',
+-    description: 'Mapping 3D, vidage automatique, évitement d’obstacles, 75 dB. L’aspirateur robot le plus autonome.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=iRobot+Roomba+j9%2B&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'irobot-roomba-i5-plus',
+-    nom: 'iRobot Roomba i5+',
+-    marqueSlug: 'irobot', categorieSlug: 'maison',
+-    prix: 399, segment: 'milieu',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix iRobot 💡',
+-    pourQui: 'Utilisateurs cherchant un robot fiable avec vidage auto abordable.',
+-    contreQui: 'Maisons avec nombreux obstacles ou moquettes épaisses.',
+-    description: 'Navigation Imprint, vidage automatique, compatible Alexa/Google. La valeur sûre iRobot.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=iRobot+Roomba+i5%2B&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'irobot-roomba-e5',
+-    nom: 'iRobot Roomba e5',
+-    marqueSlug: 'irobot', categorieSlug: 'maison',
+-    prix: 249, segment: 'moins_cher',
+-    qualite: 3, durabilite: 3, fiabilite: 4,
+-    verdict: 'L’option économique iRobot 💸',
+-    pourQui: 'Budgets serrés voulant un robot aspirateur de marque fiable.',
+-    contreQui: 'Grands espaces ou ceux qui veulent du mapping et de l’autonomie.',
+-    description: 'Aspiration 5x, brosse anti-enchevêtrement, WiFi. L’entrée de gamme iRobot honnête.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=iRobot+Roomba+e5&tag=trouvetout-21',
+-  },
+-  // ── MAISON : Miele ────────────────────────────────────────────────────────
+-  {
+-    slug: 'miele-triflex-hx2-pro',
+-    nom: 'Miele Triflex HX2 Pro',
+-    marqueSlug: 'miele', categorieSlug: 'maison',
+-    prix: 599, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 5, fiabilite: 5,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Ceux qui cherchent l’appareil qui durera 15–20 ans avec le meilleur SAV.',
+-    contreQui: 'Budget serré (Miele c’est cher mais pour très longtemps).',
+-    description: 'Moteur Vortex 25 000 tr/min, filtre HEPA AirClean, batterie interchangeable. La durabilité Miele.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Miele+Triflex+HX2+Pro&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'miele-triflex-hx1',
+-    nom: 'Miele Triflex HX1',
+-    marqueSlug: 'miele', categorieSlug: 'maison',
+-    prix: 399, segment: 'milieu',
+-    qualite: 4, durabilite: 5, fiabilite: 5,
+-    verdict: 'Meilleur rapport qualité/prix Miele 💡',
+-    pourQui: 'Utilisateurs voulant la fiabilité Miele sans payer le prix du Pro.',
+-    contreQui: 'Ceux qui veulent le filtre HEPA AirClean Pro ou la puissance maximale.',
+-    description: 'Même moteur que le HX2, sans le filtre Premium. La meilleure entrée dans l’univers Miele sans fil.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Miele+Triflex+HX1&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'miele-classic-c1-allergy',
+-    nom: 'Miele Classic C1 Allergy',
+-    marqueSlug: 'miele', categorieSlug: 'maison',
+-    prix: 249, segment: 'moins_cher',
+-    qualite: 4, durabilite: 5, fiabilite: 5,
+-    verdict: 'L’option économique Miele 💸',
+-    pourQui: 'Allergiques cherchant un aspirateur filaire fiable pour longtemps.',
+-    contreQui: 'Ceux qui veulent un sans-fil ou un robot.',
+-    description: 'Filaire, filtre AirClean, 890 W, compatible sacs Miele. La robustesse Miele accessible.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Miele+Classic+C1+Allergy&tag=trouvetout-21',
+-  },
+-  // ── MAISON : Rowenta ──────────────────────────────────────────────────────
+-  {
+-    slug: 'rowenta-x-force-14-60',
+-    nom: 'Rowenta X-Force 14.60',
+-    marqueSlug: 'rowenta', categorieSlug: 'maison',
+-    prix: 449, segment: 'meilleur_rapport',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Familles cherchant un bon sans-fil Rowenta puissant à prix raisonnable.',
+-    contreQui: 'Allergiques stricts (filtration inférieure à Dyson ou Miele).',
+-    description: '185 AW, brosse Flex, 50 min, bac 0,9L. Le meilleur Rowenta sans fil sur tous les sols.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Rowenta+X-Force+14.60&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'rowenta-x-force-8-60',
+-    nom: 'Rowenta X-Force 8.60',
+-    marqueSlug: 'rowenta', categorieSlug: 'maison',
+-    prix: 249, segment: 'milieu',
+-    qualite: 3, durabilite: 3, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Rowenta 💡',
+-    pourQui: 'Appartements de taille moyenne cherchant un Rowenta abordable.',
+-    contreQui: 'Grandes maisons ou utilisation quotidienne intensive.',
+-    description: '130 AW, 45 min, brosse motorisée. Le juste milieu dans la gamme Rowenta.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Rowenta+X-Force+8.60&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'rowenta-x-pert-6-60',
+-    nom: 'Rowenta X-Pert 6.60',
+-    marqueSlug: 'rowenta', categorieSlug: 'maison',
+-    prix: 149, segment: 'moins_cher',
+-    qualite: 3, durabilite: 3, fiabilite: 3,
+-    verdict: 'L’option économique Rowenta 💸',
+-    pourQui: 'Petits espaces, budget serré, usage occasionnel.',
+-    contreQui: 'Utilisation quotidienne ou grandes surfaces.',
+-    description: '75 AW, 45 min, léger. L’entrée de gamme sans-fil Rowenta pour les petits espaces.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Rowenta+X-Pert+6.60&tag=trouvetout-21',
+-  },
++// ─────────────────────────────────────────────────────────────────────────────
++// Produits
++//
++// ⚠️  Les URLs ci-dessous sont des recherches ManoMano generiques et les fiches
++//     n'ont pas encore ete relues (verifie: false). Avant de pousser du trafic :
++//       1. ouvre la fiche produit reelle sur manomano.fr
++//       2. colle son URL dans urlMarchand
++//       3. relis le verdict, corrige la reference si besoin
++//       4. passe verifie a true
++//     `npm run check:produits` liste tout ce qui reste a traiter.
++// ─────────────────────────────────────────────────────────────────────────────
+ 
+-  // ── CUISINE : Ninja ───────────────────────────────────────────────────────
+-  {
+-    slug: 'ninja-foodi-af400eu',
+-    nom: 'Ninja Foodi Dual Zone AF400EU',
+-    marqueSlug: 'ninja', categorieSlug: 'cuisine',
+-    prix: 249, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Familles 4+ personnes voulant cuire deux plats simultanément.',
+-    contreQui: 'Personnes seules ou couples (trop grand).',
+-    description: '2 zones de cuisson indépendantes, 9,5 L total, 6 modes. Révolutionne la cuisine quotidienne.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Ninja+AF400EU+Dual+Zone&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'ninja-speedi-sf301eu',
+-    nom: 'Ninja Speedi SF301EU',
+-    marqueSlug: 'ninja', categorieSlug: 'cuisine',
+-    prix: 199, segment: 'milieu',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Ninja 💡',
+-    pourQui: '2–3 personnes cherchant cuisson rapide et vapeur intégrée.',
+-    contreQui: 'Grandes familles (capacité 5,7 L).',
+-    description: 'Cuisson rapide 15 min, vapeur + air chaud, 12 modes, bac antiadhésif. Polyvalent et rapide.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Ninja+Speedi+SF301EU&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'ninja-air-fryer-af101eu',
+-    nom: 'Ninja Air Fryer AF101EU',
+-    marqueSlug: 'ninja', categorieSlug: 'cuisine',
+-    prix: 89, segment: 'moins_cher',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'L’option économique Ninja 💸',
+-    pourQui: '1–2 personnes cherchant leur première friteuse à air de qualité.',
+-    contreQui: 'Familles ou adeptes de la double cuisson.',
+-    description: '3,8 L, 4 modes, plateau dégraissant, lavable lave-vaisselle. Le meilleur rapport qualité/prix absolu.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Ninja+AF101+Air+Fryer&tag=trouvetout-21',
+-  },
+-  // ── CUISINE : Philips ─────────────────────────────────────────────────────
+-  {
+-    slug: 'philips-airfryer-xxl-hd9870',
+-    nom: 'Philips Airfryer XXL HD9870',
+-    marqueSlug: 'philips', categorieSlug: 'cuisine',
+-    prix: 299, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Familles 4–6 personnes, connecté app, cuissons variées.',
+-    contreQui: 'Budgets serrés ou espaces cuisine limités (grande friteuse).',
+-    description: '7,2 L, connecté, technologie Fat Removal, 5 accessoires inclus. La référence Philips.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Philips+Airfryer+XXL+HD9870&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'philips-airfryer-xl-hd9250',
+-    nom: 'Philips Airfryer XL HD9250',
+-    marqueSlug: 'philips', categorieSlug: 'cuisine',
+-    prix: 149, segment: 'milieu',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Philips 💡',
+-    pourQui: '2–4 personnes cherchant la fiabilité Philips sans les options connectées.',
+-    contreQui: 'Grandes familles ou utilisateurs voulant la connectivité.',
+-    description: '6,2 L, Rapid Air, panier antiadhésif lavable. Le classique Philips incontournable.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Philips+Airfryer+XL+HD9250&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'philips-airfryer-compact-hd9252',
+-    nom: 'Philips Airfryer Compact HD9252',
+-    marqueSlug: 'philips', categorieSlug: 'cuisine',
+-    prix: 79, segment: 'moins_cher',
+-    qualite: 3, durabilite: 4, fiabilite: 4,
+-    verdict: 'L’option économique Philips 💸',
+-    pourQui: '1–2 personnes voulant débuter avec la friteuse à air sans dépenser.',
+-    contreQui: 'Familles ou amateurs de grandes quantités.',
+-    description: '4,1 L, technologie Rapid Air, manettes analogiques. Simple, fiable, abordable.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Philips+Airfryer+HD9252&tag=trouvetout-21',
+-  },
+-  // ── CUISINE : Cosori ──────────────────────────────────────────────────────
+-  {
+-    slug: 'cosori-dual-blaze-6-4l',
+-    nom: 'Cosori Dual Blaze 6.4L',
+-    marqueSlug: 'cosori', categorieSlug: 'cuisine',
+-    prix: 179, segment: 'meilleur_rapport',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: '2–4 personnes cherchant un grand modèle connecté abordable.',
+-    contreQui: 'Ceux qui préfèrent les marques européennes ou sans app.',
+-    description: 'Chauffage dual (haut + bas), 6,4 L, Wi-Fi, 100 recettes app. Excellent rapport qualité/prix.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Cosori+Dual+Blaze+6.4L&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'cosori-pro-le-5-5l',
+-    nom: 'Cosori Pro LE 5.5L',
+-    marqueSlug: 'cosori', categorieSlug: 'cuisine',
+-    prix: 119, segment: 'milieu',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Cosori 💡',
+-    pourQui: '2–3 personnes cherchant une friteuse connectée fiable sous 120 €.',
+-    contreQui: 'Grandes familles ou ceux qui veulent la double chauffe.',
+-    description: '5,5 L, connecté, 9 fonctions, antiadhésif lavable. Le choix idéal qualité/prix Cosori.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Cosori+Pro+LE+5.5L&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'cosori-mini-3-8l',
+-    nom: 'Cosori Mini 3.8L',
+-    marqueSlug: 'cosori', categorieSlug: 'cuisine',
+-    prix: 69, segment: 'moins_cher',
+-    qualite: 3, durabilite: 3, fiabilite: 4,
+-    verdict: 'L’option économique Cosori 💸',
+-    pourQui: '1–2 personnes cherchant une friteuse à air compacte à prix mini.',
+-    contreQui: 'Familles ou grosses quantités.',
+-    description: '3,8 L, compact, 5 fonctions, panier antiadhésif. Parfait pour démarrer.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Cosori+Mini+3.8L&tag=trouvetout-21',
+-  },
+-  // ── CUISINE : Tefal ───────────────────────────────────────────────────────
+-  {
+-    slug: 'tefal-easy-fry-oven-grill-ey505',
+-    nom: 'Tefal Easy Fry Oven & Grill EY505',
+-    marqueSlug: 'tefal', categorieSlug: 'cuisine',
+-    prix: 219, segment: 'meilleur_rapport',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Polyvalents cherchant friteuse + mini-four + grill en un.',
+-    contreQui: 'Ceux qui veulent juste une friteuse simple sans l’encombrement.',
+-    description: '11 L, 9 modes dont grill, convection, déhydrateur. Multi-fonctions made in Tefal.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Tefal+Easy+Fry+Oven+Grill+EY505&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'tefal-easy-fry-xxl-ey701',
+-    nom: 'Tefal Easy Fry XXL EY701',
+-    marqueSlug: 'tefal', categorieSlug: 'cuisine',
+-    prix: 149, segment: 'milieu',
+-    qualite: 3, durabilite: 3, fiabilite: 3,
+-    verdict: 'Meilleur rapport qualité/prix Tefal 💡',
+-    pourQui: 'Familles françaises cherchant une grande friteuse à air de confiance.',
+-    contreQui: 'Ceux qui cherchent la meilleure qualité ou la connectivité.',
+-    description: '6,5 L, 8 modes, double panier. La solution familiale Tefal à prix correct.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Tefal+Easy+Fry+XXL+EY701&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'tefal-easy-fry-essential-ey130',
+-    nom: 'Tefal Easy Fry Essential EY130',
+-    marqueSlug: 'tefal', categorieSlug: 'cuisine',
+-    prix: 69, segment: 'moins_cher',
+-    qualite: 3, durabilite: 3, fiabilite: 3,
+-    verdict: 'L’option économique Tefal 💸',
+-    pourQui: 'Budget très serré voulant une friteuse à air de marque connue.',
+-    contreQui: 'Grandes familles ou utilisateurs fréquents.',
+-    description: '4,2 L, 8 modes, manette simple. L’entrée de gamme Tefal sans surprise.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Tefal+Easy+Fry+Essential+EY130&tag=trouvetout-21',
+-  },
++const rechercheManoMano = (q: string) =>
++  `https://www.manomano.fr/recherche/${encodeURIComponent(q)}`;
+ 
+-  // ── SPORT : Garmin ────────────────────────────────────────────────────────
+-  {
+-    slug: 'garmin-fenix-8-solar',
+-    nom: 'Garmin Fenix 8 Solar',
+-    marqueSlug: 'garmin', categorieSlug: 'sport',
+-    prix: 1049, segment: 'meilleur_rapport',
++export const produits: Produit[] = [
++  // ── PERÇAGE & VISSAGE ──────────────────────────────────────────────────────
++  {
++    slug: 'bosch-gsb-18v-55-professional',
++    nom: 'Bosch GSB 18V-55 Professional',
++    marqueSlug: 'bosch',
++    categorieSlug: 'percage-vissage',
++    prixIndicatif: 190,
++    segment: 'meilleur_rapport',
+     qualite: 5, durabilite: 5, fiabilite: 5,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Triathlètes, alpinistes, ultra-runners, professionnels de l’endurance.',
+-    contreQui: 'Utilisateurs occasionnels ou budgets limités.',
+-    description: 'GPS multi-bandes, charge solaire, 29 jours autonomie, haut-parleur, saphir. La montre sport ultime.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Garmin+Fenix+8+Solar&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'garmin-forerunner-965',
+-    nom: 'Garmin Forerunner 965',
+-    marqueSlug: 'garmin', categorieSlug: 'sport',
+-    prix: 599, segment: 'milieu',
++    verdict: 'Notre référence ⭐',
++    pourQui: "Ceux qui percent régulièrement, y compris dans le béton et la pierre.",
++    contreQui: "Usage deux fois par an pour monter un meuble — c'est surdimensionné.",
++    description:
++      "Perceuse-visseuse à percussion 18V de la gamme bleue. Mandrin métal, couple confortable, et surtout un moteur brushless qui ne chauffe pas sur les longues séries de vis.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Bosch GSB 18V-55 Professional'),
++    verifie: false,
++  },
++  {
++    slug: 'bosch-universalimpact-18v',
++    nom: 'Bosch UniversalImpact 18V',
++    marqueSlug: 'bosch',
++    categorieSlug: 'percage-vissage',
++    prixIndicatif: 110,
++    segment: 'milieu',
++    qualite: 4, durabilite: 3, fiabilite: 4,
++    verdict: 'Le bon compromis maison 💡',
++    pourQui: "Bricoleur du dimanche qui veut quand même pouvoir percer un mur porteur.",
++    contreQui: "Usage intensif : le moteur à charbon fatigue plus vite qu'un brushless.",
++    description:
++      "Version grand public de la percussion Bosch, sur batterie Power for All 18V partagée avec l'outillage de jardin de la marque.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Bosch UniversalImpact 18V'),
++    verifie: false,
++  },
++  {
++    slug: 'makita-dhp484',
++    nom: 'Makita DHP484',
++    marqueSlug: 'makita',
++    categorieSlug: 'percage-vissage',
++    prixIndicatif: 210,
++    segment: 'meilleur_rapport',
+     qualite: 5, durabilite: 5, fiabilite: 5,
+-    verdict: 'Meilleur rapport qualité/prix Garmin 💡',
+-    pourQui: 'Runners et triathlètes semi-pros cherchant le GPS le plus précis.',
+-    contreQui: 'Utilisateurs voulant la montre la plus légère ou le design le plus sobre.',
+-    description: 'AMOLED, GPS multi-bandes, 31 jours GPS saver, VO2max, charge rapide. Le parfait Garmin running.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Garmin+Forerunner+965&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'garmin-vivoactive-5',
+-    nom: 'Garmin Vivoactive 5',
+-    marqueSlug: 'garmin', categorieSlug: 'sport',
+-    prix: 269, segment: 'moins_cher',
++    verdict: 'La plus increvable 🔧',
++    pourQui: "Ceux qui ont déjà des batteries LXT, ou qui comptent en acheter.",
++    contreQui: "Premier achat isolé : le ticket d'entrée batteries + chargeur pique.",
++    description:
++      "Perceuse à percussion brushless compacte du système LXT 18V. Format court qui passe entre deux montants, ce que peu de concurrentes savent faire.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Makita DHP484'),
++    verifie: false,
++  },
++  {
++    slug: 'ryobi-r18pd7',
++    nom: 'Ryobi R18PD7',
++    marqueSlug: 'ryobi',
++    categorieSlug: 'percage-vissage',
++    prixIndicatif: 140,
++    segment: 'milieu',
+     qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'L’option économique Garmin 💸',
+-    pourQui: 'Sportifs du dimanche cherchant le suivi Garmin fiable sans le budget Fenix.',
+-    contreQui: 'Athlètes sérieux (GPS basique) ou fans de style minimaliste.',
+-    description: 'AMOLED, 11 jours, 30 sports, Garmin Pay, suivi santé. L’entrée de gamme sérieuse Garmin.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Garmin+Vivoactive+5&tag=trouvetout-21',
+-  },
+-  // ── SPORT : Apple Watch ───────────────────────────────────────────────────
+-  {
+-    slug: 'apple-watch-ultra-2',
+-    nom: 'Apple Watch Ultra 2',
+-    marqueSlug: 'apple-watch', categorieSlug: 'sport',
+-    prix: 849, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 4, fiabilite: 5,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Adeptes iOS voulant la montre Apple la plus sportive et robuste.',
+-    contreQui: 'Utilisateurs Android ou cherchant une autonomie > 72h.',
+-    description: 'Titane, saphir, GPS dual-fréquence, 60h autonomie, plongée certifiée. Apple au maximum.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Apple+Watch+Ultra+2&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'apple-watch-series-10',
+-    nom: 'Apple Watch Series 10',
+-    marqueSlug: 'apple-watch', categorieSlug: 'sport',
+-    prix: 449, segment: 'milieu',
+-    qualite: 5, durabilite: 4, fiabilite: 5,
+-    verdict: 'Meilleur rapport qualité/prix Apple Watch 💡',
+-    pourQui: 'Utilisateurs iOS cherchant la meilleure montre santé connectée.',
+-    contreQui: 'Android ou ceux qui veulent plus de 2 jours d’autonomie.',
+-    description: 'Plus fin jamais, charge rapide, apnée du sommeil, ECG. L’Apple Watch de référence.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Apple+Watch+Series+10&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'apple-watch-se-2',
+-    nom: 'Apple Watch SE 2',
+-    marqueSlug: 'apple-watch', categorieSlug: 'sport',
+-    prix: 279, segment: 'moins_cher',
+-    qualite: 4, durabilite: 4, fiabilite: 5,
+-    verdict: 'L’option économique Apple Watch 💸',
+-    pourQui: 'Utilisateurs iOS cherchant l’entrée dans l’univers Apple Watch.',
+-    contreQui: 'Ceux qui veulent l’ECG, Always-On ou la détection apnée.',
+-    description: 'puce S8, chute + crash detection, SOS urgence, 18h. L’essentiel Apple Watch à prix accessible.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Apple+Watch+SE+2&tag=trouvetout-21',
+-  },
+-  // ── SPORT : Samsung Watch ─────────────────────────────────────────────────
+-  {
+-    slug: 'samsung-galaxy-watch-ultra',
+-    nom: 'Samsung Galaxy Watch Ultra',
+-    marqueSlug: 'samsung-watch', categorieSlug: 'sport',
+-    prix: 699, segment: 'meilleur_rapport',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Sportifs Android cherchant une montre robuste haut de gamme.',
+-    contreQui: 'Utilisateurs iPhone ou cherchant l’autonomie record.',
+-    description: 'Titane, AMOLED, 60h, GPS double fréquence, analyse avancée course. Le premium Samsung sport.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Samsung+Galaxy+Watch+Ultra&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'samsung-galaxy-watch-7',
+-    nom: 'Samsung Galaxy Watch 7',
+-    marqueSlug: 'samsung-watch', categorieSlug: 'sport',
+-    prix: 299, segment: 'milieu',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Samsung Watch 💡',
+-    pourQui: 'Utilisateurs Android Samsung cherchant suivi santé complet et beau design.',
+-    contreQui: 'Utilisateurs iPhone ou cherchant l’autonomie Garmin.',
+-    description: 'Exynos W1000, analyse avancée sommeil, GPT santé, 40h. Le meilleur rapport Samsung Watch.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Samsung+Galaxy+Watch+7&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'samsung-galaxy-watch-fe',
+-    nom: 'Samsung Galaxy Watch FE',
+-    marqueSlug: 'samsung-watch', categorieSlug: 'sport',
+-    prix: 199, segment: 'moins_cher',
++    verdict: 'Le meilleur ticket ONE+ 👍',
++    pourQui: "Ceux qui veulent bâtir un parc d'outils sur une seule batterie.",
++    contreQui: "Usage professionnel quotidien.",
++    description:
++      "Perceuse à percussion brushless ONE+ 18V. La même batterie alimentera ensuite la scie, la ponceuse et la tondeuse — c'est tout l'intérêt.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Ryobi R18PD7'),
++    verifie: false,
++  },
++  {
++    slug: 'einhell-te-cd-18-2-li',
++    nom: 'Einhell TE-CD 18/2 Li',
++    marqueSlug: 'einhell',
++    categorieSlug: 'percage-vissage',
++    prixIndicatif: 75,
++    segment: 'moins_cher',
+     qualite: 3, durabilite: 3, fiabilite: 3,
+-    verdict: 'L’option économique Samsung Watch 💸',
+-    pourQui: 'Budgets limités voulant une smartwatch Android accessible.',
+-    contreQui: 'Sportifs sérieux ou ceux voulant le dernier Wear OS.',
+-    description: 'AMOLED, suivi sommeil, GPS, NFC. L’entrée Samsung Watch de confiance.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Samsung+Galaxy+Watch+FE&tag=trouvetout-21',
+-  },
+-  // ── SPORT : Polar ─────────────────────────────────────────────────────────
+-  {
+-    slug: 'polar-grit-x2-pro',
+-    nom: 'Polar Grit X2 Pro',
+-    marqueSlug: 'polar', categorieSlug: 'sport',
+-    prix: 499, segment: 'meilleur_rapport',
++    verdict: "L'entrée de gamme honnête 💸",
++    pourQui: "Premier achat, budget serré, usage occasionnel.",
++    contreQui: "Perçage béton répété : le couple montre vite ses limites.",
++    description:
++      "Perceuse-visseuse à percussion Power X-Change. Correcte pour du montage de meubles et des chevilles dans du placo ou de la brique.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Einhell TE-CD 18/2 Li'),
++    verifie: false,
++  },
++
++  // ── SCIAGE ─────────────────────────────────────────────────────────────────
++  {
++    slug: 'bosch-gks-190',
++    nom: 'Bosch GKS 190',
++    marqueSlug: 'bosch',
++    categorieSlug: 'sciage',
++    prixIndicatif: 160,
++    segment: 'meilleur_rapport',
+     qualite: 5, durabilite: 5, fiabilite: 5,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Traileurs et grimpeurs cherchant précision cardio et robustesse.',
+-    contreQui: 'Ceux qui veulent un écran AMOLED ou une intégration smartphone poussée.',
+-    description: 'Saphir, GPS multi-GNSS, Nightly Recharge, analyse récup avancée. La référence endurance Polar.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Polar+Grit+X2+Pro&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'polar-vantage-v3',
+-    nom: 'Polar Vantage V3',
+-    marqueSlug: 'polar', categorieSlug: 'sport',
+-    prix: 399, segment: 'milieu',
+-    qualite: 4, durabilite: 5, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Polar 💡',
+-    pourQui: 'Triathlètes et runners cherchant capteurs cardio ultra-précis et récupération.',
+-    contreQui: 'Utilisateurs voulant le meilleur GPS ou un design ultra moderne.',
+-    description: 'Optique + électrique, GPS, 140h, 30+ sports. Capteurs cardio parmi les meilleurs du marché.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Polar+Vantage+V3&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'polar-ignite-3',
+-    nom: 'Polar Ignite 3',
+-    marqueSlug: 'polar', categorieSlug: 'sport',
+-    prix: 199, segment: 'moins_cher',
++    verdict: 'La circulaire de référence ⭐',
++    pourQui: "Découpe de panneaux, bastaings, plancher — du filaire qui ne faiblit jamais.",
++    contreQui: "Ceux qui n'ont pas de prise à portée ou qui coupent en hauteur.",
++    description:
++      "Scie circulaire filaire 1400 W, profondeur de coupe 70 mm. Semelle rigide et guide parallèle correct : la coupe reste droite si le réglage est soigné.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Bosch GKS 190'),
++    verifie: false,
++  },
++  {
++    slug: 'bosch-pst-900-pel',
++    nom: 'Bosch PST 900 PEL',
++    marqueSlug: 'bosch',
++    categorieSlug: 'sciage',
++    prixIndicatif: 105,
++    segment: 'milieu',
+     qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'L’option économique Polar 💸',
+-    pourQui: 'Sportifs débutants cherchant le suivi cardio Polar à prix accessible.',
+-    contreQui: 'Athlètes avancés (GPS moins précis).',
+-    description: 'AMOLED, 5 jours, GPS, Polar Sleep Plus. L’entrée de gamme Polar complète.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Polar+Ignite+3&tag=trouvetout-21',
+-  },
+-
+-  // ── BEAUTÉ : Braun ────────────────────────────────────────────────────────
+-  {
+-    slug: 'braun-silk-epil-9-flex',
+-    nom: 'Braun Silk-épil 9 Flex',
+-    marqueSlug: 'braun', categorieSlug: 'beaute',
+-    prix: 229, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Personnes cherchant la meilleure épilation durable à la maison.',
+-    contreQui: 'Peau très sensible ou ceux préférant l’épilation lumière pulsée.',
+-    description: '40 pinces Flex, tête pivotante 360°, 8 accessoires, usage humide/sec. L’épilateur référence.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Braun+Silk-epil+9+Flex&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'braun-silk-epil-5-flex',
+-    nom: 'Braun Silk-épil 5 Flex',
+-    marqueSlug: 'braun', categorieSlug: 'beaute',
+-    prix: 119, segment: 'milieu',
++    verdict: 'La sauteuse polyvalente 💡',
++    pourQui: "Découpes courbes, plans de travail, ouvertures dans du panneau.",
++    contreQui: "Coupes droites longues — prends une circulaire.",
++    description:
++      "Scie sauteuse filaire avec changement de lame sans outil et soufflerie qui dégage le trait de coupe. Le pendulaire réglable change vraiment la propreté du résultat.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Bosch PST 900 PEL'),
++    verifie: false,
++  },
++  {
++    slug: 'makita-dss611',
++    nom: 'Makita DSS611',
++    marqueSlug: 'makita',
++    categorieSlug: 'sciage',
++    prixIndicatif: 200,
++    segment: 'meilleur_rapport',
++    qualite: 5, durabilite: 5, fiabilite: 5,
++    verdict: 'La liberté du sans-fil 🔧',
++    pourQui: "Coupes en extérieur, sur toiture, loin d'une prise.",
++    contreQui: "Grosses séries de coupe : la batterie descend vite.",
++    description:
++      "Circulaire 18V LXT, lame 165 mm. Autonomie honnête sur batterie 5 Ah, et l'équilibre en main est meilleur que sur la plupart des concurrentes sans fil.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Makita DSS611'),
++    verifie: false,
++  },
++  {
++    slug: 'ryobi-r18cs7',
++    nom: 'Ryobi R18CS7',
++    marqueSlug: 'ryobi',
++    categorieSlug: 'sciage',
++    prixIndicatif: 155,
++    segment: 'milieu',
+     qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Braun 💡',
+-    pourQui: 'Utilisatrices cherchant un Braun efficace sans le prix du modèle 9.',
+-    contreQui: 'Peaux très sensibles ou celles qui veulent la tête pivotante.',
+-    description: '40 pinces, tête pivotante 90°, usage humide/sec. Excellent compromis dans la gamme Braun.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Braun+Silk-epil+5+Flex&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'braun-silk-epil-3',
+-    nom: 'Braun Silk-épil 3',
+-    marqueSlug: 'braun', categorieSlug: 'beaute',
+-    prix: 69, segment: 'moins_cher',
++    verdict: 'Bon rapport dans ONE+ 👍',
++    pourQui: "Ceux déjà équipés en batteries Ryobi.",
++    contreQui: "Coupe de précision répétée en atelier.",
++    description:
++      "Scie circulaire brushless ONE+ 18V, lame 184 mm. Profondeur suffisante pour du bastaing en une seule passe.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Ryobi R18CS7'),
++    verifie: false,
++  },
++  {
++    slug: 'einhell-te-cs-18-165',
++    nom: 'Einhell TE-CS 18/165',
++    marqueSlug: 'einhell',
++    categorieSlug: 'sciage',
++    prixIndicatif: 90,
++    segment: 'moins_cher',
+     qualite: 3, durabilite: 3, fiabilite: 3,
+-    verdict: 'L’option économique Braun 💸',
+-    pourQui: 'Débutantes en épilation ou budget très serré.',
+-    contreQui: 'Peaux sensibles (moins de pinces) ou zones difficiles.',
+-    description: '20 pinces, 2 vitesses, usage sec. L’entrée de gamme Braun fiable.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Braun+Silk-epil+3&tag=trouvetout-21',
+-  },
+-  // ── BEAUTÉ : Philips Lumea ────────────────────────────────────────────────
+-  {
+-    slug: 'philips-lumea-prestige-bri956',
+-    nom: 'Philips Lumea Prestige BRI956',
+-    marqueSlug: 'philips-lumea', categorieSlug: 'beaute',
+-    prix: 499, segment: 'meilleur_rapport',
+-    qualite: 5, durabilite: 4, fiabilite: 5,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Personnes voulant des résultats durables équivalents salon à la maison.',
+-    contreQui: 'Peaux très foncées ou poils très clairs (IPL inefficace), et budgets serrés.',
+-    description: '4 accessoires, 5 intensités, app SkinSense, 250 000 flashs. La meilleure IPL maison.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Philips+Lumea+Prestige+BRI956&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'philips-satinelle-advanced-hp6579',
+-    nom: 'Philips Satinelle Advanced HP6579',
+-    marqueSlug: 'philips-lumea', categorieSlug: 'beaute',
+-    prix: 149, segment: 'milieu',
++    verdict: 'Dépannage économique 💸',
++    pourQui: "Quelques coupes par an sur du panneau ou du lambris.",
++    contreQui: "Bois dur ou épais : ça peine.",
++    description:
++      "Circulaire Power X-Change 18V. La semelle est moins rigide que sur les modèles pro, il faut soigner le guidage.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Einhell TE-CS 18/165'),
++    verifie: false,
++  },
++
++  // ── PONÇAGE & FINITION ─────────────────────────────────────────────────────
++  {
++    slug: 'bosch-pex-400-ae',
++    nom: 'Bosch PEX 400 AE',
++    marqueSlug: 'bosch',
++    categorieSlug: 'poncage-finition',
++    prixIndicatif: 95,
++    segment: 'meilleur_rapport',
++    qualite: 4, durabilite: 4, fiabilite: 5,
++    verdict: 'Le meilleur premier achat ⭐',
++    pourQui: "Rénovation de meubles, portes, plans de travail.",
++    contreQui: "Décapage agressif de parquet — il faut une ponceuse à bande.",
++    description:
++      "Excentrique 350 W, plateau 125 mm, aspiration intégrée. L'excentrique ne laisse pas les marques circulaires d'une rotative : c'est le bon choix par défaut.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Bosch PEX 400 AE'),
++    verifie: false,
++  },
++  {
++    slug: 'makita-bo5041',
++    nom: 'Makita BO5041',
++    marqueSlug: 'makita',
++    categorieSlug: 'poncage-finition',
++    prixIndicatif: 165,
++    segment: 'milieu',
++    qualite: 5, durabilite: 5, fiabilite: 5,
++    verdict: 'La plus confortable sur la durée 🔧',
++    pourQui: "Longues sessions de ponçage — les vibrations sont nettement mieux maîtrisées.",
++    contreQui: "Usage ponctuel : le surcoût ne se justifie pas.",
++    description:
++      "Excentrique filaire 300 W avec poignée avant réglable. C'est le modèle qu'on garde quand on ponce plusieurs heures d'affilée.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Makita BO5041'),
++    verifie: false,
++  },
++  {
++    slug: 'ryobi-r18ros',
++    nom: 'Ryobi R18ROS',
++    marqueSlug: 'ryobi',
++    categorieSlug: 'poncage-finition',
++    prixIndicatif: 95,
++    segment: 'milieu',
+     qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Philips Lumea 💡',
+-    pourQui: 'Utilisatrices cherchant un épilateur électrique Philips efficace.',
+-    contreQui: 'Celles qui veulent l’IPL ou les zones difficiles (pas de tête pivotante).',
+-    description: 'MicroGrip 32 pinces, 2 vitesses, massage, usage sec/humide. Fiable et abordable.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Philips+Satinelle+Advanced+HP6579&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'philips-satinelle-essential-hp6401',
+-    nom: 'Philips Satinelle Essential HP6401',
+-    marqueSlug: 'philips-lumea', categorieSlug: 'beaute',
+-    prix: 59, segment: 'moins_cher',
++    verdict: 'Pratique sans fil 👍',
++    pourQui: "Ponçage de petites surfaces, retouches, meubles déplacés.",
++    contreQui: "Grandes surfaces : le filaire reste plus confortable.",
++    description:
++      "Excentrique ONE+ 18V, plateau 125 mm. Sans fil, donc pas de rallonge qui traîne dans la poussière.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Ryobi R18ROS'),
++    verifie: false,
++  },
++  {
++    slug: 'einhell-te-rs-40e',
++    nom: 'Einhell TE-RS 40 E',
++    marqueSlug: 'einhell',
++    categorieSlug: 'poncage-finition',
++    prixIndicatif: 60,
++    segment: 'moins_cher',
+     qualite: 3, durabilite: 3, fiabilite: 3,
+-    verdict: 'L’option économique Philips 💸',
+-    pourQui: 'Débutantes voulant tester l’épilation électrique sans risque financier.',
+-    contreQui: 'Peaux sensibles ou utilisatrices régulières (moins de pinces).',
+-    description: '20 pinces, usage sec, cordon. La porte d’entrée Philips en épilation.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Philips+Satinelle+Essential+HP6401&tag=trouvetout-21',
+-  },
+-  // ── BEAUTÉ : Remington ────────────────────────────────────────────────────
+-  {
+-    slug: 'remington-ilight-ultra-ipl6780',
+-    nom: 'Remington iLIGHT Ultra IPL6780',
+-    marqueSlug: 'remington', categorieSlug: 'beaute',
+-    prix: 299, segment: 'meilleur_rapport',
++    verdict: 'Le prix plancher 💸',
++    pourQui: "Une porte à repeindre, un meuble à reprendre.",
++    contreQui: "Usage régulier : le plateau s'use rapidement.",
++    description:
++      "Excentrique filaire d'entrée de gamme. Fait le travail sur de petites surfaces, sans prétention.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Einhell TE-RS 40 E'),
++    verifie: false,
++  },
++
++  // ── JARDIN & EXTÉRIEUR ─────────────────────────────────────────────────────
++  {
++    slug: 'bosch-advancedrotak-36-750',
++    nom: 'Bosch AdvancedRotak 36-750',
++    marqueSlug: 'bosch',
++    categorieSlug: 'jardin-exterieur',
++    prixIndicatif: 470,
++    segment: 'meilleur_rapport',
++    qualite: 5, durabilite: 4, fiabilite: 5,
++    verdict: 'Le confort sans fil ⭐',
++    pourQui: "Terrains jusqu'à 750 m², sans envie de gérer un moteur thermique.",
++    contreQui: "Grands terrains ou herbe systématiquement haute et humide.",
++    description:
++      "Tondeuse 36V à batterie, largeur de coupe 46 cm. Plus de bidon d'essence, plus de vidange, démarrage instantané — c'est le vrai argument.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Bosch AdvancedRotak 36-750'),
++    verifie: false,
++  },
++  {
++    slug: 'makita-dur194',
++    nom: 'Makita DUR194',
++    marqueSlug: 'makita',
++    categorieSlug: 'jardin-exterieur',
++    prixIndicatif: 190,
++    segment: 'milieu',
++    qualite: 5, durabilite: 5, fiabilite: 5,
++    verdict: 'Finitions impeccables 🔧',
++    pourQui: "Bordures, pieds de mur, sous les clôtures.",
++    contreQui: "Débroussaillage de ronces — il faut une machine à lame.",
++    description:
++      "Coupe-bordures 18V LXT à tête à fil semi-automatique. Léger, silencieux, et il partage la batterie de la perceuse Makita.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Makita DUR194'),
++    verifie: false,
++  },
++  {
++    slug: 'ryobi-ry18lmx37a',
++    nom: 'Ryobi RY18LMX37A',
++    marqueSlug: 'ryobi',
++    categorieSlug: 'jardin-exterieur',
++    prixIndicatif: 360,
++    segment: 'milieu',
+     qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Personnes cherchant une IPL abordable avec résultats visibles en 3 semaines.',
+-    contreQui: 'Peaux très foncées ou poils clairs, et ceux voulant le meilleur du marché.',
+-    description: '300 000 flashs, 5 intensités, usage visage et corps, sac inclus. Bonne alternative abordable IPL.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Remington+iLIGHT+Ultra&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'remington-smooth-silky-ipl4000',
+-    nom: 'Remington Smooth & Silky IPL4000',
+-    marqueSlug: 'remington', categorieSlug: 'beaute',
+-    prix: 149, segment: 'milieu',
++    verdict: 'Cohérent dans ONE+ 👍',
++    pourQui: "Terrains moyens, propriétaires déjà équipés Ryobi.",
++    contreQui: "Plus de 500 m² : prévois une seconde batterie.",
++    description:
++      "Tondeuse ONE+ 18V, coupe 37 cm, fonction mulching. Fonctionne sur les mêmes batteries que le reste de la gamme.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Ryobi RY18LMX37A'),
++    verifie: false,
++  },
++  {
++    slug: 'einhell-gc-em-1032',
++    nom: 'Einhell GC-EM 1032',
++    marqueSlug: 'einhell',
++    categorieSlug: 'jardin-exterieur',
++    prixIndicatif: 85,
++    segment: 'moins_cher',
+     qualite: 3, durabilite: 3, fiabilite: 3,
+-    verdict: 'Meilleur rapport qualité/prix Remington 💡',
+-    pourQui: 'Budget moyen cherchant à tester l’IPL sans engagement financier fort.',
+-    contreQui: 'Personnes cherchant des résultats professionnels rapides.',
+-    description: '100 000 flashs, 3 intensités, sabots corps et visage. IPL accessible pour commencer.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Remington+Smooth+Silky+IPL4000&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'remington-smooth-silky-ipl3000',
+-    nom: 'Remington Smooth & Silky IPL3000',
+-    marqueSlug: 'remington', categorieSlug: 'beaute',
+-    prix: 89, segment: 'moins_cher',
+-    qualite: 3, durabilite: 3, fiabilite: 3,
+-    verdict: 'L’option économique Remington 💸',
+-    pourQui: 'Petits budgets voulant tester l’IPL à moindre coût.',
+-    contreQui: 'Utilisatrices exigeantes ou zones difficiles.',
+-    description: '75 000 flashs, 3 intensités. L’IPL d’entrée de gamme Remington.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Remington+Smooth+Silky+IPL3000&tag=trouvetout-21',
+-  },
+-  // ── BEAUTÉ : Rowenta Beauté ───────────────────────────────────────────────
+-  {
+-    slug: 'rowenta-liss-curl-premium-sf7461',
+-    nom: 'Rowenta Liss & Curl Premium SF7461',
+-    marqueSlug: 'rowenta-beaute', categorieSlug: 'beaute',
+-    prix: 199, segment: 'meilleur_rapport',
+-    qualite: 4, durabilite: 4, fiabilite: 4,
+-    verdict: 'Notre choix n°1 ⭐',
+-    pourQui: 'Personnes voulant lisseur + boucleur tout-en-un de qualité.',
+-    contreQui: 'Celles qui préfèrent un outil dédié uniquement au lissage.',
+-    description: 'Plaque kératine 230°C, auto-curl, Anion, chauffe 30s. 2-en-1 polyvalent Rowenta.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Rowenta+Liss+Curl+Premium+SF7461&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'rowenta-liss-style-sf3710',
+-    nom: 'Rowenta Liss & Style SF3710',
+-    marqueSlug: 'rowenta-beaute', categorieSlug: 'beaute',
+-    prix: 119, segment: 'milieu',
+-    qualite: 3, durabilite: 3, fiabilite: 4,
+-    verdict: 'Meilleur rapport qualité/prix Rowenta Beauté 💡',
+-    pourQui: 'Usage quotidien cherchant un lisseur fiable et accessible.',
+-    contreQui: 'Cheveux très épais ou résistants (température max 200°C).',
+-    description: 'Céramique, 5 températures, 200°C, fermeture magnétique. Le lisseur Rowenta fiable du quotidien.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Rowenta+Liss+Style+SF3710&tag=trouvetout-21',
+-  },
+-  {
+-    slug: 'rowenta-express-style-sf1110',
+-    nom: 'Rowenta Express Style SF1110',
+-    marqueSlug: 'rowenta-beaute', categorieSlug: 'beaute',
+-    prix: 29, segment: 'moins_cher',
+-    qualite: 2, durabilite: 2, fiabilite: 3,
+-    verdict: 'L’option économique Rowenta 💸',
+-    pourQui: 'Usage très occasionnel ou voyage, budget ultra serré.',
+-    contreQui: 'Usage quotidien ou cheveux épais/frisés.',
+-    description: 'Céramique, 180°C fixe, compact. Le dépannage Rowenta à moins de 30 €.',
+-    lienAmazon: 'https://www.amazon.fr/s?k=Rowenta+Express+Style+SF1110&tag=trouvetout-21',
++    verdict: 'Petit terrain, petit prix 💸',
++    pourQui: "Jardins de ville jusqu'à 300 m², avec une prise à proximité.",
++    contreQui: "Terrain en pente ou éloigné de la maison — le câble devient pénible.",
++    description:
++      "Tondeuse électrique filaire 1000 W, coupe 32 cm. Simple, légère, sans batterie à remplacer dans cinq ans.",
++    marchand: 'manomano',
++    urlMarchand: rechercheManoMano('Einhell GC-EM 1032'),
++    verifie: false,
+   },
+ ];
+ 
+ // ─────────────────────────────────────────────────────────────────────────────
+-// Guides
++// Guides d'achat
+ // ─────────────────────────────────────────────────────────────────────────────
+ 
+ export const guides: Guide[] = [
+   {
+-    slug: 'quel-smartphone-choisir',
+-    titre: 'Quel smartphone choisir en 2025 ?',
+-    description: 'Notre guide complet pour choisir le bon smartphone selon votre budget et vos usages.',
+-    categorieSlug: 'high-tech',
+-    intro: 'Le marché des smartphones est saturé. Entre Apple, Samsung, Google et Xiaomi, impossible de s’y retrouver sans guide. On décrypte pour vous les critères qui comptent vraiment.',
++    slug: 'quelle-perceuse-visseuse-choisir',
++    titre: 'Quelle perceuse-visseuse choisir ?',
++    description:
++      "Les critères qui comptent vraiment — et ceux que les fiches produits mettent en avant pour rien.",
++    categorieSlug: 'percage-vissage',
++    intro:
++      "C'est le premier outil qu'on achète et celui qu'on regrette le plus quand on se trompe. La bonne nouvelle : trois critères suffisent à décider, et le voltage n'en fait pas partie.",
+     sections: [
+-      { titre: 'Les 3 critères vraiment importants', contenu: '**L’autonomie** est souvent sacrifiée dans les modèles premium — vérifiez la capacité batterie et la charge rapide. **Le suivi logiciel** détermine combien d’années votre téléphone restera sécurisé (Google = 7 ans, Apple = 5-6 ans, Samsung = 4 ans). **La photo** : privilégiez les scores DxO ou les tests réels, pas les mégapixels.' },
+-      { titre: 'Moins de 200 €', contenu: 'À ce prix : Samsung Galaxy A15 5G ou Xiaomi Redmi 13C. Attendez-vous à des performances basiques, une photo correcte et une durabilité modérée. Parfait comme premier téléphone ou pour usage minimal.' },
+-      { titre: '200 € – 500 €', contenu: 'La zone la plus intéressante. Google Pixel 8a pour la meilleure photo de la gamme, Samsung Galaxy A55 pour la durabilité et les mises à jour longues.' },
+-      { titre: 'Plus de 500 €', contenu: 'iPhone 16 Pro Max ou Samsung Galaxy S25 Ultra pour le meilleur absolu. Google Pixel 9 Pro pour la photo IA. Xiaomi 14T Pro pour le meilleur rapport performance/prix premium.' },
++      {
++        titre: 'Le piège du voltage',
++        contenu:
++          "**Le chiffre en volts ne dit rien de la puissance.** Une 18V d'entrée de gamme sera moins performante qu'une 12V de marque pro. Ce qui compte, c'est le **couple en Newton-mètres** (vise 50 Nm minimum pour un usage polyvalent) et l'**ampérage de la batterie** en Ah, qui détermine l'autonomie et non la force.",
++      },
++      {
++        titre: 'Percussion ou pas ?',
++        contenu:
++          "La percussion sert uniquement à percer les matériaux durs : béton, pierre, brique pleine. Si tu ne perces que du bois, du placo et du métal, elle est inutile et alourdit l'outil. En revanche, dès qu'il y a un mur porteur dans l'équation, elle devient indispensable — sans elle, tu brûles tes forets.",
++      },
++      {
++        titre: 'Brushless : quand ça vaut le surcoût',
++        contenu:
++          "Un moteur brushless (sans charbon) chauffe moins, dure plus longtemps et consomme moins de batterie. Le surcoût tourne autour de 40 à 60 €. **Il se justifie si tu bricoles au moins une fois par mois.** Pour trois utilisations par an, le moteur à charbon tiendra largement.",
++      },
++      {
++        titre: "Le vrai critère : l'écosystème de batteries",
++        contenu:
++          "C'est le point que personne ne regarde et qui coûte le plus cher à long terme. Une batterie représente 60 à 100 € pièce. Si tu comptes acheter d'autres outils sans fil dans les cinq ans, **choisis d'abord un système** (Ryobi ONE+, Makita LXT, Bosch Power for All, Einhell Power X-Change) puis l'outil dedans. Changer de système en cours de route, c'est racheter tout le parc de batteries.",
++      },
++      {
++        titre: "Ce qu'il faut ignorer",
++        contenu:
++          "Le nombre de vitesses au-delà de deux, les LED d'éclairage (toutes équivalentes), les mallettes garnies d'accessoires bas de gamme, et les kits « 200 pièces » dont tu utiliseras six embouts.",
++      },
+     ],
+   },
+   {
+-    slug: 'quel-aspirateur-sans-fil-choisir',
+-    titre: 'Quel aspirateur sans fil choisir en 2025 ?',
+-    description: 'Guide d’achat complet : Dyson, Miele, iRobot ou Rowenta — lequel pour vous ?',
+-    categorieSlug: 'maison',
+-    intro: 'Aspirateur sans fil ou robot aspirateur ? Dyson ou Miele ? On vous aide à choisir selon votre type de logement et vos besoins réels.',
++    slug: 'scie-circulaire-ou-scie-sauteuse',
++    titre: 'Scie circulaire ou scie sauteuse ?',
++    description:
++      "Deux outils souvent confondus qui ne font pas du tout le même travail. Comment choisir — ou savoir s'il faut les deux.",
++    categorieSlug: 'sciage',
++    intro:
++      "La confusion coûte cher : beaucoup achètent une sauteuse en pensant couper des panneaux droits, puis passent des heures à rattraper des coupes bancales. Voici la règle simple.",
+     sections: [
+-      { titre: 'Sans fil vs robot : lequel choisir ?', contenu: '**Sans fil** si vous avez différentes surfaces (moquette + parquet) et des recoins. **Robot** si vous voulez déléguer l’entretien quotidien. Les deux sont complémentaires pour une maison optimale.' },
+-      { titre: 'Moins de 200 €', contenu: 'Rowenta X-Pert 6.60 ou iRobot Roomba e5. Pour usage occasionnel ou petits espaces. Durabilité inférieure aux modèles premium.' },
+-      { titre: '200 € – 500 €', contenu: 'Miele Triflex HX1 pour la durabilité légendaire, Dyson V8 pour l’aspiration, ou iRobot Roomba i5+ pour le robot avec vidage auto.' },
+-      { titre: 'Plus de 500 €', contenu: 'Dyson V15 Detect pour la puissance et la détection laser, Miele Triflex HX2 Pro pour la fiabilité 20 ans, iRobot j9+ pour l’autonomie robot maximale.' },
++      {
++        titre: 'La règle en une phrase',
++        contenu:
++          "**Circulaire = coupes droites, longues et rapides. Sauteuse = coupes courbes, découpes intérieures et travail fin.** Vouloir faire une coupe droite de deux mètres à la sauteuse, c'est possible, mais le résultat sera irrégulier quel que soit ton niveau.",
++      },
++      {
++        titre: "Si tu ne peux en acheter qu'une",
++        contenu:
++          "Prends la **sauteuse** si tu fais surtout de la rénovation intérieure : découpes de plinthes, ouvertures dans un plan de travail, arrondis. Prends la **circulaire** si tu construis : terrasse, ossature, découpe de panneaux OSB ou de contreplaqué.",
++      },
++      {
++        titre: 'Les critères qui changent le résultat',
++        contenu:
++          "Sur une circulaire : la **rigidité de la semelle** (une semelle qui vrille, c'est une coupe qui dévie) et la profondeur de coupe à 90°. Sur une sauteuse : le **mouvement pendulaire réglable**, qui permet d'aller vite dans le bois tendre et de ralentir pour un trait propre.",
++      },
++      {
++        titre: 'La lame compte plus que la machine',
++        contenu:
++          "Une bonne lame sur une machine moyenne donne un meilleur résultat que l'inverse. Regarde le nombre de dents : **peu de dents = coupe rapide et grossière**, beaucoup de dents = coupe lente et propre. Prévois au minimum deux lames par machine, et change-les dès que la coupe force.",
++      },
++      {
++        titre: 'Sécurité — le paragraphe à ne pas sauter',
++        contenu:
++          "La circulaire est l'outil le plus dangereux de cette liste, à cause du **rebond** : la lame se coince, la machine part vers l'arrière. Ne bloque jamais le carter de protection, cale toujours ta pièce, et tiens-toi hors de l'axe de la lame. Lunettes obligatoires sur les deux machines.",
++      },
+     ],
+   },
+   {
+-    slug: 'quelle-friteuse-a-air-choisir',
+-    titre: 'Quelle friteuse à air choisir en 2025 ?',
+-    description: 'Ninja, Philips, Cosori ou Tefal ? Le guide pour choisir la bonne friteuse à air selon votre budget.',
+-    categorieSlug: 'cuisine',
+-    intro: 'La friteuse à air a envahi les cuisines françaises. Mais toutes ne se valent pas. Capacité, facilité de nettoyage, connectivité : voici ce qui différencie vraiment les modèles.',
++    slug: 'quelle-ponceuse-pour-quel-usage',
++    titre: 'Quelle ponceuse pour quel usage ?',
++    description:
++      'Excentrique, vibrante, à bande, delta : chacune a un seul vrai domaine. Le guide pour ne pas se tromper.',
++    categorieSlug: 'poncage-finition',
++    intro:
++      "Le ponçage fait 80 % du rendu final et c'est l'étape que tout le monde bâcle. Utiliser la mauvaise ponceuse laisse des marques que la peinture révélera impitoyablement.",
+     sections: [
+-      { titre: 'Quelle capacité choisir ?', contenu: 'Moins de 4 L pour 1-2 personnes. Entre 4 et 6 L pour 2-4 personnes. Plus de 6 L pour les familles ou la cuisson en grande quantité. Les modèles double zone (Ninja) permettent de cuire deux plats simultanément.' },
+-      { titre: 'Moins de 100 €', contenu: 'Ninja AF101, Philips HD9252 ou Cosori Mini 3.8L. Fiables et efficaces pour débuter.' },
+-      { titre: '100 € – 200 €', contenu: 'Cosori Pro LE 5.5L connecté ou Philips XL HD9250. Excellent pour les familles de 2-4 personnes.' },
+-      { titre: 'Plus de 200 €', contenu: 'Ninja Dual Zone AF400 pour cuire deux plats simultanément, Philips XXL HD9870 pour la famille nombreuse connectée.' },
++      {
++        titre: 'Excentrique : le choix par défaut',
++        contenu:
++          "Le plateau tourne **et** oscille, ce qui empêche les marques circulaires. C'est la ponceuse polyvalente : meubles, portes, plans de travail, préparation avant peinture. Si tu n'en achètes qu'une, c'est celle-là.",
++      },
++      {
++        titre: 'Vibrante : les angles et les grandes surfaces planes',
++        contenu:
++          "Plateau rectangulaire qui vibre sans tourner. Moins agressive que l'excentrique, elle atteint les angles droits — ce qu'un plateau rond ne fera jamais. Bien pour les murs enduits et les encadrements.",
++      },
++      {
++        titre: 'À bande : le décapage lourd',
++        contenu:
++          "Très agressive, elle enlève beaucoup de matière très vite. Parquet, poutres, vieille peinture épaisse. **Attention : elle creuse le bois en quelques secondes d'inattention.** À réserver aux surfaces qui ont vraiment besoin d'être décapées.",
++      },
++      {
++        titre: 'Delta : les recoins',
++        contenu:
++          'Petit plateau triangulaire pour les volets, les moulures, les barreaux de chaise. Un complément, jamais un outil principal.',
++      },
++      {
++        titre: "L'aspiration : le critère qu'on regrette",
++        contenu:
++          "La poussière de ponçage est fine, elle s'infiltre partout et elle est nocive à l'inhalation. Une ponceuse **raccordable à un aspirateur** change complètement l'expérience — le simple bac à poussière intégré n'en capte qu'une fraction. Masque FFP2 dans tous les cas.",
++      },
+     ],
+   },
+   {
+-    slug: 'quelle-montre-connectee-choisir',
+-    titre: 'Quelle montre connectée choisir pour le sport en 2025 ?',
+-    description: 'Garmin, Apple Watch, Samsung ou Polar ? On compare les meilleures montres sport du marché.',
+-    categorieSlug: 'sport',
+-    intro: 'Choisir sa montre connectée sport dépend avant tout de votre smartphone (iOS ou Android) et de votre niveau sportif. Voici comment démêler l’offre.',
++    slug: 'tondeuse-batterie-thermique-filaire',
++    titre: 'Tondeuse : batterie, thermique ou filaire ?',
++    description:
++      'Le choix dépend presque uniquement de la surface de ton terrain. Voici les seuils.',
++    categorieSlug: 'jardin-exterieur',
++    intro:
++      "Les trois technologies coexistent parce qu'elles répondent à des besoins différents. Le critère décisif n'est ni le prix ni la marque : c'est la surface à tondre.",
+     sections: [
+-      { titre: 'iOS ou Android : le premier critère', contenu: 'L’Apple Watch ne fonctionne qu’avec l’iPhone. Garmin et Polar sont compatibles iOS et Android. Samsung Watch fonctionne mieux avec Samsung. Ce critère alone peut trancher votre choix.' },
+-      { titre: 'Sportif débutant', contenu: 'Garmin Vivoactive 5, Apple Watch SE 2 ou Polar Ignite 3. Ces modèles couvrent tous les sports du quotidien avec suivi santé complet.' },
+-      { titre: 'Sportif régulier', contenu: 'Garmin Forerunner 965, Apple Watch Series 10 ou Polar Vantage V3. GPS précis, suivi récupération, longue autonomie.' },
+-      { titre: 'Sportif expert/compétition', contenu: 'Garmin Fenix 8 Solar ou Polar Grit X2 Pro pour l’endurance. Apple Watch Ultra 2 pour les adeptes iOS.' },
++      {
++        titre: 'Les seuils, simplement',
++        contenu:
++          "**Jusqu'à 300 m²** : filaire. Légère, pas chère, aucun entretien, et la rallonge reste gérable. **300 à 800 m²** : batterie, le meilleur compromis aujourd'hui, à condition d'accepter une seconde batterie au-delà de 500 m². **Plus de 800 m²** : thermique, ou autoportée si le terrain dépasse 1 500 m².",
++      },
++      {
++        titre: "Ce que la batterie a vraiment changé",
++        contenu:
++          "Plus de vidange, plus de bougie, plus de carburant qui vieillit dans le bidon, démarrage immédiat, et un niveau sonore qui permet de tondre le dimanche matin sans fâcher les voisins. En contrepartie : autonomie limitée, et une batterie à remplacer au bout de 5 à 8 ans.",
++      },
++      {
++        titre: "Le mulching, à comprendre avant d'acheter",
++        contenu:
++          "La tondeuse broie l'herbe finement et la laisse au sol comme engrais naturel. Plus de bac à vider, meilleure santé du gazon. **Mais** : il faut tondre plus souvent, et jamais sur herbe haute ou mouillée, sinon ça fait des paquets.",
++      },
++      {
++        titre: 'Largeur de coupe et hauteur réglable',
++        contenu:
++          "Une largeur plus grande fait gagner du temps mais rend la machine plus lourde et moins maniable autour des massifs. Le **réglage centralisé de hauteur** (une seule manette au lieu de quatre roues à régler) est le petit luxe qui se remarque à chaque tonte.",
++      },
+     ],
+   },
+   {
+-    slug: 'quel-epilateur-choisir',
+-    titre: 'Quel épilateur choisir en 2025 ?',
+-    description: 'Électrique, IPL ou lisseur ? Braun, Philips Lumea ou Remington — notre guide complet.',
+-    categorieSlug: 'beaute',
+-    intro: 'Épilation électrique, lumière pulsée (IPL) ou lisseur capillaire ? Les besoins varient. On vous aide à choisir selon votre type de peau, vos zones à traiter et votre budget.',
++    slug: 'premier-equipement-bricolage',
++    titre: 'Premier équipement : par quoi commencer ?',
++    description:
++      "L'ordre d'achat qui évite de dépenser 800 € pour racheter les mêmes outils deux ans plus tard.",
++    categorieSlug: 'percage-vissage',
++    intro:
++      "L'erreur classique est d'acheter un gros coffret « tout en un » en promotion. Deux ans plus tard, la moitié n'a jamais servi et l'autre moitié est à remplacer. Voici un ordre qui tient.",
+     sections: [
+-      { titre: 'Électrique vs IPL : quelle différence ?', contenu: '**Épilateur électrique** : résultats immédiats, poils fins repoussent en 2-4 semaines. **IPL** : résultats progressifs sur 8 semaines mais durables plusieurs mois. L’IPL est inefficace sur peau foncée et poils clairs.' },
+-      { titre: 'Moins de 100 €', contenu: 'Braun Silk-épil 3 ou Philips Satinelle Essential. Bien pour commencer, 20 pinces, usage sec.' },
+-      { titre: '100 € – 250 €', contenu: 'Braun Silk-épil 5 Flex ou 9 Flex pour l’électrique. Remington IPL4000 pour commencer l’IPL sans budget pro.' },
+-      { titre: 'Plus de 250 €', contenu: 'Philips Lumea Prestige BRI956 pour les meilleurs résultats IPL à domicile. Braun Silk-épil 9 Flex pour l’épilation électrique haut de gamme.' },
++      {
++        titre: '1. Choisis un système de batteries, pas un outil',
++        contenu:
++          "C'est la décision structurante : tout le reste en découlera pendant dix ans. Regarde le catalogue complet de chaque marque avant de trancher — propose-t-elle aussi la tondeuse, le taille-haie, la ponceuse dont tu auras besoin plus tard ?",
++      },
++      {
++        titre: '2. La perceuse-visseuse à percussion',
++        contenu:
++          "Elle couvre l'essentiel des besoins réels : monter, fixer, percer. Mets-y le budget, c'est celle que tu utiliseras le plus.",
++      },
++      {
++        titre: '3. La scie sauteuse',
++        contenu:
++          'Le premier outil de coupe, le plus polyvalent et le moins dangereux. La circulaire viendra plus tard, quand tu auras un vrai projet de construction.',
++      },
++      {
++        titre: '4. La ponceuse excentrique',
++        contenu:
++          "Dès que tu touches à de la rénovation de meuble ou de la peinture, elle devient indispensable et fait la différence entre un travail correct et un travail qui se voit.",
++      },
++      {
++        titre: "Ce qu'il faut acheter en premier et qui ne coûte presque rien",
++        contenu:
++          "Avant tout outil électroportatif : des **lunettes de protection**, un **masque FFP2**, un **mètre de qualité**, un **niveau à bulle** et un **détecteur de métaux et câbles**. Ce dernier coûte une trentaine d'euros et évite de percer une canalisation ou une gaine électrique — le meilleur rapport sécurité/prix de toute la liste.",
++      },
+     ],
+   },
+ ];
+@@ -958,7 +652,7 @@ export function getCategorieBySlug(slug: string): Categorie | undefined {
+ }
+ 
+ export function getMarquesByCategorie(categorieSlug: string): Marque[] {
+-  return marques.filter(m => m.categorieSlug === categorieSlug);
++  return marques.filter(m => m.categorieSlugs.includes(categorieSlug));
+ }
+ 
+ export function getMarqueBySlug(slug: string): Marque | undefined {
+@@ -985,72 +679,29 @@ export function getGuidesByCategorie(categorieSlug: string): Guide[] {
+   return guides.filter(g => g.categorieSlug === categorieSlug);
+ }
+ 
+-function scoreComposite(p: Produit, priorite: string): number {
+-  const qualScore = (p.qualite + p.durabilite + p.fiabilite) / 3;
+-  if (priorite === 'qualite') return qualScore;
+-  if (priorite === 'prix') return 5 - (p.prix / 2000) * 5;
+-  // equilibre: 60% qualité, 40% prix relatif
+-  return qualScore * 0.6 + (5 - (p.prix / 2000) * 5) * 0.4;
+-}
+-
+ // ─────────────────────────────────────────────────────────────────────────────
+-// Algorithme Choix Express
++// Moteur de recommandation « Choix Express »
+ // ─────────────────────────────────────────────────────────────────────────────
+ 
++const POIDS: Record<string, { qualite: number; durabilite: number; fiabilite: number }> = {
++  qualite:    { qualite: 3, durabilite: 1, fiabilite: 1 },
++  durabilite: { qualite: 1, durabilite: 3, fiabilite: 1.5 },
++  equilibre:  { qualite: 1, durabilite: 1, fiabilite: 1 },
++};
++
++function scoreComposite(p: Produit, priorite: string): number {
++  const w = POIDS[priorite] ?? POIDS.equilibre;
++  return p.qualite * w.qualite + p.durabilite * w.durabilite + p.fiabilite * w.fiabilite;
++}
++
+ export function recommanderChoixExpress(
+   categorieSlug: string,
+   budget: number,
+   priorite: string,
+ ): Produit | null {
+   const pool = produits.filter(
+-    p => p.categorieSlug === categorieSlug && p.prix <= budget,
++    p => p.categorieSlug === categorieSlug && p.prixIndicatif <= budget,
+   );
+   if (pool.length === 0) return null;
+   return pool.sort((a, b) => scoreComposite(b, priorite) - scoreComposite(a, priorite))[0];
+ }
+-
+-// ─────────────────────────────────────────────────────────────────────────────
+-// Algorithme Mode Cadeau
+-// ─────────────────────────────────────────────────────────────────────────────
+-
+-const CATEGORIE_WEIGHTS: Record<string, Record<string, number>> = {
+-  enfant:  { 'cuisine': 2, 'sport': 2, 'maison': 1, 'high-tech': 0.5, 'beaute': 0 },
+-  ado:     { 'high-tech': 3, 'sport': 2, 'beaute': 1.5, 'cuisine': 0.5, 'maison': 0 },
+-  adulte:  { 'high-tech': 2, 'maison': 2, 'cuisine': 2, 'sport': 2, 'beaute': 2 },
+-  senior:  { 'maison': 3, 'cuisine': 3, 'sport': 1, 'high-tech': 0.5, 'beaute': 1 },
+-};
+-
+-const TECH_WEIGHTS: Record<string, Record<string, number>> = {
+-  debutant: { 'high-tech': 0.3, 'maison': 1.5, 'cuisine': 1.5, 'sport': 1, 'beaute': 1.5 },
+-  moyen:    { 'high-tech': 1, 'maison': 1, 'cuisine': 1, 'sport': 1, 'beaute': 1 },
+-  expert:   { 'high-tech': 2, 'maison': 1, 'cuisine': 1, 'sport': 1.5, 'beaute': 1 },
+-};
+-
+-export function recommanderCadeau(profile: GiftProfile): Produit[] {
+-  const { age, budget, niveauTech } = profile;
+-  const catW = CATEGORIE_WEIGHTS[age] ?? CATEGORIE_WEIGHTS.adulte;
+-  const techW = TECH_WEIGHTS[niveauTech] ?? TECH_WEIGHTS.moyen;
+-
+-  const scored = produits
+-    .filter(p => p.prix <= budget)
+-    .map(p => ({
+-      produit: p,
+-      score:
+-        scoreComposite(p, 'equilibre') *
+-        (catW[p.categorieSlug] ?? 1) *
+-        (techW[p.categorieSlug] ?? 1),
+-    }))
+-    .sort((a, b) => b.score - a.score);
+-
+-  // Dédupliquer par catégorie — max 1 produit par catégorie
+-  const seen = new Set<string>();
+-  const results: Produit[] = [];
+-  for (const { produit } of scored) {
+-    if (!seen.has(produit.categorieSlug)) {
+-      seen.add(produit.categorieSlug);
+-      results.push(produit);
+-    }
+-    if (results.length >= 3) break;
+-  }
+-  return results;
+-}
+diff --git a/src/pages/cadeau/index.astro b/src/pages/cadeau/index.astro
+deleted file mode 100644
+index c7b21a0..0000000
+--- a/src/pages/cadeau/index.astro
++++ /dev/null
+@@ -1,118 +0,0 @@
+----
+-import Layout from '../../layouts/Layout.astro';
+-import VerdictProduit from '../../components/VerdictProduit.astro';
+-import { recommanderCadeau } from '../../lib/data';
+-import type { GiftProfile, Produit } from '../../lib/data';
+-
+-let resultats: Produit[] = [];
+-let submitted = false;
+-
+-if (Astro.request.method === 'POST') {
+-  submitted = true;
+-  const form = await Astro.request.formData();
+-  const profile: GiftProfile = {
+-    destinataire: form.get('destinataire') as string,
+-    age:          form.get('age') as string,
+-    budget:       parseInt(form.get('budget') as string, 10),
+-    occasion:     form.get('occasion') as string,
+-    niveauTech:   form.get('niveau_tech') as string,
+-  };
+-  resultats = recommanderCadeau(profile);
+-}
+----
+-<Layout title="Mode Cadeau" description="Trouvez le cadeau idéal en répondant à quelques questions.">
+-  <div class="max-w-xl mx-auto px-4 py-12">
+-    <h1 class="text-3xl font-bold mb-2">🎁 Mode Cadeau</h1>
+-    <p class="text-gray-500 mb-8">Dites-nous tout sur la personne, on trouve le cadeau parfait.</p>
+-
+-    {!submitted && (
+-      <form method="POST" class="space-y-6">
+-        <div>
+-          <label class="block font-medium mb-2">Pour qui ?</label>
+-          <select name="destinataire" required
+-            class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400">
+-            <option value="">Choisir…</option>
+-            {[['ami', 'Ami(e)'], ['parent', 'Parent'], ['enfant', 'Enfant'], ['conjoint', 'Conjoint(e)'], ['collegue', 'Collègue']].map(([v, l]) => (
+-              <option value={v}>{l}</option>
+-            ))}
+-          </select>
+-        </div>
+-
+-        <div>
+-          <label class="block font-medium mb-2">Tranche d'âge ?</label>
+-          <select name="age" required
+-            class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400">
+-            <option value="enfant">Enfant (moins de 12 ans)</option>
+-            <option value="ado">Ado (12–18 ans)</option>
+-            <option value="adulte" selected>Adulte (18–60 ans)</option>
+-            <option value="senior">Senior (60+)</option>
+-          </select>
+-        </div>
+-
+-        <div>
+-          <label class="block font-medium mb-2">Budget ?</label>
+-          <select name="budget" required
+-            class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400">
+-            <option value="50">Moins de 50 €</option>
+-            <option value="150">50 – 150 €</option>
+-            <option value="300">150 – 300 €</option>
+-            <option value="9999">+ de 300 €</option>
+-          </select>
+-        </div>
+-
+-        <div>
+-          <label class="block font-medium mb-2">Occasion ?</label>
+-          <select name="occasion" required
+-            class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-pink-400">
+-            {[['noel', 'Noël'], ['anniversaire', 'Anniversaire'], ['fete', 'Fête'], ['autre', 'Autre']].map(([v, l]) => (
+-              <option value={v}>{l}</option>
+-            ))}
+-          </select>
+-        </div>
+-
+-        <div>
+-          <label class="block font-medium mb-2">Niveau tech de la personne ?</label>
+-          <div class="flex gap-4">
+-            {[['debutant', '🐣 Débutant'], ['moyen', '👤 Moyen'], ['expert', '🚀 Expert']].map(([val, label]) => (
+-              <label class="flex-1 border border-gray-200 rounded-xl p-3 text-center cursor-pointer hover:border-pink-400 has-[:checked]:border-pink-500 has-[:checked]:bg-pink-50">
+-                <input type="radio" name="niveau_tech" value={val} class="sr-only" required />
+-                <span class="text-sm font-medium">{label}</span>
+-              </label>
+-            ))}
+-          </div>
+-        </div>
+-
+-        <button type="submit"
+-          class="w-full bg-pink-500 text-white py-3 rounded-xl font-semibold hover:bg-pink-600 transition">
+-          Trouver le cadeau idéal →
+-        </button>
+-      </form>
+-    )}
+-
+-    {submitted && (
+-      <div>
+-        {resultats.length > 0 ? (
+-          <div>
+-            <div class="bg-pink-50 border border-pink-100 rounded-2xl px-5 py-4 mb-6 text-pink-800">
+-              <strong>🎁 {resultats.length} idée{resultats.length > 1 ? 's' : ''} de cadeau</strong> sélectionnée{resultats.length > 1 ? 's' : ''} pour vous.
+-            </div>
+-            <div class="space-y-6">
+-              {resultats.map((p, i) => (
+-                <VerdictProduit produit={p} numero={i + 1} />
+-              ))}
+-            </div>
+-          </div>
+-        ) : (
+-          <div class="bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-amber-800">
+-            Aucun produit trouvé pour ce budget. Essayez un budget plus élevé.
+-          </div>
+-        )}
+-        <div class="mt-8 text-center">
+-          <a href="/cadeau" class="text-sm text-gray-500 hover:text-pink-600 underline">
+-            ← Recommencer
+-          </a>
+-        </div>
+-      </div>
+-    )}
+-  </div>
+-</Layout>
+diff --git a/src/pages/confidentialite.astro b/src/pages/confidentialite.astro
+new file mode 100644
+index 0000000..61f0f3e
+--- /dev/null
++++ b/src/pages/confidentialite.astro
+@@ -0,0 +1,67 @@
++---
++import Layout from '../layouts/Layout.astro';
++export const prerender = true;
++---
++<Layout title="Politique de confidentialité" description="Données personnelles et cookies sur Trouve-Tout.">
++  <article class="max-w-3xl mx-auto px-4 py-12">
++    <h1 class="text-3xl font-bold mb-8">Politique de confidentialité</h1>
++
++    <div class="space-y-6 text-gray-700 leading-relaxed">
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Responsable du traitement</h2>
++        <p>L'éditeur du site, identifié sur la page <a href="/mentions-legales" class="text-indigo-600 underline">Mentions légales</a>.</p>
++      </section>
++
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Données collectées</h2>
++        <p>
++          Ce site ne demande aucune inscription et ne collecte aucune donnée nominative.
++          Deux traitements limités existent :
++        </p>
++        <ul class="list-disc pl-6 mt-2 space-y-1">
++          <li>
++            <strong>Mesure d'audience</strong> — Vercel Web Analytics, configuré sans cookie
++            et sans identifiant persistant. Les données sont agrégées et ne permettent pas
++            d'identifier un visiteur. À ce titre, aucun consentement préalable n'est requis.
++          </li>
++          <li>
++            <strong>Préférences du Choix Express</strong> — si tu utilises l'outil de
++            recommandation, tes réponses peuvent être conservées dans un cookie technique
++            déposé sur ton appareil, uniquement pour te réafficher tes critères. Aucune
++            donnée n'est transmise à un tiers. Tu peux le supprimer à tout moment via
++            les réglages de ton navigateur.
++          </li>
++        </ul>
++      </section>
++
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Liens vers des sites tiers</h2>
++        <p>
++          Les liens d'affiliation renvoient vers des marchands (ManoMano via Awin, Amazon)
++          qui déposent leurs propres cookies et appliquent leurs propres politiques de
++          confidentialité. Dès que tu quittes ce site, ces politiques s'appliquent et
++          l'éditeur n'a aucun contrôle sur les données collectées.
++        </p>
++      </section>
++
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Durée de conservation</h2>
++        <p>
++          Statistiques d'audience agrégées : conservées par Vercel selon les durées de son
++          offre. Cookie de préférences : 6 mois maximum.
++        </p>
++      </section>
++
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Tes droits</h2>
++        <p>
++          Conformément au RGPD, tu disposes d'un droit d'accès, de rectification,
++          d'effacement et d'opposition. Comme aucune donnée nominative n'est conservée,
++          ces droits s'exercent principalement en supprimant les cookies depuis ton
++          navigateur. Pour toute demande, utilise l'adresse indiquée en mentions légales.
++          Tu peux également introduire une réclamation auprès de la CNIL (cnil.fr).
++        </p>
++      </section>
++    </div>
++  </article>
++</Layout>
+diff --git a/src/pages/index.astro b/src/pages/index.astro
+index 6db3a07..d7232bf 100644
+--- a/src/pages/index.astro
++++ b/src/pages/index.astro
+@@ -1,45 +1,52 @@
+ ---
+ import Layout from '../layouts/Layout.astro';
++import { categories, guides } from '../lib/data';
+ 
+ export const prerender = true;
+ ---
+-<Layout title="Accueil" description="Trouve le meilleur produit sans perdre de temps — comparatifs honnêtes, verdict clair.">
++<Layout
++  title="Bien choisir son outillage"
++  description="Guides d'achat outillage et jardin : les critères qui comptent vraiment, sans jargon et sans classement bidon."
++>
+   <section class="max-w-3xl mx-auto px-4 py-16 text-center">
+-    <h1 class="text-4xl font-bold mb-4">Trouve le bon produit, vite.</h1>
++    <h1 class="text-4xl font-bold mb-4">Choisis le bon outil du premier coup.</h1>
+     <p class="text-lg text-gray-600 mb-8">
+-      Comparatifs honnêtes, verdict clair. Pas de publicité déguisée.
++      Des guides d'achat qui expliquent les critères au lieu de te vendre un classement.
++      Bricolage, sciage, ponçage, jardin.
+     </p>
+     <div class="flex flex-col sm:flex-row gap-4 justify-center">
+       <a href="/choix-express"
+         class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition">
+-        ⚡ Choix Express (sans compte)
++        ⚡ Choix Express
+       </a>
+-      <a href="/cadeau"
+-        class="bg-pink-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-pink-600 transition">
+-        🎁 Mode Cadeau
+-      </a>
+-      <a href="/categories"
++      <a href="/blog"
+         class="bg-white border border-gray-300 text-gray-800 px-6 py-3 rounded-xl font-semibold hover:bg-gray-50 transition">
+-        Voir les catégories
++        Lire les guides
+       </a>
+     </div>
+   </section>
+ 
+-  <section class="max-w-4xl mx-auto px-4 pb-16 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+-    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+-      <div class="text-3xl mb-2">📱</div>
+-      <h2 class="font-semibold mb-1">High-Tech</h2>
+-      <a href="/categories/high-tech" class="text-sm text-indigo-600 hover:underline">Voir les produits →</a>
+-    </div>
+-    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+-      <div class="text-3xl mb-2">🏠</div>
+-      <h2 class="font-semibold mb-1">Maison</h2>
+-      <a href="/categories/maison" class="text-sm text-indigo-600 hover:underline">Voir les produits →</a>
+-    </div>
+-    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+-      <div class="text-3xl mb-2">🍳</div>
+-      <h2 class="font-semibold mb-1">Cuisine</h2>
+-      <a href="/categories/cuisine" class="text-sm text-indigo-600 hover:underline">Voir les produits →</a>
++  <section class="max-w-4xl mx-auto px-4 pb-16 grid grid-cols-1 sm:grid-cols-2 gap-6">
++    {categories.map(c => (
++      <a href={`/categories/${c.slug}`}
++         class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-indigo-300 transition block">
++        <div class="text-3xl mb-2">{c.emoji}</div>
++        <h2 class="font-semibold mb-1">{c.nom}</h2>
++        <p class="text-sm text-gray-500">{c.sousTitre}</p>
++      </a>
++    ))}
++  </section>
++
++  <section class="max-w-4xl mx-auto px-4 pb-20">
++    <h2 class="text-xl font-bold mb-6">Les guides du moment</h2>
++    <div class="space-y-3">
++      {guides.slice(0, 4).map(g => (
++        <a href={`/blog/${g.slug}`}
++           class="block bg-white rounded-xl px-5 py-4 border border-gray-100 hover:border-indigo-300 transition">
++          <div class="font-medium">{g.titre}</div>
++          <div class="text-sm text-gray-500 mt-1">{g.description}</div>
++        </a>
++      ))}
+     </div>
+   </section>
+ </Layout>
+diff --git a/src/pages/marques/[slug].astro b/src/pages/marques/[slug].astro
+index 788d0ee..f214af1 100644
+--- a/src/pages/marques/[slug].astro
++++ b/src/pages/marques/[slug].astro
+@@ -14,7 +14,7 @@ const marque = getMarqueBySlug(slug!);
+ if (!marque) return Astro.redirect('/categories');
+ 
+ const produitsDuMarque = getProduitsByMarque(slug!);
+-const categorie = getCategorieBySlug(marque.categorieSlug);
++const categorie = getCategorieBySlug(marque.categorieSlugs[0]);
+ 
+ export const prerender = true;
+ 
+diff --git a/src/pages/mentions-legales.astro b/src/pages/mentions-legales.astro
+new file mode 100644
+index 0000000..a5b1755
+--- /dev/null
++++ b/src/pages/mentions-legales.astro
+@@ -0,0 +1,72 @@
++---
++import Layout from '../layouts/Layout.astro';
++export const prerender = true;
++---
++<Layout title="Mentions légales" description="Mentions légales du site Trouve-Tout.">
++  <article class="max-w-3xl mx-auto px-4 py-12 prose-sm">
++    <h1 class="text-3xl font-bold mb-8">Mentions légales</h1>
++
++    <div class="space-y-6 text-gray-700 leading-relaxed">
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Éditeur du site</h2>
++        <p>
++          {/* ⚠️ À COMPLÉTER avant mise en ligne — obligatoire (art. 6 LCEN). */}
++          Nom et prénom de l'éditeur : <strong>[À COMPLÉTER]</strong><br />
++          Statut : <strong>[particulier / micro-entreprise + n° SIREN]</strong><br />
++          Adresse : <strong>[À COMPLÉTER]</strong><br />
++          Contact : <strong>[adresse e-mail]</strong>
++        </p>
++      </section>
++
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Hébergeur</h2>
++        <p>
++          Vercel Inc., 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis — vercel.com
++        </p>
++      </section>
++
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Nom de domaine</h2>
++        <p>Enregistré auprès d'OVH SAS, 2 rue Kellermann, 59100 Roubaix, France.</p>
++      </section>
++
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Liens d'affiliation</h2>
++        <p>
++          Ce site publie des guides d'achat et comporte des liens d'affiliation vers des
++          marchands partenaires (notamment ManoMano via la plateforme Awin, et Amazon).
++          Lorsqu'un achat est effectué après un clic sur l'un de ces liens, l'éditeur
++          perçoit une commission versée par le marchand. <strong>Le prix payé par
++          l'acheteur reste inchangé.</strong>
++        </p>
++        <p class="mt-2">
++          En tant que Partenaire Amazon, l'éditeur réalise un bénéfice sur les achats
++          remplissant les conditions requises.
++        </p>
++        <p class="mt-2">
++          Les recommandations publiées sont établies de manière éditoriale. La présence
++          d'un lien d'affiliation n'influence ni la sélection ni l'ordre des produits.
++        </p>
++      </section>
++
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Propriété intellectuelle</h2>
++        <p>
++          Les textes publiés sur ce site sont la propriété de l'éditeur. Les marques et
++          références produits citées appartiennent à leurs détenteurs respectifs et ne
++          sont mentionnées qu'à titre informatif.
++        </p>
++      </section>
++
++      <section>
++        <h2 class="font-semibold text-gray-900 mb-2">Limitation de responsabilité</h2>
++        <p>
++          Les informations techniques et les fourchettes de prix sont fournies à titre
++          indicatif et peuvent évoluer. Seules les informations affichées sur le site du
++          marchand au moment de l'achat font foi. Les conseils de sécurité relatifs à
++          l'usage d'outillage ne se substituent pas aux notices des fabricants.
++        </p>
++      </section>
++    </div>
++  </article>
++</Layout>
+diff --git a/src/pages/produits/[slug].astro b/src/pages/produits/[slug].astro
+index 1e7008c..27e267b 100644
+--- a/src/pages/produits/[slug].astro
++++ b/src/pages/produits/[slug].astro
+@@ -2,7 +2,8 @@
+ import Layout from '../../layouts/Layout.astro';
+ import VerdictProduit from '../../components/VerdictProduit.astro';
+ import TableauComparatif from '../../components/TableauComparatif.astro';
+-import CTAAmazon from '../../components/CTAAmazon.astro';
++import CTAAffilie from '../../components/CTAAffilie.astro';
++import { trancheBudget } from '../../lib/affiliation';
+ import {
+   getProduitBySlug,
+   getMarqueBySlug,
+@@ -26,20 +27,11 @@ const schema = JSON.stringify({
+   name: produit.nom,
+   description: produit.description,
+   brand: { '@type': 'Brand', name: marque?.nom },
+-  offers: {
+-    '@type': 'Offer',
+-    priceCurrency: 'EUR',
+-    price: produit.prix,
+-    availability: 'https://schema.org/InStock',
+-    url: produit.lienAmazon,
+-  },
+-  aggregateRating: {
+-    '@type': 'AggregateRating',
+-    ratingValue: ((produit.qualite + produit.durabilite + produit.fiabilite) / 3).toFixed(1),
+-    bestRating: 5,
+-    worstRating: 1,
+-    ratingCount: 1,
+-  },
++  // Pas de bloc `offers` : declarer un prix fige et `InStock` sans flux
++  // marchand temps reel, c'est du balisage faux (risque d'action manuelle Google).
++  // Pas de bloc `aggregateRating` non plus : une note editoriale maison avec
++  // ratingCount:1 est consideree comme un avis auto-attribue et sanctionnee.
++  // A remettre quand un flux produit reel alimentera la page.
+ });
+ 
+ export const prerender = true;
+@@ -50,7 +42,7 @@ export function getStaticPaths() {
+ ---
+ <Layout
+   title={`${produit.nom} — Avis et comparatif`}
+-  description={`${produit.verdict} — ${produit.description} Prix : ${produit.prix} €.`}
++  description={`${produit.verdict} — ${produit.description}`}
+ >
+   <script is:inline type="application/ld+json" set:html={schema} />
+ 
+@@ -67,7 +59,7 @@ export function getStaticPaths() {
+     <div class="lg:col-span-2 space-y-8">
+       <div>
+         <h1 class="text-3xl font-bold mb-1">{produit.nom}</h1>
+-        <div class="text-3xl font-bold text-indigo-600 mb-3">{produit.prix.toLocaleString('fr-FR')} €</div>
++        <div class="text-3xl font-bold text-indigo-600 mb-3">{trancheBudget(produit.prixIndicatif)}</div>
+         <p class="text-gray-600">{produit.description}</p>
+       </div>
+ 
+@@ -114,8 +106,8 @@ export function getStaticPaths() {
+       <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm sticky top-4">
+         <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Notre verdict</div>
+         <div class="text-lg font-bold text-indigo-600 mb-3">{produit.verdict}</div>
+-        <div class="text-3xl font-bold mb-4">{produit.prix.toLocaleString('fr-FR')} €</div>
+-        <CTAAmazon lien={produit.lienAmazon} label={`Voir sur Amazon`} />
++        <div class="text-3xl font-bold mb-4">{trancheBudget(produit.prixIndicatif)}</div>
++        <CTAAffilie url={produit.urlMarchand} marchand={produit.marchand} />
+         <p class="text-xs text-gray-400 mt-3">
+           Lien affilié — votre prix ne change pas.
+         </p>
+diff --git a/src/pages/sitemap.xml.ts b/src/pages/sitemap.xml.ts
+index 3b8008a..6915280 100644
+--- a/src/pages/sitemap.xml.ts
++++ b/src/pages/sitemap.xml.ts
+@@ -20,8 +20,9 @@ export const GET: APIRoute = () => {
+     url('/', '1.0', 'weekly'),
+     url('/categories', '0.9', 'weekly'),
+     url('/choix-express', '0.8', 'monthly'),
+-    url('/cadeau', '0.8', 'monthly'),
+     url('/blog', '0.7', 'weekly'),
++    url('/mentions-legales', '0.2', 'yearly'),
++    url('/confidentialite', '0.2', 'yearly'),
+   ];
+ 
+   const catPages = categories.map(c => url(`/categories/${c.slug}`, '0.8', 'weekly'));
+-- 
+2.43.0
+

@@ -78,14 +78,15 @@ const categories = ['Tous', 'High-Tech', 'Maison', 'Cuisine', 'Sport', 'Beauté'
         </div>
 
         <!-- Categories Filter -->
-        <div class="flex flex-wrap justify-center gap-2 mb-12">
+        <div class="flex flex-wrap justify-center gap-2 mb-12" id="category-filters">
             {categories.map((cat, index) => (
                 <button 
-                    class={`px-4 py-2 rounded-full font-medium transition-colors ${
+                    class={`category-filter px-4 py-2 rounded-full font-medium transition-colors cursor-pointer ${
                         index === 0 
-                            ? 'bg-primary-600 text-white' 
+                            ? 'bg-primary-600 text-white active' 
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
+                    data-category={cat}
                 >
                     {cat}
                 </button>
@@ -124,9 +125,9 @@ const categories = ['Tous', 'High-Tech', 'Maison', 'Cuisine', 'Sport', 'Beauté'
         </article>
 
         <!-- Articles Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="articles-grid">
             {articles.slice(1).map((article) => (
-                <article class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                <article class="article-card bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow" data-category={article.category}>
                     <div class="h-48 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
                         <span class="text-6xl">📄</span>
                     </div>
@@ -180,3 +181,43 @@ const categories = ['Tous', 'High-Tech', 'Maison', 'Cuisine', 'Sport', 'Beauté'
         </div>
     </div>
 </Layout>
+
+<script>
+    // Filtrage des articles par catégorie
+    const filterButtons = document.querySelectorAll('.category-filter');
+    const articleCards = document.querySelectorAll('.article-card');
+    const featuredArticle = document.querySelector('article.bg-white.rounded-2xl.shadow-lg') as HTMLElement;
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const category = button.getAttribute('data-category');
+            
+            // Mettre à jour les styles des boutons
+            filterButtons.forEach(btn => {
+                btn.classList.remove('bg-primary-600', 'text-white', 'active');
+                btn.classList.add('bg-gray-100', 'text-gray-700');
+            });
+            button.classList.remove('bg-gray-100', 'text-gray-700');
+            button.classList.add('bg-primary-600', 'text-white', 'active');
+            
+            // Filtrer les articles
+            articleCards.forEach(card => {
+                const cardCategory = card.getAttribute('data-category');
+                if (category === 'Tous' || cardCategory === category) {
+                    (card as HTMLElement).style.display = 'block';
+                } else {
+                    (card as HTMLElement).style.display = 'none';
+                }
+            });
+            
+            // Afficher/masquer l'article vedette (High-Tech)
+            if (featuredArticle) {
+                if (category === 'Tous' || category === 'High-Tech') {
+                    featuredArticle.style.display = 'block';
+                } else {
+                    featuredArticle.style.display = 'none';
+                }
+            }
+        });
+    });
+</script>

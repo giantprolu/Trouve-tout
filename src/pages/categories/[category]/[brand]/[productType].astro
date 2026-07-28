@@ -19,7 +19,7 @@ import {
     getBrandsByCategory,
     getProductTypeBySlug,
     getProductTypesByCategoryAndBrand,
-    getProductsByProductTypeId,
+    getProductsByProductTypeAndBrand,
     POSITION_LABELS,
     type ProductPosition,
     type ProductFull
@@ -59,8 +59,8 @@ if (!category || !brand || !productType) {
     return Astro.redirect('/404');
 }
 
-// Récupérer les produits pour ce type de produit
-const products = await getProductsByProductTypeId(productType.id);
+// Récupérer les produits pour ce type de produit ET cette marque
+const products = await getProductsByProductTypeAndBrand(productType.id, brand.id);
 
 // Organiser les produits par position
 const productsByPosition: Record<ProductPosition, ProductFull | null> = {

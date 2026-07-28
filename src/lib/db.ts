@@ -494,6 +494,36 @@ export async function getProductsByProductTypeId(productTypeId: string): Promise
         .sort((a, b) => positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position));
 }
 
+/**
+ * Récupère les produits par type de produit ET par marque
+ * Utilisé pour la page /categories/[category]/[brand]/[productType]
+ */
+export async function getProductsByProductTypeAndBrand(productTypeId: string, brandId: string): Promise<ProductFull[]> {
+    const { data, error } = await supabase
+        .from('products')
+        .select(`
+            *,
+            categories(*),
+            brands(*),
+            product_types(*)
+        `)
+        .eq('product_type_id', productTypeId)
+        .eq('brand_id', brandId)
+        .eq('is_active', true)
+        .order('position', { ascending: true });
+    
+    if (error) {
+        console.error('Erreur getProductsByProductTypeAndBrand:', error);
+        return [];
+    }
+    
+    // Trier par position: best-value → middle-ground → budget
+    const positionOrder = ['best-value', 'middle-ground', 'budget'];
+    return (data || [])
+        .map(enrichProduct)
+        .sort((a, b) => positionOrder.indexOf(a.position) - positionOrder.indexOf(b.position));
+}
+
 export async function getProductsByPosition(position: ProductPosition): Promise<ProductFull[]> {
     const { data, error } = await supabase
         .from('products')

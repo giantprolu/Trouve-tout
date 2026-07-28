@@ -2,52 +2,111 @@
 export const prerender = false; // Page dynamique SSR
 
 import Layout from '../../layouts/Layout.astro';
-import ProductCard from '../../components/ProductCard.astro';
-import { products, categories, formatPrice } from '../../data/products';
+import DbProductCard from '../../components/DbProductCard.astro';
+import { getCategories, getProductTypesByCategory, type DbCategory, type DbProductType, type ProductFull } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
 
 const title = "Choix Express ⚡ | Trouve-Tout";
 const description = "Trouvez le produit parfait en quelques clics. Répondez à quelques questions et obtenez une recommandation personnalisée.";
 
+// Récupérer les catégories depuis Supabase
+const categories = await getCategories();
+
 // Récupérer les paramètres de recherche
 const url = new URL(Astro.request.url);
-const selectedCategory = url.searchParams.get('category');
-const selectedBudget = url.searchParams.get('budget');
-const selectedTier = url.searchParams.get('tier');
+const selectedCategorySlug = url.searchParams.get('category');
+const selectedProductTypeSlug = url.searchParams.get('productType');
+const budgetMin = parseInt(url.searchParams.get('budgetMin') || '0');
+const budgetMax = parseInt(url.searchParams.get('budgetMax') || '2000');
+const priority = url.searchParams.get('priority') || 'balanced'; // quality, price, balanced
 
-let recommendations: typeof products = [];
+// Récupérer les types de produits si catégorie sélectionnée
+let productTypes: DbProductType[] = [];
+let selectedCategory: DbCategory | null = null;
 
-if (selectedCategory && selectedBudget) {
-    // Filtrer les produits
-    recommendations = products.filter(p => {
-        if (p.category !== selectedCategory) return false;
-        
-        const price = p.price || 0;
-        switch (selectedBudget) {
-            case 'low':
-                return price < 200;
-            case 'medium':
-                return price >= 200 && price < 500;
-            case 'high':
-                return price >= 500;
-            default:
-                return true;
-        }
-    });
-
-    if (selectedTier) {
-        recommendations = recommendations.filter(p => p.tier === selectedTier);
-    }
-
-    // Sauvegarder la recherche si l'utilisateur est connecté
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-        await supabase.from('search_history').insert({
-            user_id: user.id,
-            query: `Choix Express: ${selectedCategory} - Budget ${selectedBudget}`
-        });
+if (selectedCategorySlug) {
+    selectedCategory = categories.find(c => c.slug === selectedCategorySlug) || null;
+    if (selectedCategory) {
+        productTypes = await getProductTypesByCategory(selectedCategorySlug);
     }
 }
+
+// Calculer les recommandations SSR
+let recommendations: ProductFull[] = [];
+let isSearching = selectedCategorySlug && selectedProductTypeSlug;
+
+if (isSearching && selectedCategory) {
+    // Récupérer les produits avec relations
+    let query = supabase
+        .from('products')
+        .select(`
+            *,
+            category:categories(*),
+            brand:brands(*),
+            product_type:product_types(*)
+        `)
+        .eq('is_active', true)
+        .eq('category_id', selectedCategory.id);
+    
+    // Filtrer par type de produit
+    if (selectedProductTypeSlug && selectedProductTypeSlug !== 'all') {
+        const productType = productTypes.find(pt => pt.slug === selectedProductTypeSlug);
+        if (productType) {
+            query = query.eq('product_type_id', productType.id);
+        }
+    }
+    
+    const { data, error } = await query;
+    
+    if (!error && data) {
+        // Transformer et calculer les scores de recommandation
+        recommendations = data.map((p: any) => {
+            // Calculer la note moyenne
+            const ratings = [p.rating_quality, p.rating_price, p.rating_durability, p.rating_reliability].filter(r => r !== null);
+            const avg_rating = ratings.length > 0 ? ratings.reduce((a, b) => a + parseFloat(b), 0) / ratings.length : 0;
+            
+            // Calculer un score pondéré selon la priorité
+            let score = 0;
+            const qualityScore = parseFloat(p.rating_quality || '3');
+            const priceScore = parseFloat(p.rating_price || '3');
+            const durabilityScore = parseFloat(p.rating_durability || '3');
+            const reliabilityScore = parseFloat(p.rating_reliability || '3');
+            
+            switch (priority) {
+                case 'quality':
+                    // Priorité qualité: qualité + durabilité + fiabilité
+                    score = (qualityScore * 2 + durabilityScore * 1.5 + reliabilityScore * 1.5 + priceScore * 0.5) / 5.5;
+                    break;
+                case 'price':
+                    // Priorité prix: note prix très importante
+                    score = (priceScore * 3 + qualityScore * 0.5 + durabilityScore * 0.5 + reliabilityScore * 0.5) / 4.5;
+                    break;
+                default:
+                    // Équilibré: toutes les notes comptent pareil
+                    score = avg_rating;
+            }
+            
+            return {
+                ...p,
+                avg_rating,
+                recommendation_score: score
+            } as ProductFull & { recommendation_score: number };
+        });
+        
+        // Trier par score de recommandation décroissant
+        recommendations.sort((a: any, b: any) => b.recommendation_score - a.recommendation_score);
+        
+        // Limiter à 6 résultats max
+        recommendations = recommendations.slice(0, 6);
+    }
+}
+
+// Labels pour l'affichage
+const priorityLabels: Record<string, { label: string; emoji: string; desc: string }> = {
+    quality: { label: 'Qualité Premium', emoji: '🏆', desc: 'Le meilleur, quel que soit le prix' },
+    balanced: { label: 'Équilibré', emoji: '⚖️', desc: 'Bon rapport qualité/prix' },
+    price: { label: 'Petit Budget', emoji: '💰', desc: 'Le moins cher possible' }
+};
 ---
 
 <Layout title={title} description={description}>
@@ -59,139 +118,338 @@ if (selectedCategory && selectedBudget) {
                 Choix Express
             </h1>
             <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-                Pas le temps de chercher ? Répondez à quelques questions et trouvez le produit parfait en moins d'une minute !
+                Pas le temps de chercher ? Répondez à 3 questions et trouvez le produit parfait en moins d'une minute !
             </p>
         </div>
 
-        <!-- Form or Results -->
-        {!selectedCategory || !selectedBudget ? (
-            <!-- Selection Form -->
-            <div class="max-w-2xl mx-auto">
-                <form method="GET" class="space-y-8">
-                    <!-- Step 1: Category -->
+        {!isSearching ? (
+            <!-- Formulaire de sélection -->
+            <div class="max-w-3xl mx-auto">
+                <form method="GET" class="space-y-8" id="express-form">
+                    
+                    <!-- Étape 1: Catégorie -->
                     <div class="bg-white rounded-2xl shadow-lg p-8">
-                        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                            <span class="bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                            <span class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-bold">1</span>
                             Que recherchez-vous ?
                         </h2>
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             {categories.map((cat) => (
-                                <label class="cursor-pointer">
-                                    <input type="radio" name="category" value={cat.slug} class="peer sr-only" required />
-                                    <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-primary-300 peer-checked:border-primary-600 peer-checked:bg-primary-50 transition-all">
+                                <label class="cursor-pointer group">
+                                    <input 
+                                        type="radio" 
+                                        name="category" 
+                                        value={cat.slug} 
+                                        class="peer sr-only category-radio" 
+                                        required 
+                                    />
+                                    <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-blue-300 hover:bg-blue-50 peer-checked:border-blue-600 peer-checked:bg-blue-50 transition-all">
                                         <div class="text-3xl mb-2">{cat.icon}</div>
-                                        <div class="font-medium">{cat.name}</div>
+                                        <div class="font-medium text-sm">{cat.name}</div>
                                     </div>
                                 </label>
                             ))}
                         </div>
                     </div>
 
-                    <!-- Step 2: Budget -->
+                    <!-- Étape 2: Type de produit (dynamique) -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8" id="step-product-type">
+                        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                            <span class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-bold">2</span>
+                            Quel type de produit ?
+                        </h2>
+                        <div id="product-types-container" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <p class="text-gray-500 col-span-full text-center py-8">
+                                👆 Sélectionnez d'abord une catégorie
+                            </p>
+                        </div>
+                        <input type="hidden" name="productType" id="selected-product-type" value="all" />
+                    </div>
+
+                    <!-- Étape 3: Budget (Slider) -->
                     <div class="bg-white rounded-2xl shadow-lg p-8">
-                        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                            <span class="bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">2</span>
-                            Quel est votre budget ?
+                        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                            <span class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-bold">3</span>
+                            Votre budget ?
+                        </h2>
+                        
+                        <div class="space-y-6">
+                            <!-- Affichage du budget sélectionné -->
+                            <div class="flex justify-between items-center text-lg font-semibold">
+                                <span class="text-gray-600">Budget :</span>
+                                <span class="text-blue-600" id="budget-display">0 € - 2000 €</span>
+                            </div>
+                            
+                            <!-- Double slider -->
+                            <div class="relative pt-2 pb-6">
+                                <div class="slider-track"></div>
+                                <div class="slider-range" id="slider-range"></div>
+                                <input 
+                                    type="range" 
+                                    name="budgetMin" 
+                                    id="budget-min" 
+                                    min="0" 
+                                    max="2000" 
+                                    value="0" 
+                                    step="50"
+                                    class="slider-thumb"
+                                />
+                                <input 
+                                    type="range" 
+                                    name="budgetMax" 
+                                    id="budget-max" 
+                                    min="0" 
+                                    max="2000" 
+                                    value="2000" 
+                                    step="50"
+                                    class="slider-thumb"
+                                />
+                            </div>
+                            
+                            <!-- Presets rapides -->
+                            <div class="flex flex-wrap gap-2 justify-center">
+                                <button type="button" class="budget-preset px-4 py-2 rounded-lg bg-gray-100 hover:bg-blue-100 text-sm font-medium transition-colors" data-min="0" data-max="100">
+                                    💵 &lt; 100€
+                                </button>
+                                <button type="button" class="budget-preset px-4 py-2 rounded-lg bg-gray-100 hover:bg-blue-100 text-sm font-medium transition-colors" data-min="100" data-max="300">
+                                    💶 100-300€
+                                </button>
+                                <button type="button" class="budget-preset px-4 py-2 rounded-lg bg-gray-100 hover:bg-blue-100 text-sm font-medium transition-colors" data-min="300" data-max="600">
+                                    💰 300-600€
+                                </button>
+                                <button type="button" class="budget-preset px-4 py-2 rounded-lg bg-gray-100 hover:bg-blue-100 text-sm font-medium transition-colors" data-min="600" data-max="2000">
+                                    💎 600€+
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Étape 4: Priorité -->
+                    <div class="bg-white rounded-2xl shadow-lg p-8">
+                        <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                            <span class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm font-bold">4</span>
+                            Votre priorité ?
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <label class="cursor-pointer">
-                                <input type="radio" name="budget" value="low" class="peer sr-only" required />
-                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-primary-300 peer-checked:border-primary-600 peer-checked:bg-primary-50 transition-all">
-                                    <div class="text-3xl mb-2">💰</div>
-                                    <div class="font-medium">Petit budget</div>
-                                    <div class="text-sm text-gray-500">Moins de 200€</div>
+                                <input type="radio" name="priority" value="quality" class="peer sr-only" />
+                                <div class="p-6 border-2 border-gray-200 rounded-xl text-center hover:border-amber-300 peer-checked:border-amber-500 peer-checked:bg-amber-50 transition-all">
+                                    <div class="text-4xl mb-3">🏆</div>
+                                    <div class="font-bold text-lg mb-1">Qualité Premium</div>
+                                    <div class="text-sm text-gray-500">Le meilleur, quel que soit le prix</div>
                                 </div>
                             </label>
                             <label class="cursor-pointer">
-                                <input type="radio" name="budget" value="medium" class="peer sr-only" />
-                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-primary-300 peer-checked:border-primary-600 peer-checked:bg-primary-50 transition-all">
-                                    <div class="text-3xl mb-2">💵</div>
-                                    <div class="font-medium">Budget moyen</div>
-                                    <div class="text-sm text-gray-500">200€ - 500€</div>
+                                <input type="radio" name="priority" value="balanced" class="peer sr-only" checked />
+                                <div class="p-6 border-2 border-gray-200 rounded-xl text-center hover:border-blue-300 peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
+                                    <div class="text-4xl mb-3">⚖️</div>
+                                    <div class="font-bold text-lg mb-1">Équilibré</div>
+                                    <div class="text-sm text-gray-500">Bon rapport qualité/prix</div>
                                 </div>
                             </label>
                             <label class="cursor-pointer">
-                                <input type="radio" name="budget" value="high" class="peer sr-only" />
-                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-primary-300 peer-checked:border-primary-600 peer-checked:bg-primary-50 transition-all">
-                                    <div class="text-3xl mb-2">💎</div>
-                                    <div class="font-medium">Sans limite</div>
-                                    <div class="text-sm text-gray-500">Plus de 500€</div>
+                                <input type="radio" name="priority" value="price" class="peer sr-only" />
+                                <div class="p-6 border-2 border-gray-200 rounded-xl text-center hover:border-green-300 peer-checked:border-green-500 peer-checked:bg-green-50 transition-all">
+                                    <div class="text-4xl mb-3">💰</div>
+                                    <div class="font-bold text-lg mb-1">Petit Budget</div>
+                                    <div class="text-sm text-gray-500">Le moins cher possible</div>
                                 </div>
                             </label>
                         </div>
                     </div>
 
-                    <!-- Step 3: Priority (optional) -->
-                    <div class="bg-white rounded-2xl shadow-lg p-8">
-                        <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                            <span class="bg-primary-600 text-white w-8 h-8 rounded-full flex items-center justify-center mr-3 text-sm">3</span>
-                            Votre priorité ? <span class="text-gray-400 text-sm ml-2">(optionnel)</span>
-                        </h2>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <label class="cursor-pointer">
-                                <input type="radio" name="tier" value="best-value" class="peer sr-only" />
-                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-green-300 peer-checked:border-green-600 peer-checked:bg-green-50 transition-all">
-                                    <div class="text-3xl mb-2">🏆</div>
-                                    <div class="font-medium text-green-700">Meilleur rapport Q/P</div>
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="tier" value="mid-range" class="peer sr-only" />
-                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-blue-300 peer-checked:border-blue-600 peer-checked:bg-blue-50 transition-all">
-                                    <div class="text-3xl mb-2">⚖️</div>
-                                    <div class="font-medium text-blue-700">Équilibré</div>
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input type="radio" name="tier" value="budget" class="peer sr-only" />
-                                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-orange-300 peer-checked:border-orange-600 peer-checked:bg-orange-50 transition-all">
-                                    <div class="text-3xl mb-2">💵</div>
-                                    <div class="font-medium text-orange-700">Le moins cher</div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Submit -->
+                    <!-- Bouton de soumission -->
                     <button 
                         type="submit"
-                        class="w-full bg-secondary-500 hover:bg-secondary-600 text-white py-4 rounded-xl font-bold text-xl transition-colors flex items-center justify-center"
+                        class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white py-5 rounded-2xl font-bold text-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
                     >
-                        ⚡ Trouver mon produit
+                        <span class="text-2xl">⚡</span>
+                        Trouver mon produit idéal
                     </button>
                 </form>
             </div>
         ) : (
-            <!-- Results -->
-            <div>
-                <div class="bg-secondary-50 border border-secondary-200 rounded-xl p-6 mb-8 flex items-center justify-between">
-                    <div>
-                        <h2 class="font-bold text-lg text-secondary-800">
-                            {recommendations.length} produit{recommendations.length > 1 ? 's' : ''} trouvé{recommendations.length > 1 ? 's' : ''} !
-                        </h2>
-                        <p class="text-secondary-600">
-                            Catégorie: {categories.find(c => c.slug === selectedCategory)?.name} | 
-                            Budget: {selectedBudget === 'low' ? '< 200€' : selectedBudget === 'medium' ? '200-500€' : '> 500€'}
-                        </p>
+            <!-- Résultats -->
+            <div class="max-w-6xl mx-auto">
+                <!-- Résumé de la recherche -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6 mb-8">
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="font-bold text-xl text-gray-900 mb-2">
+                                {recommendations.length > 0 ? (
+                                    <>🎯 {recommendations.length} produit{recommendations.length > 1 ? 's' : ''} recommandé{recommendations.length > 1 ? 's' : ''} !</>
+                                ) : (
+                                    <>😕 Aucun produit trouvé</>
+                                )}
+                            </h2>
+                            <div class="flex flex-wrap gap-3 text-sm">
+                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white shadow-sm">
+                                    {selectedCategory?.icon} {selectedCategory?.name}
+                                </span>
+                                {selectedProductTypeSlug && selectedProductTypeSlug !== 'all' && (
+                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white shadow-sm">
+                                        📦 {productTypes.find(pt => pt.slug === selectedProductTypeSlug)?.name || selectedProductTypeSlug}
+                                    </span>
+                                )}
+                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white shadow-sm">
+                                    💰 {budgetMin}€ - {budgetMax}€
+                                </span>
+                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white shadow-sm">
+                                    {priorityLabels[priority]?.emoji} {priorityLabels[priority]?.label}
+                                </span>
+                            </div>
+                        </div>
+                        <a 
+                            href="/choix-express" 
+                            class="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-6 py-3 rounded-xl font-medium transition-colors shadow-sm border border-gray-200"
+                        >
+                            🔄 Nouvelle recherche
+                        </a>
                     </div>
-                    <a href="/choix-express" class="bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                        Nouvelle recherche
-                    </a>
                 </div>
 
                 {recommendations.length > 0 ? (
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {recommendations.map((product) => (
-                            <ProductCard product={product} />
-                        ))}
+                    <div class="space-y-8">
+                        <!-- Premier produit mis en avant (TOP recommandation) -->
+                        {recommendations.length > 0 && (
+                            <div class="relative">
+                                <div class="absolute -top-3 left-6 z-10">
+                                    <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg">
+                                        ⭐ Notre recommandation #1
+                                    </span>
+                                </div>
+                                <div class="bg-white rounded-2xl shadow-xl border-2 border-amber-200 overflow-hidden">
+                                    <div class="grid md:grid-cols-2 gap-6 p-6 pt-8">
+                                        <!-- Image -->
+                                        <div class="aspect-square bg-gray-50 rounded-xl flex items-center justify-center p-6">
+                                            {recommendations[0].image_url ? (
+                                                <img 
+                                                    src={recommendations[0].image_url} 
+                                                    alt={recommendations[0].name}
+                                                    class="max-w-full max-h-full object-contain"
+                                                />
+                                            ) : (
+                                                <div class="text-8xl text-gray-300">📦</div>
+                                            )}
+                                        </div>
+                                        
+                                        <!-- Détails -->
+                                        <div class="flex flex-col justify-between">
+                                            <div>
+                                                <div class="flex items-center gap-2 mb-2">
+                                                    <span class="text-sm font-medium text-gray-500">{recommendations[0].brand?.name}</span>
+                                                </div>
+                                                <h3 class="text-2xl font-bold text-gray-900 mb-3">{recommendations[0].name}</h3>
+                                                <p class="text-gray-600 mb-4">{recommendations[0].summary}</p>
+                                                
+                                                {recommendations[0].verdict && (
+                                                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
+                                                        <div class="flex items-start gap-2">
+                                                            <span class="text-xl">💡</span>
+                                                            <div>
+                                                                <span class="font-semibold text-green-800">Notre verdict :</span>
+                                                                <p class="text-green-700">{recommendations[0].verdict}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                <!-- Indicateurs -->
+                                                <div class="grid grid-cols-2 gap-3 mb-4">
+                                                    {recommendations[0].rating_quality && (
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="text-sm">Qualité</span>
+                                                            <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                                <div class="h-full bg-blue-500 rounded-full" style={`width: ${parseFloat(recommendations[0].rating_quality as any) * 20}%`}></div>
+                                                            </div>
+                                                            <span class="text-sm font-bold">{recommendations[0].rating_quality}/5</span>
+                                                        </div>
+                                                    )}
+                                                    {recommendations[0].rating_price && (
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="text-sm">Prix</span>
+                                                            <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                                <div class="h-full bg-green-500 rounded-full" style={`width: ${parseFloat(recommendations[0].rating_price as any) * 20}%`}></div>
+                                                            </div>
+                                                            <span class="text-sm font-bold">{recommendations[0].rating_price}/5</span>
+                                                        </div>
+                                                    )}
+                                                    {recommendations[0].rating_durability && (
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="text-sm">Durabilité</span>
+                                                            <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                                <div class="h-full bg-purple-500 rounded-full" style={`width: ${parseFloat(recommendations[0].rating_durability as any) * 20}%`}></div>
+                                                            </div>
+                                                            <span class="text-sm font-bold">{recommendations[0].rating_durability}/5</span>
+                                                        </div>
+                                                    )}
+                                                    {recommendations[0].rating_reliability && (
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="text-sm">Fiabilité</span>
+                                                            <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                                <div class="h-full bg-amber-500 rounded-full" style={`width: ${parseFloat(recommendations[0].rating_reliability as any) * 20}%`}></div>
+                                                            </div>
+                                                            <span class="text-sm font-bold">{recommendations[0].rating_reliability}/5</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- CTA Amazon -->
+                                            <div class="flex flex-col sm:flex-row gap-3">
+                                                <a 
+                                                    href={recommendations[0].amazon_url} 
+                                                    target="_blank" 
+                                                    rel="noopener sponsored"
+                                                    class="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-6 py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl"
+                                                >
+                                                    🛒 Voir sur Amazon
+                                                    {recommendations[0].price_display && (
+                                                        <span class="bg-white/20 px-2 py-1 rounded-lg text-sm">{recommendations[0].price_display}</span>
+                                                    )}
+                                                </a>
+                                                <a 
+                                                    href={`/produits/${recommendations[0].slug}`}
+                                                    class="inline-flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-4 rounded-xl font-medium transition-colors"
+                                                >
+                                                    📋 Fiche complète
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        <!-- Autres recommandations -->
+                        {recommendations.length > 1 && (
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900 mb-4">Autres excellents choix</h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {recommendations.slice(1).map((product, index) => (
+                                        <div class="relative">
+                                            <span class="absolute -top-2 -left-2 z-10 w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full font-bold text-sm shadow">
+                                                #{index + 2}
+                                            </span>
+                                            <DbProductCard product={product} showBrand={true} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    <div class="text-center py-16 bg-gray-50 rounded-2xl">
-                        <div class="text-6xl mb-4">😕</div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2">Aucun produit trouvé</h3>
-                        <p class="text-gray-600 mb-6">Essayez d'élargir vos critères de recherche.</p>
-                        <a href="/choix-express" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
-                            Modifier ma recherche
+                    <div class="text-center py-16 bg-white rounded-2xl shadow-lg">
+                        <div class="text-8xl mb-6">🔍</div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-3">Aucun produit ne correspond</h3>
+                        <p class="text-gray-600 mb-8 max-w-md mx-auto">
+                            Nous n'avons pas trouvé de produit correspondant exactement à vos critères. Essayez d'élargir votre recherche.
+                        </p>
+                        <a 
+                            href="/choix-express" 
+                            class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors"
+                        >
+                            ⚡ Nouvelle recherche
                         </a>
                     </div>
                 )}
@@ -199,3 +457,179 @@ if (selectedCategory && selectedBudget) {
         )}
     </div>
 </Layout>
+
+<style>
+    /* Styles pour le double slider */
+    .slider-track {
+        @apply absolute w-full h-2 bg-gray-200 rounded-full top-1/2 -translate-y-1/2;
+    }
+    
+    .slider-range {
+        @apply absolute h-2 bg-blue-500 rounded-full top-1/2 -translate-y-1/2;
+    }
+    
+    .slider-thumb {
+        @apply absolute w-full pointer-events-none appearance-none bg-transparent;
+    }
+    
+    .slider-thumb::-webkit-slider-thumb {
+        @apply pointer-events-auto appearance-none w-6 h-6 bg-white border-4 border-blue-500 rounded-full cursor-pointer shadow-lg hover:bg-blue-50 transition-colors;
+    }
+    
+    .slider-thumb::-moz-range-thumb {
+        @apply pointer-events-auto appearance-none w-6 h-6 bg-white border-4 border-blue-500 rounded-full cursor-pointer shadow-lg hover:bg-blue-50 transition-colors;
+    }
+</style>
+
+<script>
+    // Types de produits par catégorie (chargés dynamiquement)
+    const productTypesData: Record<string, Array<{slug: string, name: string, icon: string}>> = {};
+    
+    // Éléments du DOM
+    const categoryRadios = document.querySelectorAll('.category-radio') as NodeListOf<HTMLInputElement>;
+    const productTypesContainer = document.getElementById('product-types-container');
+    const selectedProductTypeInput = document.getElementById('selected-product-type') as HTMLInputElement;
+    const budgetMinInput = document.getElementById('budget-min') as HTMLInputElement;
+    const budgetMaxInput = document.getElementById('budget-max') as HTMLInputElement;
+    const budgetDisplay = document.getElementById('budget-display');
+    const sliderRange = document.getElementById('slider-range');
+    const budgetPresets = document.querySelectorAll('.budget-preset');
+    
+    // Charger les types de produits pour une catégorie
+    async function loadProductTypes(categorySlug: string) {
+        if (productTypesData[categorySlug]) {
+            renderProductTypes(productTypesData[categorySlug]);
+            return;
+        }
+        
+        productTypesContainer!.innerHTML = `
+            <p class="text-gray-500 col-span-full text-center py-8">
+                ⏳ Chargement...
+            </p>
+        `;
+        
+        try {
+            const response = await fetch(`/api/admin/categories/${categorySlug}/product-types`);
+            if (response.ok) {
+                const data = await response.json();
+                productTypesData[categorySlug] = data;
+                renderProductTypes(data);
+            } else {
+                productTypesContainer!.innerHTML = `
+                    <p class="text-red-500 col-span-full text-center py-8">
+                        ❌ Erreur de chargement
+                    </p>
+                `;
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    // Afficher les types de produits
+    function renderProductTypes(types: Array<{slug: string, name: string, icon: string}>) {
+        if (!productTypesContainer) return;
+        
+        if (types.length === 0) {
+            productTypesContainer.innerHTML = `
+                <p class="text-gray-500 col-span-full text-center py-8">
+                    😕 Aucun type de produit disponible
+                </p>
+            `;
+            return;
+        }
+        
+        // Ajouter "Tous les produits" en premier
+        let html = `
+            <label class="cursor-pointer">
+                <input type="radio" name="productTypeRadio" value="all" class="peer sr-only product-type-radio" checked />
+                <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-blue-300 peer-checked:border-blue-600 peer-checked:bg-blue-50 transition-all">
+                    <div class="text-2xl mb-1">🔍</div>
+                    <div class="font-medium text-sm">Tous</div>
+                </div>
+            </label>
+        `;
+        
+        types.forEach(type => {
+            html += `
+                <label class="cursor-pointer">
+                    <input type="radio" name="productTypeRadio" value="${type.slug}" class="peer sr-only product-type-radio" />
+                    <div class="p-4 border-2 border-gray-200 rounded-xl text-center hover:border-blue-300 peer-checked:border-blue-600 peer-checked:bg-blue-50 transition-all">
+                        <div class="text-2xl mb-1">${type.icon || '📦'}</div>
+                        <div class="font-medium text-sm">${type.name}</div>
+                    </div>
+                </label>
+            `;
+        });
+        
+        productTypesContainer.innerHTML = html;
+        
+        // Ajouter les événements
+        document.querySelectorAll('.product-type-radio').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const target = e.target as HTMLInputElement;
+                selectedProductTypeInput.value = target.value;
+            });
+        });
+    }
+    
+    // Gérer le changement de catégorie
+    categoryRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const target = e.target as HTMLInputElement;
+            loadProductTypes(target.value);
+        });
+    });
+    
+    // Mise à jour du slider de budget
+    function updateBudgetSlider() {
+        const min = parseInt(budgetMinInput.value);
+        const max = parseInt(budgetMaxInput.value);
+        
+        // Éviter le croisement des sliders
+        if (min > max - 50) {
+            if (document.activeElement === budgetMinInput) {
+                budgetMinInput.value = (max - 50).toString();
+            } else {
+                budgetMaxInput.value = (min + 50).toString();
+            }
+        }
+        
+        const minVal = parseInt(budgetMinInput.value);
+        const maxVal = parseInt(budgetMaxInput.value);
+        
+        // Mettre à jour l'affichage
+        if (budgetDisplay) {
+            if (maxVal >= 2000) {
+                budgetDisplay.textContent = `${minVal} € - 2000€+`;
+            } else {
+                budgetDisplay.textContent = `${minVal} € - ${maxVal} €`;
+            }
+        }
+        
+        // Mettre à jour la barre de range
+        if (sliderRange) {
+            const percent1 = (minVal / 2000) * 100;
+            const percent2 = (maxVal / 2000) * 100;
+            sliderRange.style.left = `${percent1}%`;
+            sliderRange.style.width = `${percent2 - percent1}%`;
+        }
+    }
+    
+    budgetMinInput?.addEventListener('input', updateBudgetSlider);
+    budgetMaxInput?.addEventListener('input', updateBudgetSlider);
+    
+    // Presets de budget
+    budgetPresets.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const min = btn.getAttribute('data-min') || '0';
+            const max = btn.getAttribute('data-max') || '2000';
+            budgetMinInput.value = min;
+            budgetMaxInput.value = max;
+            updateBudgetSlider();
+        });
+    });
+    
+    // Initialiser
+    updateBudgetSlider();
+</script>

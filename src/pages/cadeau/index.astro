@@ -2,8 +2,8 @@
 export const prerender = false; // Page dynamique SSR
 
 import Layout from '../../layouts/Layout.astro';
-import ProductCard from '../../components/ProductCard.astro';
-import { products, categories, formatPrice } from '../../data/products';
+import DbProductCard from '../../components/DbProductCard.astro';
+import { getCategories, getProducts, type ProductFull } from '../../lib/db';
 
 const title = "Mode Cadeau 🎁 | Trouve-Tout";
 const description = "Trouvez le cadeau parfait pour vos proches. Sélectionnez le profil et le budget, nous vous proposons les meilleures idées.";
@@ -14,44 +14,58 @@ const recipient = url.searchParams.get('recipient');
 const occasion = url.searchParams.get('occasion');
 const budget = url.searchParams.get('budget');
 
-let giftSuggestions: typeof products = [];
-
+// Mapping des profils vers les slugs de catégories
 const recipientProfiles: Record<string, string[]> = {
     'tech-lover': ['high-tech'],
-    'home-maker': ['maison', 'cuisine'],
+    'home-maker': ['maison-quotidien'],
     'foodie': ['cuisine'],
-    'athlete': ['sport'],
-    'beauty-fan': ['beaute'],
-    'all': ['high-tech', 'maison', 'cuisine', 'sport', 'beaute']
+    'athlete': ['sport-bien-etre'],
+    'beauty-fan': ['beaute-soin'],
+    'all': ['high-tech', 'maison-quotidien', 'cuisine', 'sport-bien-etre', 'beaute-soin']
 };
 
+let giftSuggestions: ProductFull[] = [];
+
 if (recipient && budget) {
-    const categories = recipientProfiles[recipient] || recipientProfiles['all'];
+    // Récupérer les catégories et produits depuis Supabase
+    const categories = await getCategories();
+    const allProducts = await getProducts();
     
-    giftSuggestions = products.filter(p => {
-        if (!categories.includes(p.category || '')) return false;
+    // Trouver les catégories correspondant au profil
+    const categorySlugs = recipientProfiles[recipient] || recipientProfiles['all'];
+    const matchingCategoryIds = categories
+        .filter(c => categorySlugs.includes(c.slug))
+        .map(c => c.id);
+    
+    // Filtrer les produits
+    giftSuggestions = allProducts.filter(p => {
+        // Vérifier la catégorie
+        if (!matchingCategoryIds.includes(p.category_id)) return false;
         
-        const price = p.price || 0;
+        // Filtrer par position selon le budget (puisqu'on n'a pas de prix exact)
         switch (budget) {
             case 'small':
-                return price <= 100;
+                // Petit budget = produits budget
+                return p.position === 'budget';
             case 'medium':
-                return price > 100 && price <= 300;
+                // Budget moyen = middle-ground
+                return p.position === 'middle-ground' || p.position === 'budget';
             case 'large':
-                return price > 300 && price <= 600;
+                // Beau cadeau = best-value ou middle-ground
+                return p.position === 'best-value' || p.position === 'middle-ground';
             case 'luxury':
-                return price > 600;
+                // Luxe = best-value en priorité
+                return p.position === 'best-value';
             default:
                 return true;
         }
     });
 
-    // Trier par meilleur rapport qualité/prix
-    giftSuggestions.sort((a, b) => {
-        const scoreA = (a.quality_rating || 0) + (a.price_rating || 0);
-        const scoreB = (b.quality_rating || 0) + (b.price_rating || 0);
-        return scoreB - scoreA;
-    });
+    // Trier par meilleur rapport qualité/prix (avg_rating)
+    giftSuggestions.sort((a, b) => (b.avg_rating || 0) - (a.avg_rating || 0));
+    
+    // Limiter à 9 résultats
+    giftSuggestions = giftSuggestions.slice(0, 9);
 }
 
 const occasions = [
@@ -158,43 +172,74 @@ const budgets = [
                     <!-- Submit -->
                     <button 
                         type="submit"
-                        class="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-xl font-bold text-xl transition-colors flex items-center justify-center"
+                        class="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white py-5 rounded-2xl font-bold text-xl transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
                     >
-                        🎁 Trouver des idées cadeaux
+                        <span class="text-2xl">🎁</span>
+                        Trouver des idées cadeaux
                     </button>
                 </form>
             </div>
         ) : (
             <!-- Results -->
-            <div>
-                <div class="bg-pink-50 border border-pink-200 rounded-xl p-6 mb-8 flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h2 class="font-bold text-lg text-pink-800">
-                            {giftSuggestions.length} idée{giftSuggestions.length > 1 ? 's' : ''} cadeau{giftSuggestions.length > 1 ? 'x' : ''} !
-                        </h2>
-                        <p class="text-pink-600">
-                            Pour: {recipients.find(r => r.value === recipient)?.label} | 
-                            Budget: {budgets.find(b => b.value === budget)?.range}
-                        </p>
+            <div class="max-w-6xl mx-auto">
+                <div class="bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-2xl p-6 mb-8">
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="font-bold text-xl text-gray-900 mb-2">
+                                {giftSuggestions.length > 0 ? (
+                                    <>🎁 {giftSuggestions.length} idée{giftSuggestions.length > 1 ? 's' : ''} cadeau{giftSuggestions.length > 1 ? 'x' : ''} !</>
+                                ) : (
+                                    <>😕 Aucune suggestion trouvée</>
+                                )}
+                            </h2>
+                            <div class="flex flex-wrap gap-3 text-sm">
+                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white shadow-sm">
+                                    {recipients.find(r => r.value === recipient)?.emoji} {recipients.find(r => r.value === recipient)?.label}
+                                </span>
+                                {occasion && (
+                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white shadow-sm">
+                                        {occasions.find(o => o.value === occasion)?.emoji} {occasions.find(o => o.value === occasion)?.label}
+                                    </span>
+                                )}
+                                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white shadow-sm">
+                                    💰 {budgets.find(b => b.value === budget)?.range}
+                                </span>
+                            </div>
+                        </div>
+                        <a 
+                            href="/cadeau" 
+                            class="inline-flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 px-6 py-3 rounded-xl font-medium transition-colors shadow-sm border border-gray-200"
+                        >
+                            🔄 Nouvelle recherche
+                        </a>
                     </div>
-                    <a href="/cadeau" class="bg-pink-500 hover:bg-pink-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                        Nouvelle recherche
-                    </a>
                 </div>
 
                 {giftSuggestions.length > 0 ? (
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {giftSuggestions.map((product) => (
-                            <ProductCard product={product} />
+                        {giftSuggestions.map((product, index) => (
+                            <div class="relative">
+                                {index === 0 && (
+                                    <span class="absolute -top-2 -left-2 z-10 px-3 py-1 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full font-bold text-sm shadow">
+                                        ⭐ Top choix
+                                    </span>
+                                )}
+                                <DbProductCard product={product} showBrand={true} showCategory={true} />
+                            </div>
                         ))}
                     </div>
                 ) : (
-                    <div class="text-center py-16 bg-gray-50 rounded-2xl">
-                        <div class="text-6xl mb-4">😕</div>
-                        <h3 class="text-xl font-bold text-gray-900 mb-2">Aucune suggestion trouvée</h3>
-                        <p class="text-gray-600 mb-6">Essayez de modifier vos critères.</p>
-                        <a href="/cadeau" class="bg-pink-500 hover:bg-pink-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
-                            Modifier ma recherche
+                    <div class="text-center py-16 bg-white rounded-2xl shadow-lg">
+                        <div class="text-8xl mb-6">🔍</div>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-3">Aucune suggestion trouvée</h3>
+                        <p class="text-gray-600 mb-8 max-w-md mx-auto">
+                            Nous n'avons pas trouvé de cadeau correspondant à vos critères. Essayez de modifier le profil ou le budget.
+                        </p>
+                        <a 
+                            href="/cadeau" 
+                            class="inline-flex items-center gap-2 bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors"
+                        >
+                            🎁 Modifier ma recherche
                         </a>
                     </div>
                 )}
