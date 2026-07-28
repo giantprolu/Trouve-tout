@@ -16,12 +16,15 @@ interface Props {
   description?: string;
   ogImage?: string;
   canonicalPath?: string;
+  /** L'accueil porte son propre header (coque translucide) — voir design-system.md. */
+  hideHeader?: boolean;
 }
 const {
   title,
   description = "Trouve-Tout : guides d'achat outillage et jardin — on vous aide à choisir, pas à acheter.",
   ogImage = '/og-default.png',
   canonicalPath,
+  hideHeader = false,
 } = Astro.props;
 
 const siteUrl = SITE_URL;
@@ -73,22 +76,24 @@ const fullTitle = `${title} — Trouve-Tout`;
       Aller au contenu
     </a>
 
-    <header class="border-b border-line/40">
-      <nav class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-6">
-        <a href="/" class="font-display text-display-m text-ink tracking-tight">TROUVE-TOUT</a>
-        <div class="hidden sm:flex items-center gap-6 font-mono text-label uppercase text-ink">
-          <a href="/categories" class="hover:text-accent transition-colors">Catégories</a>
-          <a href="/blog" class="hover:text-accent transition-colors">Guides</a>
-          <a href="/marques" class="hover:text-accent transition-colors">Marques</a>
-        </div>
-        <a
-          href="/choix-express"
-          class="ml-auto rounded border border-accent text-accent font-mono text-label uppercase px-4 py-2 hover:bg-accent/10 transition-colors"
-        >
-          Choix Express
-        </a>
-      </nav>
-    </header>
+    {!hideHeader && (
+      <header class="border-b border-line/40">
+        <nav class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-6">
+          <a href="/" class="font-display text-display-m text-ink tracking-tight">TROUVE-TOUT</a>
+          <div class="hidden sm:flex items-center gap-6 font-mono text-label uppercase text-ink">
+            <a href="/categories" class="hover:text-accent transition-colors">Catégories</a>
+            <a href="/blog" class="hover:text-accent transition-colors">Guides</a>
+            <a href="/marques" class="hover:text-accent transition-colors">Marques</a>
+          </div>
+          <a
+            href="/choix-express"
+            class="ml-auto rounded border border-accent text-accent font-mono text-label uppercase px-4 py-2 hover:bg-accent/10 transition-colors"
+          >
+            Choix Express
+          </a>
+        </nav>
+      </header>
+    )}
 
     <main id="contenu" class="max-w-6xl mx-auto px-4 sm:px-6 flex-1 w-full py-8">
       <slot />

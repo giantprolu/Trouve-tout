@@ -1,6 +1,5 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import EncartTransparence from '../components/EncartTransparence.astro';
 import {
   categories,
   guides,
@@ -36,8 +35,29 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
 <Layout
   title="Bien choisir son outillage"
   description="Guides d'achat outillage et jardin : les critères qui comptent vraiment, sans jargon et sans classement bidon."
+  hideHeader
 >
-  <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6 mb-10">
+  <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+      <a href="/" class="flex items-center rounded-full bg-white/95 shadow-tile px-5 py-2.5">
+        <span class="font-display font-bold text-body-lg text-ink lowercase">trouve-tout.</span>
+      </a>
+      <a
+        href="/categories"
+        class="flex-1 min-w-[200px] flex items-center justify-between gap-3 rounded-full bg-white/95 shadow-tile pl-6 pr-1.5 py-1.5 hover:bg-white transition-colors"
+      >
+        <span class="text-body text-ink/55">Parcourir tous les guides</span>
+        <span class="grid h-[42px] w-[42px] flex-none place-items-center rounded-full bg-ink text-bg" aria-hidden="true">→</span>
+      </a>
+      <div class="flex items-center gap-6 px-3 font-display font-semibold text-body">
+        {categories.map((c) => (
+          <a href={`/categories/${c.slug}`} class="text-ink hover:text-accent transition-colors whitespace-nowrap">
+            {c.nom}
+          </a>
+        ))}
+      </div>
+    </div>
+
     <div class="flex flex-col lg:flex-row gap-4">
       <div class="flex-[3] min-w-0 flex flex-col gap-4">
         <div class="rounded-panel bg-gradient-to-br from-[#F6F8F0] to-[#EDF0E4] shadow-tile p-6 sm:p-8 lg:p-11 flex flex-wrap gap-8">
@@ -120,36 +140,11 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
         </a>
       </div>
     </div>
-  </section>
 
-  <EncartTransparence />
-
-  <section class="py-10 border-t border-line/40 mt-10">
-    <p class="font-mono text-label uppercase text-ink mb-6">Guides récents</p>
-    <div class="flex flex-col sm:flex-row gap-6">
-      {guides.slice(0, 3).map((g, i) => (
-        <a
-          href={`/blog/${g.slug}`}
-          class={`bg-surface border-t-[3px] border-accent px-5 py-5 block hover:bg-accent/10 transition-colors ${i === 0 ? 'sm:flex-[1.4]' : 'sm:flex-1'}`}
-        >
-          <h2 class="font-display text-display-m text-ink mb-2">{g.titre}</h2>
-          <p class="font-body text-small text-ink">{g.description}</p>
-        </a>
-      ))}
-    </div>
-  </section>
-
-  <section class="py-10 border-t border-line/40">
-    <p class="font-mono text-label uppercase text-ink mb-6">Par type d'outil</p>
-    <div class="flex flex-col divide-y divide-line/30">
-      {categories.map((c) => (
-        <a href={`/categories/${c.slug}`} class="py-5 flex items-baseline gap-4 group">
-          <h2 class="font-display text-display-m text-ink group-hover:text-accent transition-colors">
-            {c.nom}
-          </h2>
-          <p class="font-body text-body text-ink">{c.sousTitre}</p>
-        </a>
-      ))}
-    </div>
+    <p class="mt-4 mx-2 text-small text-ink/60">
+      Si vous achetez via ce lien, le marchand nous verse une commission. Le prix ne change pas
+      pour vous, et ça ne change rien à notre avis : on a écrit ce guide avant de savoir qui vous
+      le proposerait.
+    </p>
   </section>
 </Layout>
