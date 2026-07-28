@@ -28,11 +28,17 @@ let alternatives: ReturnType<typeof recommanderChoixExpress>[] = [];
 let erreur = '';
 let valeurs = { categorie: '', budget: '300', priorite: 'equilibre' };
 
-if (Astro.request.method === 'POST') {
-  const form = await Astro.request.formData();
-  const categorie = form.get('categorie') as string;
-  const budget    = parseInt(form.get('budget') as string, 10);
-  const priorite  = form.get('priorite') as string;
+// Formulaire en GET plutôt qu'en POST : ce questionnaire n'a aucun effet de
+// bord (pas d'écriture, pas de compte), donc GET est sémantiquement correct
+// et le résultat reste partageable/rechargeable par son URL. Ça évite aussi
+// la protection anti-CSRF d'Astro (bloque les POST cross-origine) qui
+// déclenchait « Cross-site POST form submissions are forbidden » — rien à
+// voir avec l'affiliation ManoMano en attente.
+const params = Astro.url.searchParams;
+if (params.has('categorie')) {
+  const categorie = params.get('categorie') ?? '';
+  const budget    = parseInt(params.get('budget') ?? '0', 10);
+  const priorite  = params.get('priorite') ?? '';
   valeurs = { categorie, budget: String(budget), priorite };
 
   resultat = recommanderChoixExpress(categorie, budget, priorite);
@@ -71,7 +77,7 @@ const prioriteLabel = PRIORITES.find(p => p.valeur === valeurs.priorite)?.label 
             Catégorie, budget, priorité : trois réponses et on te propose un seul outil, avec la raison qui va avec.
           </p>
 
-          <form method="POST" class="mt-9 flex flex-col gap-9">
+          <form method="GET" class="mt-9 flex flex-col gap-9">
             <div>
               <p class="mb-3 font-mono text-label uppercase text-ink">Quelle catégorie ?</p>
               <div class="flex flex-wrap gap-3">

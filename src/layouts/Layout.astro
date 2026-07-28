@@ -10,6 +10,7 @@ import '@fontsource/ibm-plex-mono/500';
 import '@fontsource/ibm-plex-mono/600';
 import '../styles/global.css';
 import { SITE_URL } from '../lib/site';
+import { GOOGLE_ADSENSE_CLIENT_ID, publiciteConfiguree } from '../lib/publicite';
 
 interface Props {
   title: string;
@@ -70,6 +71,15 @@ const fullTitle = `${title} — Trouve-Tout`;
       url: siteUrl,
       description: "Guides d'achat outillage honnêtes — on vous aide à choisir, pas à acheter.",
     })} />
+
+    {publiciteConfiguree && (
+      <script
+        is:inline
+        async
+        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${GOOGLE_ADSENSE_CLIENT_ID}`}
+        crossorigin="anonymous"
+      />
+    )}
   </head>
   <body class="bg-bg text-ink font-body text-body antialiased min-h-screen flex flex-col">
     <a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-signal focus:text-ink focus:px-4 focus:py-2 focus:rounded">

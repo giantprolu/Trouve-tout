@@ -1,0 +1,32 @@
+---
+/**
+ * Encart publicitaire Google AdSense. Tant que `PUBLIC_GOOGLE_ADSENSE_CLIENT_ID`
+ * n'est pas défini (compte en attente d'approbation), affiche un emplacement
+ * réservé honnête plutôt qu'un ID inventé — même logique que l'affiliation
+ * ManoMano tant que `PUBLIC_AWIN_AFFILIATE_ID` est absent.
+ */
+import { GOOGLE_ADSENSE_CLIENT_ID, publiciteConfiguree } from '../lib/publicite';
+
+interface Props {
+  slot?: string;
+  class?: string;
+}
+const { slot, class: className = '' } = Astro.props;
+---
+{publiciteConfiguree ? (
+  <div class={className}>
+    <ins
+      class="adsbygoogle block"
+      style="display:block"
+      data-ad-client={GOOGLE_ADSENSE_CLIENT_ID}
+      data-ad-slot={slot}
+      data-ad-format="auto"
+      data-full-width-responsive="true"
+    />
+    <script is:inline>(window.adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
+) : (
+  <div class={`rounded-tile border border-dashed border-line bg-bg flex items-center justify-center p-6 ${className}`}>
+    <span class="font-mono text-label uppercase text-line">Emplacement publicitaire</span>
+  </div>
+)}
