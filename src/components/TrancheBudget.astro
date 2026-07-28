@@ -1,0 +1,39 @@
+---
+import { segmentBudget, BORNES_BUDGET } from '../lib/affiliation';
+
+/**
+ * Bandeau de budget gradué — design-system.md §6.
+ * Affiche une TRANCHE, jamais le prix exact (non-négociable) : le montant
+ * indicatif ne sert qu'à calculer quel segment mettre en évidence.
+ */
+interface Props {
+  prixIndicatif: number;
+}
+const { prixIndicatif } = Astro.props;
+const { index, total, label } = segmentBudget(prixIndicatif);
+const segmentPct = 100 / total;
+const centrePct = segmentPct * index + segmentPct / 2;
+---
+<div class="w-full">
+  <div class="flex justify-center mb-1" style={`margin-left: ${centrePct}%; transform: translateX(-50%);`}>
+    <span class="font-mono text-mono-l text-cordeau whitespace-nowrap">{label}</span>
+  </div>
+  <div class="flex justify-center mb-2" style={`margin-left: ${centrePct}%; transform: translateX(-50%);`}>
+    <span class="text-graphite" aria-hidden="true">▼</span>
+  </div>
+
+  <div class="relative h-3 bg-tole shadow-etch flex" role="img" aria-label={`Tranche de budget : ${label}`}>
+    {Array.from({ length: total }).map((_, i) => (
+      <div
+        class={`flex-1 h-full ${i === index ? 'bg-cordeau-light' : ''}`}
+        style={i < total - 1 ? 'border-right: 1px solid #6E7268' : ''}
+      />
+    ))}
+  </div>
+
+  <div class="flex justify-between mt-1 font-mono text-mono-base text-graphite">
+    <span>0 €</span>
+    {BORNES_BUDGET.map((borne) => <span>{borne} €</span>)}
+    <span>+</span>
+  </div>
+</div>

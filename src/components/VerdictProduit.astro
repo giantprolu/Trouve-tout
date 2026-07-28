@@ -1,67 +1,44 @@
 ---
 import type { Produit } from '../lib/data';
+import { niveauConfiance } from '../lib/data';
 import CTAAffilie from './CTAAffilie.astro';
-import { trancheBudget } from '../lib/affiliation';
+import EncartTransparence from './EncartTransparence.astro';
+import NiveauABulle from './NiveauABulle.astro';
+import TrancheBudget from './TrancheBudget.astro';
 
 interface Props {
   produit: Produit;
   numero?: number;
 }
 const { produit, numero } = Astro.props;
-
-const segmentLabel: Record<string, string> = {
-  meilleur_rapport: 'Notre choix n°1 ⭐',
-  milieu: 'Meilleur rapport qualité/prix 💡',
-  moins_cher: 'Le plus abordable 💸',
-};
-const segmentColor: Record<string, string> = {
-  meilleur_rapport: 'bg-indigo-50 border-indigo-200 text-indigo-800',
-  milieu: 'bg-emerald-50 border-emerald-200 text-emerald-800',
-  moins_cher: 'bg-amber-50 border-amber-200 text-amber-800',
-};
 ---
-<div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+<div class="bg-tole border-t-[3px] border-cordeau px-6 py-6">
   {numero && (
-    <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">N°{numero}</div>
+    <p class="font-mono text-kicker uppercase text-graphite mb-3">N°{numero}</p>
   )}
-  <div class={`inline-block text-xs font-semibold px-3 py-1 rounded-full border mb-3 ${segmentColor[produit.segment]}`}>
-    {segmentLabel[produit.segment]}
-  </div>
 
-  <h3 class="text-xl font-bold mb-1">{produit.nom}</h3>
-  <div class="text-2xl font-bold text-indigo-600 mb-3">{trancheBudget(produit.prixIndicatif)}</div>
+  <NiveauABulle niveau={niveauConfiance(produit)} taille="grand" class="mb-4" />
 
-  <p class="text-gray-600 text-sm mb-4">{produit.description}</p>
+  <h2 class="font-display text-display-m text-graphite mb-2">{produit.verdict}</h2>
+  <p class="font-lecture text-lecture text-graphite mb-5">{produit.description}</p>
 
-  <!-- Indicateurs -->
-  <div class="grid grid-cols-3 gap-3 mb-4">
-    {[
-      { label: '⭐ Qualité', val: produit.qualite },
-      { label: '🔧 Durabilité', val: produit.durabilite },
-      { label: '🛠 Fiabilité', val: produit.fiabilite },
-    ].map(({ label, val }) => (
-      <div class="text-center bg-gray-50 rounded-xl py-2">
-        <div class="text-xs text-gray-500 mb-1">{label}</div>
-        <div class="flex justify-center gap-0.5">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div class={`w-2 h-2 rounded-full ${i < val ? 'bg-indigo-500' : 'bg-gray-200'}`} />
-          ))}
-        </div>
-      </div>
-    ))}
-  </div>
-
-  <!-- Pour qui / Contre qui -->
-  <div class="space-y-2 mb-4 text-sm">
-    <div class="flex gap-2">
-      <span class="text-green-500 font-bold flex-shrink-0">✓</span>
-      <span class="text-gray-700">{produit.pourQui}</span>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+    <div>
+      <p class="font-mono text-kicker uppercase text-graphite mb-1">Ce qui compte</p>
+      <p class="font-lecture text-lecture text-graphite">{produit.pourQui}</p>
     </div>
-    <div class="flex gap-2">
-      <span class="text-red-400 font-bold flex-shrink-0">✗</span>
-      <span class="text-gray-500">{produit.contreQui}</span>
+    <div>
+      <p class="font-mono text-kicker uppercase text-graphite mb-1">Ce qui ne compte pas</p>
+      <p class="font-lecture text-lecture text-graphite">{produit.contreQui}</p>
     </div>
   </div>
 
-  <CTAAffilie url={produit.urlMarchand} marchand={produit.marchand} />
+  <div class="mb-6">
+    <TrancheBudget prixIndicatif={produit.prixIndicatif} />
+  </div>
+
+  <div class="space-y-3">
+    <CTAAffilie url={produit.urlMarchand} marchand={produit.marchand} />
+    <EncartTransparence />
+  </div>
 </div>

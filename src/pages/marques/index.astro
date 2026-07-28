@@ -1,8 +1,22 @@
 ---
-
+import Layout from '../../layouts/Layout.astro';
+import { marques } from '../../lib/data';
 
 export const prerender = true;
 ---
+<Layout title="Marques" description="Bosch, Makita, Ryobi, Einhell : à quoi correspond chaque marque, et pour qui.">
+  <p class="font-mono text-kicker uppercase text-graphite mb-4">Marques</p>
+  <h1 class="font-display text-display-l text-graphite mb-10">Toutes les marques</h1>
 
-<h1 class="text-2xl font-bold">Marques</h1>
-<p>Liste des marques...</p>
+  <div class="flex flex-col divide-y divide-ligne/30">
+    {marques.map(m => (
+      <a href={`/marques/${m.slug}`} class="py-6 block group">
+        <div class="flex items-baseline justify-between gap-4">
+          <h2 class="font-display text-display-m text-graphite group-hover:text-cordeau transition-colors">{m.nom}</h2>
+          <span class="font-mono text-kicker uppercase text-graphite shrink-0">{m.positionnement}</span>
+        </div>
+        <p class="font-lecture text-lecture text-graphite mt-2 max-w-2xl">{m.description}</p>
+      </a>
+    ))}
+  </div>
+</Layout>

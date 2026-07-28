@@ -675,6 +675,15 @@ export function getGuideBySlug(slug: string): Guide | undefined {
   return guides.find(g => g.slug === slug);
 }
 
+/**
+ * Niveau de confiance éditoriale (0 à 1) affiché par le niveau à bulle.
+ * Ce n'est pas une mesure : qualite/durabilite/fiabilite sont des poids de
+ * tri interne fixés à la rédaction, jamais des résultats de test.
+ */
+export function niveauConfiance(p: Produit): number {
+  return (p.qualite + p.durabilite + p.fiabilite) / 15;
+}
+
 export function getGuidesByCategorie(categorieSlug: string): Guide[] {
   return guides.filter(g => g.categorieSlug === categorieSlug);
 }

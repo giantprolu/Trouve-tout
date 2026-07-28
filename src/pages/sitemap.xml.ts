@@ -19,6 +19,8 @@ export const GET: APIRoute = () => {
   const staticPages = [
     url('/', '1.0', 'weekly'),
     url('/categories', '0.9', 'weekly'),
+    url('/marques', '0.7', 'weekly'),
+    url('/produits', '0.6', 'weekly'),
     url('/choix-express', '0.8', 'monthly'),
     url('/blog', '0.7', 'weekly'),
     url('/mentions-legales', '0.2', 'yearly'),

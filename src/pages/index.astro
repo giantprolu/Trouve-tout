@@ -8,43 +8,43 @@ export const prerender = true;
   title="Bien choisir son outillage"
   description="Guides d'achat outillage et jardin : les critères qui comptent vraiment, sans jargon et sans classement bidon."
 >
-  <section class="max-w-3xl mx-auto px-4 py-16 text-center">
-    <h1 class="text-4xl font-bold mb-4">Choisis le bon outil du premier coup.</h1>
-    <p class="text-lg text-gray-600 mb-8">
-      Des guides d'achat qui expliquent les critères au lieu de te vendre un classement.
-      Bricolage, sciage, ponçage, jardin.
+  <section class="py-8 sm:py-12 max-w-2xl">
+    <h1 class="font-display text-display-xl text-graphite mb-6">
+      On vous aide à choisir, pas à acheter.
+    </h1>
+    <p class="font-lecture text-lecture-l text-graphite mb-8">
+      Des guides d'achat qui expliquent les critères au lieu de vous vendre un classement.
+      Perçage, sciage, ponçage, jardin.
     </p>
-    <div class="flex flex-col sm:flex-row gap-4 justify-center">
-      <a href="/choix-express"
-        class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition">
-        ⚡ Choix Express
-      </a>
-      <a href="/blog"
-        class="bg-white border border-gray-300 text-gray-800 px-6 py-3 rounded-xl font-semibold hover:bg-gray-50 transition">
-        Lire les guides
-      </a>
+    <a
+      href="/choix-express"
+      class="inline-block border border-cordeau text-cordeau font-mono text-kicker uppercase px-6 py-3 hover:bg-cordeau-light transition-colors"
+    >
+      Commencer le Choix Express →
+    </a>
+  </section>
+
+  <section class="py-10 border-t border-graphite">
+    <p class="font-mono text-kicker uppercase text-graphite mb-6">Guides récents</p>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      {guides.slice(0, 3).map(g => (
+        <a href={`/blog/${g.slug}`} class="bg-tole border-t-[3px] border-cordeau px-5 py-5 block hover:bg-cordeau-light/40 transition-colors">
+          <h2 class="font-display text-display-m text-graphite mb-2">{g.titre}</h2>
+          <p class="font-lecture text-legende text-graphite">{g.description}</p>
+        </a>
+      ))}
     </div>
   </section>
 
-  <section class="max-w-4xl mx-auto px-4 pb-16 grid grid-cols-1 sm:grid-cols-2 gap-6">
-    {categories.map(c => (
-      <a href={`/categories/${c.slug}`}
-         class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-indigo-300 transition block">
-        <div class="text-3xl mb-2">{c.emoji}</div>
-        <h2 class="font-semibold mb-1">{c.nom}</h2>
-        <p class="text-sm text-gray-500">{c.sousTitre}</p>
-      </a>
-    ))}
-  </section>
-
-  <section class="max-w-4xl mx-auto px-4 pb-20">
-    <h2 class="text-xl font-bold mb-6">Les guides du moment</h2>
-    <div class="space-y-3">
-      {guides.slice(0, 4).map(g => (
-        <a href={`/blog/${g.slug}`}
-           class="block bg-white rounded-xl px-5 py-4 border border-gray-100 hover:border-indigo-300 transition">
-          <div class="font-medium">{g.titre}</div>
-          <div class="text-sm text-gray-500 mt-1">{g.description}</div>
+  <section class="py-10 border-t border-graphite">
+    <p class="font-mono text-kicker uppercase text-graphite mb-6">Par type d'outil</p>
+    <div class="flex flex-col divide-y divide-ligne/30">
+      {categories.map(c => (
+        <a href={`/categories/${c.slug}`} class="py-5 flex items-baseline gap-4 group">
+          <h2 class="font-display text-display-m text-graphite group-hover:text-cordeau transition-colors">
+            {c.nom}
+          </h2>
+          <p class="font-lecture text-lecture text-graphite">{c.sousTitre}</p>
         </a>
       ))}
     </div>

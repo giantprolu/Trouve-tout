@@ -1,7 +1,9 @@
 ---
 import type { Produit } from '../lib/data';
-import CTAAffilie from './CTAAffilie.astro';
+import { niveauConfiance } from '../lib/data';
 import { trancheBudget } from '../lib/affiliation';
+import CTAAffilie from './CTAAffilie.astro';
+import NiveauABulle from './NiveauABulle.astro';
 
 interface Props {
   produits: Produit[];
@@ -9,66 +11,41 @@ interface Props {
 const { produits } = Astro.props;
 
 const segmentLabel: Record<string, string> = {
-  meilleur_rapport: '⭐ Premium',
-  milieu: '💡 Équilibre',
-  moins_cher: '💸 Budget',
+  meilleur_rapport: 'Premium',
+  milieu: 'Équilibre',
+  moins_cher: 'Budget',
 };
 ---
-<div class="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
-  <table class="w-full text-sm">
+<div class="overflow-x-auto shadow-etch">
+  <table class="w-full text-lecture">
     <thead>
-      <tr class="bg-gray-50 border-b border-gray-100">
-        <th class="text-left px-4 py-3 font-semibold text-gray-700">Produit</th>
-        <th class="text-center px-3 py-3 font-semibold text-gray-700">Prix</th>
-        <th class="text-center px-3 py-3 font-semibold text-gray-700">⭐ Qualité</th>
-        <th class="text-center px-3 py-3 font-semibold text-gray-700">🔧 Durabilité</th>
-        <th class="text-center px-3 py-3 font-semibold text-gray-700">🛠 Fiabilité</th>
-        <th class="text-center px-3 py-3 font-semibold text-gray-700">Segment</th>
-        <th class="px-3 py-3"></th>
+      <tr class="bg-graphite text-atelier">
+        <th scope="col" class="text-left px-4 py-3 font-lecture font-semibold">Produit</th>
+        <th scope="col" class="text-center px-3 py-3 font-lecture font-semibold">Budget</th>
+        <th scope="col" class="text-center px-3 py-3 font-lecture font-semibold">Adéquation</th>
+        <th scope="col" class="text-center px-3 py-3 font-lecture font-semibold">Segment</th>
+        <th scope="col" class="px-3 py-3"><span class="sr-only">Lien marchand</span></th>
       </tr>
     </thead>
     <tbody>
       {produits.map((p, i) => (
-        <tr class={`border-b border-gray-50 ${i === 0 ? 'bg-indigo-50/40' : 'bg-white hover:bg-gray-50'} transition`}>
+        <tr class="bg-tole border-b border-ligne">
           <td class="px-4 py-4">
-            <a href={`/produits/${p.slug}`} class="font-medium hover:text-indigo-600 transition">
+            <a href={`/produits/${p.slug}`} class="font-lecture font-semibold text-graphite hover:text-cordeau transition-colors">
               {p.nom}
             </a>
-            {i === 0 && (
-              <span class="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold">
-                Recommandé
-              </span>
-            )}
           </td>
-          <td class="text-center px-3 py-4 font-bold text-indigo-600">
+          <td class="text-center px-3 py-4 font-mono text-mono-base text-graphite whitespace-nowrap">
             {trancheBudget(p.prixIndicatif)}
           </td>
-          <td class="text-center px-3 py-4">
-            <div class="flex justify-center gap-0.5">
-              {Array.from({ length: 5 }).map((_, j) => (
-                <div class={`w-2 h-2 rounded-full ${j < p.qualite ? 'bg-yellow-400' : 'bg-gray-200'}`} />
-              ))}
-            </div>
+          <td class="px-3 py-4">
+            <NiveauABulle niveau={niveauConfiance(p)} taille="mini" class="mx-auto" />
           </td>
-          <td class="text-center px-3 py-4">
-            <div class="flex justify-center gap-0.5">
-              {Array.from({ length: 5 }).map((_, j) => (
-                <div class={`w-2 h-2 rounded-full ${j < p.durabilite ? 'bg-blue-400' : 'bg-gray-200'}`} />
-              ))}
-            </div>
-          </td>
-          <td class="text-center px-3 py-4">
-            <div class="flex justify-center gap-0.5">
-              {Array.from({ length: 5 }).map((_, j) => (
-                <div class={`w-2 h-2 rounded-full ${j < p.fiabilite ? 'bg-green-400' : 'bg-gray-200'}`} />
-              ))}
-            </div>
-          </td>
-          <td class="text-center px-3 py-4 text-xs font-medium text-gray-600">
+          <td class="text-center px-3 py-4 font-mono text-mono-base text-graphite">
             {segmentLabel[p.segment]}
           </td>
-          <td class="px-3 py-4">
-            <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir" />
+          <td class="px-3 py-4 text-center">
+            <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir ↗" />
           </td>
         </tr>
       ))}

@@ -4,18 +4,15 @@ import { categories } from '../../lib/data';
 
 export const prerender = true;
 ---
-<Layout title="Catégories" description="Toutes les catégories de produits comparés sur Trouve-Tout.">
-  <div class="max-w-4xl mx-auto px-4 py-12">
-    <h1 class="text-3xl font-bold mb-8">Toutes les catégories</h1>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {categories.map(cat => (
-        <a href={`/categories/${cat.slug}`}
-          class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition group">
-          <div class="text-4xl mb-3">{cat.emoji}</div>
-          <h2 class="font-semibold text-lg mb-1 group-hover:text-indigo-600">{cat.nom}</h2>
-          <p class="text-sm text-gray-500">{cat.description}</p>
-        </a>
-      ))}
-    </div>
+<Layout title="Catégories" description="Toutes les catégories d'outillage et jardin couvertes par Trouve-Tout.">
+  <p class="font-mono text-kicker uppercase text-graphite mb-4">Catégories</p>
+  <h1 class="font-display text-display-l text-graphite mb-10">Toutes les catégories</h1>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+    {categories.map(cat => (
+      <a href={`/categories/${cat.slug}`} class="bg-tole border-t-[3px] border-cordeau px-6 py-6 block hover:bg-cordeau-light/40 transition-colors">
+        <h2 class="font-display text-display-m text-graphite mb-2">{cat.nom}</h2>
+        <p class="font-lecture text-lecture text-graphite">{cat.description}</p>
+      </a>
+    ))}
   </div>
 </Layout>

@@ -3,63 +3,64 @@ import Layout from '../layouts/Layout.astro';
 export const prerender = true;
 ---
 <Layout title="Politique de confidentialité" description="Données personnelles et cookies sur Trouve-Tout.">
-  <article class="max-w-3xl mx-auto px-4 py-12">
-    <h1 class="text-3xl font-bold mb-8">Politique de confidentialité</h1>
+  <article class="max-w-3xl">
+    <p class="font-mono text-kicker uppercase text-graphite mb-3">Légal</p>
+    <h1 class="font-display text-display-l text-graphite mb-10">Politique de confidentialité</h1>
 
-    <div class="space-y-6 text-gray-700 leading-relaxed">
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Responsable du traitement</h2>
-        <p>L'éditeur du site, identifié sur la page <a href="/mentions-legales" class="text-indigo-600 underline">Mentions légales</a>.</p>
+    <div class="space-y-8 font-lecture text-lecture text-graphite leading-relaxed">
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Responsable du traitement</h2>
+        <p>L'éditeur du site, identifié sur la page <a href="/mentions-legales" class="text-cordeau underline underline-offset-2">Mentions légales</a>.</p>
       </section>
 
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Données collectées</h2>
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Données collectées</h2>
         <p>
           Ce site ne demande aucune inscription et ne collecte aucune donnée nominative.
           Deux traitements limités existent :
         </p>
-        <ul class="list-disc pl-6 mt-2 space-y-1">
+        <ul class="list-disc pl-6 mt-3 space-y-2">
           <li>
             <strong>Mesure d'audience</strong> — Vercel Web Analytics, configuré sans cookie
             et sans identifiant persistant. Les données sont agrégées et ne permettent pas
             d'identifier un visiteur. À ce titre, aucun consentement préalable n'est requis.
           </li>
           <li>
-            <strong>Préférences du Choix Express</strong> — si tu utilises l'outil de
-            recommandation, tes réponses peuvent être conservées dans un cookie technique
-            déposé sur ton appareil, uniquement pour te réafficher tes critères. Aucune
-            donnée n'est transmise à un tiers. Tu peux le supprimer à tout moment via
-            les réglages de ton navigateur.
+            <strong>Préférences du Choix Express</strong> — si vous utilisez l'outil de
+            recommandation, vos réponses peuvent être conservées dans un cookie technique
+            déposé sur votre appareil, uniquement pour vous réafficher vos critères. Aucune
+            donnée n'est transmise à un tiers. Vous pouvez le supprimer à tout moment via
+            les réglages de votre navigateur.
           </li>
         </ul>
       </section>
 
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Liens vers des sites tiers</h2>
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Liens vers des sites tiers</h2>
         <p>
           Les liens d'affiliation renvoient vers des marchands (ManoMano via Awin, Amazon)
           qui déposent leurs propres cookies et appliquent leurs propres politiques de
-          confidentialité. Dès que tu quittes ce site, ces politiques s'appliquent et
+          confidentialité. Dès que vous quittez ce site, ces politiques s'appliquent et
           l'éditeur n'a aucun contrôle sur les données collectées.
         </p>
       </section>
 
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Durée de conservation</h2>
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Durée de conservation</h2>
         <p>
           Statistiques d'audience agrégées : conservées par Vercel selon les durées de son
           offre. Cookie de préférences : 6 mois maximum.
         </p>
       </section>
 
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Tes droits</h2>
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Vos droits</h2>
         <p>
-          Conformément au RGPD, tu disposes d'un droit d'accès, de rectification,
+          Conformément au RGPD, vous disposez d'un droit d'accès, de rectification,
           d'effacement et d'opposition. Comme aucune donnée nominative n'est conservée,
-          ces droits s'exercent principalement en supprimant les cookies depuis ton
-          navigateur. Pour toute demande, utilise l'adresse indiquée en mentions légales.
-          Tu peux également introduire une réclamation auprès de la CNIL (cnil.fr).
+          ces droits s'exercent principalement en supprimant les cookies depuis votre
+          navigateur. Pour toute demande, utilisez l'adresse indiquée en mentions légales.
+          Vous pouvez également introduire une réclamation auprès de la CNIL (cnil.fr).
         </p>
       </section>
     </div>

@@ -1,8 +1,37 @@
 ---
-
+import Layout from '../../layouts/Layout.astro';
+import { categories, getProduitsByCategorie } from '../../lib/data';
+import { trancheBudget } from '../../lib/affiliation';
 
 export const prerender = true;
 ---
+<Layout title="Tous les produits" description="Toutes les fiches produits comparées sur Trouve-Tout, par catégorie.">
+  <p class="font-mono text-kicker uppercase text-graphite mb-4">Produits</p>
+  <h1 class="font-display text-display-l text-graphite mb-10">Tous les produits</h1>
 
-<h1 class="text-2xl font-bold">Produits</h1>
-<p>Liste des produits...</p>
+  {categories.map(cat => {
+    const produitsCat = getProduitsByCategorie(cat.slug);
+    return (
+      <section class="mb-12 border-t border-graphite pt-8">
+        <div class="flex items-baseline justify-between gap-4 mb-5">
+          <h2 class="font-display text-display-m text-graphite">{cat.nom}</h2>
+          <a href={`/categories/${cat.slug}`} class="font-mono text-kicker uppercase text-cordeau hover:text-graphite transition-colors shrink-0">
+            Voir la catégorie →
+          </a>
+        </div>
+        <ul class="flex flex-col divide-y divide-ligne/30">
+          {produitsCat.map(p => (
+            <li>
+              <a href={`/produits/${p.slug}`} class="py-4 flex items-baseline justify-between gap-4 group">
+                <span class="font-lecture text-lecture font-semibold text-graphite group-hover:text-cordeau transition-colors">
+                  {p.nom}
+                </span>
+                <span class="font-mono text-mono-base text-graphite shrink-0">{trancheBudget(p.prixIndicatif)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  })}
+</Layout>
