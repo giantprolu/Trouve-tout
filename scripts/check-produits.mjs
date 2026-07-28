@@ -7,9 +7,16 @@
  */
 import { readFileSync } from 'node:fs';
 
-const src = readFileSync(new URL('../src/lib/data.ts', import.meta.url), 'utf8');
+// Normalise les fins de ligne : le depot est en CRLF sous Windows, et la regex
+// de decoupage ci-dessous doit matcher quel que soit l'OS qui a ecrit le fichier.
+const src = readFileSync(new URL('../src/lib/data.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
-const blocs = src.split(/\n  \{\n/).slice(1);
+// On isole le tableau `produits` avant de decouper : sans ca, le commentaire
+// juste au-dessus (qui mentionne "urlMarchand" et "verifie: false" en toutes
+// lettres) se fait passer pour une fiche produit et fausse le compte.
+const tableauProduits = src.match(/export const produits: Produit\[\] = \[([\s\S]*?)\n\];/)?.[1] ?? '';
+
+const blocs = tableauProduits.split(/\n  \{\n/).slice(1);
 const aFaire = [];
 let total = 0;
 
