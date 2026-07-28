@@ -16,6 +16,7 @@ export default {
         display: ['Manrope', 'sans-serif'],
         body: ['"Public Sans"', 'sans-serif'],
         mono: ['"IBM Plex Mono"', 'monospace'],
+        logo: ['"Big Shoulders Display"', 'sans-serif'],
       },
       fontSize: {
         'display-xl': ['clamp(2.75rem, 6vw, 4.5rem)', { lineHeight: '1.02', fontWeight: '800' }],

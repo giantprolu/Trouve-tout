@@ -1,0 +1,46 @@
+---
+/**
+ * Logo Trouve-Tout — repère de niveau à bulle (importé du projet Claude
+ * Design "Trouve-Tout Logo"). Deux traits de calibrage encadrent la bulle :
+ * bleu cordeau (#2C4A6E) en registre éditorial sur fond clair, jaune
+ * sécurité (#F0B400) en registre commercial/signal sur fond graphite.
+ * Wordmark en Big Shoulders Display, jamais centré, jamais en couleur —
+ * la bulle est le seul accent.
+ */
+interface Props {
+  /** Registre "graphite" (fond sombre) au lieu du registre clair par défaut. */
+  dark?: boolean;
+  /** Wordmark empilé sur deux lignes plutôt qu'en ligne. */
+  stacked?: boolean;
+  /** N'affiche que le monogramme, sans le wordmark. */
+  iconOnly?: boolean;
+  /** Taille du monogramme en pixels. */
+  size?: number;
+  class?: string;
+}
+const { dark = false, stacked = false, iconOnly = false, size = 32, class: className = '' } = Astro.props;
+
+const trait = dark ? '#EDEEE9' : '#1D201F';
+const bulle = dark ? '#F0B400' : '#2C4A6E';
+const texte = dark ? '#EDEEE9' : '#1D201F';
+const tailleTexte = stacked ? size * 0.62 : size * 0.9;
+---
+<span class={`inline-flex ${stacked ? 'flex-col items-start' : 'items-center'} gap-[0.3em] ${className}`}>
+  <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" class="flex-none">
+    <rect x="4" y="24" width="56" height="16" rx="8" fill="none" stroke={trait} stroke-width="2.5" />
+    <line x1="21.6" y1="24" x2="21.6" y2="40" stroke={trait} stroke-width="1.5" />
+    <line x1="42.4" y1="24" x2="42.4" y2="40" stroke={trait} stroke-width="1.5" />
+    <circle cx="32" cy="32" r="6.5" fill={bulle} />
+  </svg>
+  {!iconOnly && (
+    stacked ? (
+      <span class="font-logo font-extrabold leading-[0.95]" style={`font-size:${tailleTexte}px; color:${texte}`}>
+        Trouve<br />-Tout
+      </span>
+    ) : (
+      <span class="font-logo font-extrabold leading-none tracking-[-0.01em]" style={`font-size:${tailleTexte}px; color:${texte}`}>
+        Trouve-Tout
+      </span>
+    )
+  )}
+</span>
