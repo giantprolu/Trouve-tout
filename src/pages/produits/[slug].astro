@@ -2,8 +2,6 @@
 import Layout from '../../layouts/Layout.astro';
 import VerdictProduit from '../../components/VerdictProduit.astro';
 import TableauComparatif from '../../components/TableauComparatif.astro';
-import CTAAffilie from '../../components/CTAAffilie.astro';
-import { trancheBudget } from '../../lib/affiliation';
 import {
   getProduitBySlug,
   getMarqueBySlug,
@@ -18,7 +16,7 @@ if (!produit) return Astro.redirect('/categories');
 
 const marque = getMarqueBySlug(produit.marqueSlug);
 const categorie = getCategorieBySlug(produit.categorieSlug);
-const autresDuMarque = getProduitsByMarque(produit.marqueSlug);
+const autresDuMarque = getProduitsByMarque(produit.marqueSlug).filter(p => p.slug !== produit.slug);
 
 // Schema.org Product JSON-LD
 const schema = JSON.stringify({
@@ -46,77 +44,40 @@ export function getStaticPaths() {
 >
   <script is:inline type="application/ld+json" set:html={schema} />
 
-  <!-- Breadcrumb -->
-  <div class="max-w-4xl mx-auto px-4 pt-6 text-sm text-gray-500">
-    <a href="/" class="hover:text-indigo-600">Accueil</a> ›
-    <a href={`/categories/${produit.categorieSlug}`} class="hover:text-indigo-600 mx-1">{categorie?.nom}</a> ›
-    <a href={`/marques/${produit.marqueSlug}`} class="hover:text-indigo-600 mx-1">{marque?.nom}</a> ›
-    <span class="text-gray-800 font-medium">{produit.nom}</span>
-  </div>
+  <nav class="font-mono text-legende text-ligne mb-6" aria-label="Fil d'ariane">
+    <a href="/" class="hover:text-cordeau transition-colors">Accueil</a> ›
+    <a href={`/categories/${produit.categorieSlug}`} class="hover:text-cordeau transition-colors mx-1">{categorie?.nom}</a> ›
+    <a href={`/marques/${produit.marqueSlug}`} class="hover:text-cordeau transition-colors mx-1">{marque?.nom}</a> ›
+    <span class="text-graphite">{produit.nom}</span>
+  </nav>
 
-  <div class="max-w-4xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- Main -->
-    <div class="lg:col-span-2 space-y-8">
-      <div>
-        <h1 class="text-3xl font-bold mb-1">{produit.nom}</h1>
-        <div class="text-3xl font-bold text-indigo-600 mb-3">{trancheBudget(produit.prixIndicatif)}</div>
-        <p class="text-gray-600">{produit.description}</p>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-2">
+      <h1 class="font-display text-display-l text-graphite mb-6">{produit.nom}</h1>
+
+      <div class="mb-8">
+        <VerdictProduit produit={produit} />
       </div>
 
-      <!-- Indicateurs -->
-      <div class="bg-gray-50 rounded-2xl p-6 grid grid-cols-3 gap-4">
-        {[
-          { label: '⭐ Qualité', val: produit.qualite },
-          { label: '🔧 Durabilité', val: produit.durabilite },
-          { label: '🛠 Fiabilité/SAV', val: produit.fiabilite },
-        ].map(({ label, val }) => (
-          <div class="text-center">
-            <div class="text-sm text-gray-500 mb-2">{label}</div>
-            <div class="text-2xl font-bold text-indigo-600">{val}/5</div>
-            <div class="flex justify-center gap-1 mt-1">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div class={`w-3 h-3 rounded-full ${i < val ? 'bg-indigo-500' : 'bg-gray-200'}`} />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <!-- Pour qui / Contre qui -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="bg-green-50 border border-green-100 rounded-xl p-4">
-          <div class="font-semibold text-green-800 mb-2">✓ Idéal pour</div>
-          <p class="text-green-700 text-sm">{produit.pourQui}</p>
-        </div>
-        <div class="bg-red-50 border border-red-100 rounded-xl p-4">
-          <div class="font-semibold text-red-800 mb-2">✗ Moins adapté si</div>
-          <p class="text-red-700 text-sm">{produit.contreQui}</p>
-        </div>
-      </div>
-
-      <!-- Comparaison avec les autres produits de la marque -->
-      <div>
-        <h2 class="text-xl font-bold mb-4">Comparaison avec les autres {marque?.nom}</h2>
-        <TableauComparatif produits={autresDuMarque} />
-      </div>
+      {autresDuMarque.length > 0 && (
+        <section>
+          <p class="font-mono text-kicker uppercase text-ligne mb-4">
+            Comparaison avec les autres {marque?.nom}
+          </p>
+          <TableauComparatif produits={autresDuMarque} />
+        </section>
+      )}
     </div>
 
-    <!-- Sidebar -->
-    <div class="lg:col-span-1 space-y-4">
-      <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm sticky top-4">
-        <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Notre verdict</div>
-        <div class="text-lg font-bold text-indigo-600 mb-3">{produit.verdict}</div>
-        <div class="text-3xl font-bold mb-4">{trancheBudget(produit.prixIndicatif)}</div>
-        <CTAAffilie url={produit.urlMarchand} marchand={produit.marchand} />
-        <p class="text-xs text-gray-400 mt-3">
-          Lien affilié — votre prix ne change pas.
+    <aside class="lg:col-span-1">
+      <div class="bg-atelier border border-graphite px-5 py-5">
+        <p class="font-lecture text-lecture text-graphite mb-3">
+          <strong>Pas sûr(e) ?</strong>
         </p>
+        <a href="/choix-express" class="font-mono text-kicker uppercase text-cordeau hover:text-graphite transition-colors">
+          Utiliser le Choix Express →
+        </a>
       </div>
-
-      <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-sm text-indigo-800">
-        <strong>Pas sûr(e) ?</strong><br />
-        <a href="/choix-express" class="underline">Utilise le Choix Express</a> pour une recommandation personnalisée.
-      </div>
-    </div>
+    </aside>
   </div>
 </Layout>

@@ -11,7 +11,7 @@ import {
 
 const { slug } = Astro.params;
 const marque = getMarqueBySlug(slug!);
-if (!marque) return Astro.redirect('/categories');
+if (!marque) return Astro.redirect('/marques');
 
 const produitsDuMarque = getProduitsByMarque(slug!);
 const categorie = getCategorieBySlug(marque.categorieSlugs[0]);
@@ -23,44 +23,40 @@ export function getStaticPaths() {
 }
 ---
 <Layout
-  title={`${marque.nom} — Comparatif ${categorie?.sousTitre ?? ''}`}
-  description={`Comparatif complet ${marque.nom} : les 3 meilleurs modèles ${categorie?.sousTitre ?? ''} décortiqués.`}
+  title={`${marque.nom} — ${marque.positionnement}`}
+  description={marque.description}
 >
-  <!-- Breadcrumb -->
-  <div class="max-w-4xl mx-auto px-4 pt-6 text-sm text-gray-500">
-    <a href="/" class="hover:text-indigo-600">Accueil</a> ›
-    <a href="/categories" class="hover:text-indigo-600 mx-1">Catégories</a> ›
-    <a href={`/categories/${marque.categorieSlug}`} class="hover:text-indigo-600 mx-1">{categorie?.nom}</a> ›
-    <span class="text-gray-800 font-medium">{marque.nom}</span>
+  <nav class="font-mono text-legende text-ligne mb-6" aria-label="Fil d'ariane">
+    <a href="/" class="hover:text-cordeau transition-colors">Accueil</a> ›
+    <a href="/marques" class="hover:text-cordeau transition-colors mx-1">Marques</a> ›
+    <span class="text-graphite">{marque.nom}</span>
+  </nav>
+
+  <div class="mb-12">
+    <p class="font-mono text-kicker uppercase text-ligne mb-3">{marque.positionnement}</p>
+    <h1 class="font-display text-display-l text-graphite mb-3">{marque.nom}</h1>
+    <p class="font-lecture text-lecture-l text-graphite max-w-2xl">{marque.description}</p>
   </div>
 
-  <div class="max-w-4xl mx-auto px-4 py-8">
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold mb-2">{marque.nom}</h1>
-      <p class="text-gray-500">{marque.description}</p>
+  <section class="mb-12 border-t border-graphite pt-8">
+    <p class="font-mono text-kicker uppercase text-ligne mb-6">
+      Comparatif des {produitsDuMarque.length} modèles
+    </p>
+    <TableauComparatif produits={produitsDuMarque} />
+  </section>
+
+  <section class="border-t border-graphite pt-8">
+    <p class="font-mono text-kicker uppercase text-ligne mb-6">Détail de chaque modèle</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {produitsDuMarque.map((p, i) => (
+        <VerdictProduit produit={p} numero={i + 1} />
+      ))}
     </div>
+  </section>
 
-    <!-- Tableau comparatif -->
-    <section class="mb-10">
-      <h2 class="text-xl font-bold mb-4">Comparatif des {produitsDuMarque.length} modèles</h2>
-      <TableauComparatif produits={produitsDuMarque} />
-    </section>
-
-    <!-- Fiches détaillées -->
-    <section>
-      <h2 class="text-xl font-bold mb-6">Détail de chaque modèle</h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {produitsDuMarque.map((p, i) => (
-          <VerdictProduit produit={p} numero={i + 1} />
-        ))}
-      </div>
-    </section>
-
-    <div class="mt-10 text-center">
-      <a href={`/categories/${marque.categorieSlug}`}
-        class="text-indigo-600 hover:underline font-medium">
-        ← Voir toutes les marques {categorie?.nom}
-      </a>
-    </div>
+  <div class="mt-12 border-t border-graphite pt-6">
+    <a href={`/categories/${marque.categorieSlugs[0]}`} class="font-mono text-kicker uppercase text-cordeau hover:text-graphite transition-colors">
+      ← Voir la catégorie {categorie?.nom}
+    </a>
   </div>
 </Layout>

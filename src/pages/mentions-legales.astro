@@ -3,35 +3,39 @@ import Layout from '../layouts/Layout.astro';
 export const prerender = true;
 ---
 <Layout title="Mentions légales" description="Mentions légales du site Trouve-Tout.">
-  <article class="max-w-3xl mx-auto px-4 py-12 prose-sm">
-    <h1 class="text-3xl font-bold mb-8">Mentions légales</h1>
+  <article class="max-w-3xl">
+    <p class="font-mono text-kicker uppercase text-ligne mb-3">Légal</p>
+    <h1 class="font-display text-display-l text-graphite mb-10">Mentions légales</h1>
 
-    <div class="space-y-6 text-gray-700 leading-relaxed">
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Éditeur du site</h2>
+    <div class="space-y-8 font-lecture text-lecture text-graphite leading-relaxed">
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Éditeur du site</h2>
         <p>
           {/* ⚠️ À COMPLÉTER avant mise en ligne — obligatoire (art. 6 LCEN). */}
           Nom et prénom de l'éditeur : <strong>[À COMPLÉTER]</strong><br />
-          Statut : <strong>[particulier / micro-entreprise + n° SIREN]</strong><br />
+          Statut : <strong>[À COMPLÉTER — particulier / micro-entreprise + n° SIREN]</strong><br />
           Adresse : <strong>[À COMPLÉTER]</strong><br />
-          Contact : <strong>[adresse e-mail]</strong>
+          Contact : <strong>[À COMPLÉTER — adresse e-mail]</strong>
         </p>
       </section>
 
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Hébergeur</h2>
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Hébergeur</h2>
         <p>
           Vercel Inc., 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis — vercel.com
         </p>
       </section>
 
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Nom de domaine</h2>
-        <p>Enregistré auprès d'OVH SAS, 2 rue Kellermann, 59100 Roubaix, France.</p>
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Nom de domaine</h2>
+        <p>
+          {/* ⚠️ À COMPLÉTER — registrar réel du domaine, pas de valeur inventée ici. */}
+          Enregistré auprès de : <strong>[À COMPLÉTER]</strong>
+        </p>
       </section>
 
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Liens d'affiliation</h2>
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Liens d'affiliation</h2>
         <p>
           Ce site publie des guides d'achat et comporte des liens d'affiliation vers des
           marchands partenaires (notamment ManoMano via la plateforme Awin, et Amazon).
@@ -39,18 +43,18 @@ export const prerender = true;
           perçoit une commission versée par le marchand. <strong>Le prix payé par
           l'acheteur reste inchangé.</strong>
         </p>
-        <p class="mt-2">
+        <p class="mt-3">
           En tant que Partenaire Amazon, l'éditeur réalise un bénéfice sur les achats
           remplissant les conditions requises.
         </p>
-        <p class="mt-2">
+        <p class="mt-3">
           Les recommandations publiées sont établies de manière éditoriale. La présence
           d'un lien d'affiliation n'influence ni la sélection ni l'ordre des produits.
         </p>
       </section>
 
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Propriété intellectuelle</h2>
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Propriété intellectuelle</h2>
         <p>
           Les textes publiés sur ce site sont la propriété de l'éditeur. Les marques et
           références produits citées appartiennent à leurs détenteurs respectifs et ne
@@ -58,8 +62,8 @@ export const prerender = true;
         </p>
       </section>
 
-      <section>
-        <h2 class="font-semibold text-gray-900 mb-2">Limitation de responsabilité</h2>
+      <section class="border-t border-graphite pt-6">
+        <h2 class="font-display text-display-m text-graphite mb-3">Limitation de responsabilité</h2>
         <p>
           Les informations techniques et les fourchettes de prix sont fournies à titre
           indicatif et peuvent évoluer. Seules les informations affichées sur le site du

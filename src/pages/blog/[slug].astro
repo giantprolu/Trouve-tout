@@ -26,38 +26,48 @@ export function getStaticPaths() {
 <Layout title={guide.titre} description={guide.description}>
   <script is:inline type="application/ld+json" set:html={schema} />
 
-  <div class="max-w-3xl mx-auto px-4 pt-6 text-sm text-gray-500">
-    <a href="/" class="hover:text-indigo-600">Accueil</a> ›
-    <a href="/blog" class="hover:text-indigo-600 mx-1">Guides</a> ›
-    <span class="text-gray-800 font-medium">{guide.titre}</span>
-  </div>
+  <nav class="font-mono text-legende text-ligne mb-6" aria-label="Fil d'ariane">
+    <a href="/" class="hover:text-cordeau transition-colors">Accueil</a> ›
+    <a href="/blog" class="hover:text-cordeau transition-colors mx-1">Guides</a> ›
+    <span class="text-graphite">{guide.titre}</span>
+  </nav>
 
-  <article class="max-w-3xl mx-auto px-4 py-8">
-    <div class="text-sm text-indigo-600 font-medium mb-2">
-      {categorie?.emoji} {categorie?.nom}
-    </div>
-    <h1 class="text-3xl font-bold mb-4">{guide.titre}</h1>
-    <p class="text-lg text-gray-600 mb-8 border-l-4 border-indigo-200 pl-4">{guide.intro}</p>
+  <article class="max-w-3xl">
+    <p class="font-mono text-kicker uppercase text-ligne mb-3">{categorie?.nom}</p>
+    <h1 class="font-display text-display-l text-graphite mb-6">{guide.titre}</h1>
 
-    <div class="space-y-8">
+    <nav class="mb-10 border-y border-graphite py-4" aria-label="Sommaire du guide">
+      <p class="font-mono text-kicker uppercase text-ligne mb-2">Sommaire</p>
+      <ul class="flex flex-col gap-1">
+        {guide.sections.map(s => (
+          <li>
+            <a href={`#${s.titre.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} class="font-lecture text-lecture text-cordeau hover:text-graphite transition-colors">
+              {s.titre}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <p class="font-lecture text-lecture-l text-graphite mb-10 border-l-2 border-cordeau pl-5">{guide.intro}</p>
+
+    <div class="space-y-10">
       {guide.sections.map(s => (
-        <section>
-          <h2 class="text-xl font-bold mb-3">{s.titre}</h2>
-          <p class="text-gray-700 leading-relaxed"
+        <section id={s.titre.toLowerCase().replace(/[^a-z0-9]+/g, '-')} class="border-t border-graphite pt-8">
+          <h2 class="font-display text-display-m text-graphite mb-4">{s.titre}</h2>
+          <p class="font-lecture text-lecture text-graphite leading-relaxed max-w-[68ch]"
             set:html={s.contenu.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')} />
         </section>
       ))}
     </div>
 
-    <div class="mt-12 bg-indigo-50 border border-indigo-100 rounded-2xl p-6 text-center">
-      <p class="font-semibold text-indigo-800 mb-3">Prêt à choisir ?</p>
-      <div class="flex flex-col sm:flex-row gap-3 justify-center">
-        <a href="/choix-express"
-          class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-indigo-700 transition text-sm">
-          ⚡ Choix Express
+    <div class="mt-14 bg-tole border-t-[3px] border-cordeau px-6 py-8 text-center">
+      <p class="font-display text-display-m text-graphite mb-5">Prêt à choisir ?</p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/choix-express" class="border border-cordeau text-cordeau font-mono text-kicker uppercase px-5 py-3 hover:bg-cordeau-light transition-colors">
+          Faire le Choix Express →
         </a>
-        <a href={`/categories/${guide.categorieSlug}`}
-          class="bg-white border border-indigo-200 text-indigo-700 px-5 py-2.5 rounded-xl font-medium hover:bg-indigo-50 transition text-sm">
+        <a href={`/categories/${guide.categorieSlug}`} class="font-mono text-kicker uppercase text-graphite px-5 py-3 hover:text-cordeau transition-colors">
           Voir les comparatifs {categorie?.nom}
         </a>
       </div>

@@ -1,7 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import VerdictProduit from '../../components/VerdictProduit.astro';
-import { recommanderChoixExpress, categories } from '../../lib/data';
+import NiveauABulle from '../../components/NiveauABulle.astro';
+import { recommanderChoixExpress, categories, niveauConfiance } from '../../lib/data';
 
 let resultat = null;
 let erreur = '';
@@ -19,29 +20,29 @@ if (Astro.request.method === 'POST') {
 }
 ---
 <Layout title="Choix Express" description="3 questions, 1 recommandation personnalisée — sans compte.">
-  <div class="max-w-xl mx-auto px-4 py-12">
-    <h1 class="text-3xl font-bold mb-2">⚡ Choix Express</h1>
-    <p class="text-gray-500 mb-8">3 questions, 1 recommandation. Sans compte.</p>
+  <div class="max-w-xl">
+    <p class="font-mono text-kicker uppercase text-ligne mb-3">3 questions, sans compte</p>
+    <h1 class="font-display text-display-l text-graphite mb-8">Choix Express</h1>
 
     {!resultat && (
-      <form method="POST" class="space-y-6">
+      <form method="POST" class="space-y-8">
         <div>
-          <label class="block font-medium mb-2">Quelle catégorie ?</label>
+          <label class="block font-lecture text-lecture font-semibold text-graphite mb-2">Quelle catégorie ?</label>
           <select name="categorie" required
-            class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            class="w-full border border-graphite bg-atelier px-4 py-3 font-lecture text-lecture text-graphite focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau">
             <option value="">Choisir…</option>
             {categories.map(c => (
               <option value={c.slug} selected={valeurs.categorie === c.slug}>
-                {c.emoji} {c.nom} — {c.sousTitre}
+                {c.nom} — {c.sousTitre}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label class="block font-medium mb-2">Budget maximum ?</label>
+          <label class="block font-lecture text-lecture font-semibold text-graphite mb-2">Budget maximum ?</label>
           <select name="budget" required
-            class="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            class="w-full border border-graphite bg-atelier px-4 py-3 font-lecture text-lecture text-graphite focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau">
             <option value="100">Moins de 100 €</option>
             <option value="300" selected>100 – 300 €</option>
             <option value="600">300 – 600 €</option>
@@ -50,26 +51,26 @@ if (Astro.request.method === 'POST') {
         </div>
 
         <div>
-          <label class="block font-medium mb-2">Priorité ?</label>
-          <div class="flex gap-4">
-            {[['prix', '💸 Prix bas'], ['equilibre', '⚖️ Équilibré'], ['qualite', '⭐ Qualité max']].map(([val, label]) => (
-              <label class="flex-1 border border-gray-200 rounded-xl p-3 text-center cursor-pointer hover:border-indigo-400 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50">
+          <label class="block font-lecture text-lecture font-semibold text-graphite mb-2">Priorité ?</label>
+          <div class="flex gap-3">
+            {[['prix', 'Prix bas'], ['equilibre', 'Équilibré'], ['qualite', 'Qualité max']].map(([val, label]) => (
+              <label class="flex-1 border border-graphite px-3 py-3 text-center cursor-pointer font-mono text-kicker uppercase text-graphite hover:bg-tole has-[:checked]:bg-cordeau has-[:checked]:text-atelier has-[:checked]:border-cordeau transition-colors">
                 <input type="radio" name="priorite" value={val} class="sr-only"
                   checked={valeurs.priorite === val} required />
-                <span class="text-sm font-medium">{label}</span>
+                {label}
               </label>
             ))}
           </div>
         </div>
 
         {erreur && (
-          <div class="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+          <div class="border border-graphite bg-tole px-4 py-3 font-lecture text-lecture text-graphite">
             {erreur}
           </div>
         )}
 
         <button type="submit"
-          class="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition">
+          class="w-full border border-cordeau bg-cordeau text-atelier py-3 font-mono text-kicker uppercase hover:bg-graphite hover:border-graphite transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau">
           Trouver mon produit →
         </button>
       </form>
@@ -77,14 +78,22 @@ if (Astro.request.method === 'POST') {
 
     {resultat && (
       <div>
-        <div class="bg-indigo-50 border border-indigo-100 rounded-2xl px-5 py-4 mb-6 text-indigo-800">
-          <strong>✓ Recommandation personnalisée</strong> — basée sur vos réponses.
+        <p class="font-mono text-legende text-ligne mb-6">
+          Vos réponses : {valeurs.categorie} · sous {valeurs.budget} € · priorité {valeurs.priorite}
+        </p>
+
+        <div class="flex justify-center mb-8">
+          <NiveauABulle niveau={niveauConfiance(resultat)} taille="hero" />
         </div>
+
+        <h2 class="font-display text-display-l text-graphite mb-3 text-center">Ce qu'on vous conseille</h2>
+        <p class="font-lecture text-lecture text-graphite mb-8 text-center">{resultat.verdict}</p>
+
         <VerdictProduit produit={resultat} />
-        <div class="mt-6 text-center">
-          <a href="/choix-express"
-            class="text-sm text-gray-500 hover:text-indigo-600 underline">
-            ← Recommencer
+
+        <div class="mt-8 text-center">
+          <a href="/choix-express" class="font-mono text-kicker uppercase text-ligne hover:text-cordeau transition-colors">
+            ← Refaire le test
           </a>
         </div>
       </div>
