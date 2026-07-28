@@ -26,27 +26,27 @@ export function getStaticPaths() {
   title={`${marque.nom} — ${marque.positionnement}`}
   description={marque.description}
 >
-  <nav class="font-mono text-legende text-ligne mb-6" aria-label="Fil d'ariane">
+  <nav class="font-mono text-legende text-graphite mb-6" aria-label="Fil d'ariane">
     <a href="/" class="hover:text-cordeau transition-colors">Accueil</a> ›
     <a href="/marques" class="hover:text-cordeau transition-colors mx-1">Marques</a> ›
     <span class="text-graphite">{marque.nom}</span>
   </nav>
 
   <div class="mb-12">
-    <p class="font-mono text-kicker uppercase text-ligne mb-3">{marque.positionnement}</p>
+    <p class="font-mono text-kicker uppercase text-graphite mb-3">{marque.positionnement}</p>
     <h1 class="font-display text-display-l text-graphite mb-3">{marque.nom}</h1>
     <p class="font-lecture text-lecture-l text-graphite max-w-2xl">{marque.description}</p>
   </div>
 
   <section class="mb-12 border-t border-graphite pt-8">
-    <p class="font-mono text-kicker uppercase text-ligne mb-6">
+    <p class="font-mono text-kicker uppercase text-graphite mb-6">
       Comparatif des {produitsDuMarque.length} modèles
     </p>
     <TableauComparatif produits={produitsDuMarque} />
   </section>
 
   <section class="border-t border-graphite pt-8">
-    <p class="font-mono text-kicker uppercase text-ligne mb-6">Détail de chaque modèle</p>
+    <p class="font-mono text-kicker uppercase text-graphite mb-6">Détail de chaque modèle</p>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       {produitsDuMarque.map((p, i) => (
         <VerdictProduit produit={p} numero={i + 1} />

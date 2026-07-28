@@ -20,11 +20,11 @@ const segmentLabel: Record<string, string> = {
   <table class="w-full text-lecture">
     <thead>
       <tr class="bg-graphite text-atelier">
-        <th class="text-left px-4 py-3 font-lecture font-semibold">Produit</th>
-        <th class="text-center px-3 py-3 font-lecture font-semibold">Budget</th>
-        <th class="text-center px-3 py-3 font-lecture font-semibold">Adéquation</th>
-        <th class="text-center px-3 py-3 font-lecture font-semibold">Segment</th>
-        <th class="px-3 py-3"></th>
+        <th scope="col" class="text-left px-4 py-3 font-lecture font-semibold">Produit</th>
+        <th scope="col" class="text-center px-3 py-3 font-lecture font-semibold">Budget</th>
+        <th scope="col" class="text-center px-3 py-3 font-lecture font-semibold">Adéquation</th>
+        <th scope="col" class="text-center px-3 py-3 font-lecture font-semibold">Segment</th>
+        <th scope="col" class="px-3 py-3"><span class="sr-only">Lien marchand</span></th>
       </tr>
     </thead>
     <tbody>
@@ -41,7 +41,7 @@ const segmentLabel: Record<string, string> = {
           <td class="px-3 py-4">
             <NiveauABulle niveau={niveauConfiance(p)} taille="mini" class="mx-auto" />
           </td>
-          <td class="text-center px-3 py-4 font-mono text-mono-base text-ligne">
+          <td class="text-center px-3 py-4 font-mono text-mono-base text-graphite">
             {segmentLabel[p.segment]}
           </td>
           <td class="px-3 py-4 text-center">

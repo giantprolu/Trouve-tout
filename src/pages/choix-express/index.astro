@@ -21,7 +21,7 @@ if (Astro.request.method === 'POST') {
 ---
 <Layout title="Choix Express" description="3 questions, 1 recommandation personnalisée — sans compte.">
   <div class="max-w-xl">
-    <p class="font-mono text-kicker uppercase text-ligne mb-3">3 questions, sans compte</p>
+    <p class="font-mono text-kicker uppercase text-graphite mb-3">3 questions, sans compte</p>
     <h1 class="font-display text-display-l text-graphite mb-8">Choix Express</h1>
 
     {!resultat && (
@@ -78,7 +78,7 @@ if (Astro.request.method === 'POST') {
 
     {resultat && (
       <div>
-        <p class="font-mono text-legende text-ligne mb-6">
+        <p class="font-mono text-legende text-graphite mb-6">
           Vos réponses : {valeurs.categorie} · sous {valeurs.budget} € · priorité {valeurs.priorite}
         </p>
 
@@ -92,7 +92,7 @@ if (Astro.request.method === 'POST') {
         <VerdictProduit produit={resultat} />
 
         <div class="mt-8 text-center">
-          <a href="/choix-express" class="font-mono text-kicker uppercase text-ligne hover:text-cordeau transition-colors">
+          <a href="/choix-express" class="font-mono text-kicker uppercase text-graphite hover:text-cordeau transition-colors">
             ← Refaire le test
           </a>
         </div>

@@ -31,7 +31,7 @@ if (Astro.request.method === 'POST') {
 ---
 <Layout title="Mon profil" description="Personnalisez vos préférences pour des recommandations sur mesure.">
   <div class="max-w-xl">
-    <p class="font-mono text-kicker uppercase text-ligne mb-3">Préférences</p>
+    <p class="font-mono text-kicker uppercase text-graphite mb-3">Préférences</p>
     <h1 class="font-display text-display-l text-graphite mb-8">Mon profil</h1>
 
     {saved && (
@@ -58,7 +58,7 @@ if (Astro.request.method === 'POST') {
         <div class="flex gap-3 items-center">
           <input type="number" name="budget_min" value={profil.budgetMin} placeholder="Min" min="0"
             class="w-1/2 border border-graphite bg-atelier px-4 py-2 font-lecture text-lecture text-graphite focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau" />
-          <span class="text-ligne">–</span>
+          <span class="text-graphite">–</span>
           <input type="number" name="budget_max" value={profil.budgetMax} placeholder="Max" min="0"
             class="w-1/2 border border-graphite bg-atelier px-4 py-2 font-lecture text-lecture text-graphite focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau" />
         </div>

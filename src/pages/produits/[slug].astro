@@ -44,7 +44,7 @@ export function getStaticPaths() {
 >
   <script is:inline type="application/ld+json" set:html={schema} />
 
-  <nav class="font-mono text-legende text-ligne mb-6" aria-label="Fil d'ariane">
+  <nav class="font-mono text-legende text-graphite mb-6" aria-label="Fil d'ariane">
     <a href="/" class="hover:text-cordeau transition-colors">Accueil</a> ›
     <a href={`/categories/${produit.categorieSlug}`} class="hover:text-cordeau transition-colors mx-1">{categorie?.nom}</a> ›
     <a href={`/marques/${produit.marqueSlug}`} class="hover:text-cordeau transition-colors mx-1">{marque?.nom}</a> ›
@@ -61,7 +61,7 @@ export function getStaticPaths() {
 
       {autresDuMarque.length > 0 && (
         <section>
-          <p class="font-mono text-kicker uppercase text-ligne mb-4">
+          <p class="font-mono text-kicker uppercase text-graphite mb-4">
             Comparaison avec les autres {marque?.nom}
           </p>
           <TableauComparatif produits={autresDuMarque} />

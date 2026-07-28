@@ -14,22 +14,22 @@ const { produit, numero } = Astro.props;
 ---
 <div class="bg-tole border-t-[3px] border-cordeau px-6 py-6">
   {numero && (
-    <p class="font-mono text-kicker uppercase text-ligne mb-3">N°{numero}</p>
+    <p class="font-mono text-kicker uppercase text-graphite mb-3">N°{numero}</p>
   )}
 
   <NiveauABulle niveau={niveauConfiance(produit)} taille="grand" class="mb-4" />
 
-  <h3 class="font-display text-display-m text-graphite mb-2">{produit.verdict}</h3>
+  <h2 class="font-display text-display-m text-graphite mb-2">{produit.verdict}</h2>
   <p class="font-lecture text-lecture text-graphite mb-5">{produit.description}</p>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
     <div>
-      <p class="font-mono text-kicker uppercase text-ligne mb-1">Ce qui compte</p>
+      <p class="font-mono text-kicker uppercase text-graphite mb-1">Ce qui compte</p>
       <p class="font-lecture text-lecture text-graphite">{produit.pourQui}</p>
     </div>
     <div>
-      <p class="font-mono text-kicker uppercase text-ligne mb-1">Ce qui ne compte pas</p>
-      <p class="font-lecture text-lecture text-ligne">{produit.contreQui}</p>
+      <p class="font-mono text-kicker uppercase text-graphite mb-1">Ce qui ne compte pas</p>
+      <p class="font-lecture text-lecture text-graphite">{produit.contreQui}</p>
     </div>
   </div>
 

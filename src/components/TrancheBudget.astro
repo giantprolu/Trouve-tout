@@ -19,7 +19,7 @@ const centrePct = segmentPct * index + segmentPct / 2;
     <span class="font-mono text-mono-l text-cordeau whitespace-nowrap">{label}</span>
   </div>
   <div class="flex justify-center mb-2" style={`margin-left: ${centrePct}%; transform: translateX(-50%);`}>
-    <span class="text-ligne" aria-hidden="true">▼</span>
+    <span class="text-graphite" aria-hidden="true">▼</span>
   </div>
 
   <div class="relative h-3 bg-tole shadow-etch flex" role="img" aria-label={`Tranche de budget : ${label}`}>
@@ -31,7 +31,7 @@ const centrePct = segmentPct * index + segmentPct / 2;
     ))}
   </div>
 
-  <div class="flex justify-between mt-1 font-mono text-mono-base text-ligne">
+  <div class="flex justify-between mt-1 font-mono text-mono-base text-graphite">
     <span>0 €</span>
     {BORNES_BUDGET.map((borne) => <span>{borne} €</span>)}
     <span>+</span>
