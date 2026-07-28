@@ -1,0 +1,61 @@
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  background-color: #EDEEE9;
+  color: #1D201F;
+}
+
+:focus-visible {
+  outline: 2px solid #2C4A6E;
+  outline-offset: 2px;
+}
+
+/* Règle graduée en marge gauche — motif signature (design-system.md §4). */
+.regle-graduee {
+  width: 24px;
+  flex-shrink: 0;
+}
+.regle-graduee__ligne {
+  position: relative;
+  height: 100%;
+  min-height: 100%;
+  border-left: 1px solid #6E7268;
+}
+.regle-graduee__reper {
+  position: absolute;
+  left: 0;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.regle-graduee__reper::before {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 1px;
+  background: #6E7268;
+}
+@media (max-width: 639px) {
+  .regle-graduee {
+    width: 8px;
+  }
+  .regle-graduee__reper {
+    display: none;
+  }
+}

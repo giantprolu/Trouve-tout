@@ -1,0 +1,52 @@
+---
+/**
+ * Élément signature — jauge de confiance éditoriale, pas une note sur 5.
+ * N'apparaît qu'à trois endroits (design-system.md §5) : bloc verdict (grand),
+ * résultat Choix Express (hero), colonne du tableau comparatif (mini).
+ */
+interface Props {
+  /** 0 = tout à gauche, 1 = tout à droite. 0.5 = centré entre les deux traits de calibrage = choix solide. */
+  niveau: number;
+  taille?: 'mini' | 'grand' | 'hero';
+  class?: string;
+}
+const { niveau, taille = 'grand', class: className = '' } = Astro.props;
+const clamped = Math.max(0, Math.min(1, niveau));
+const pct = clamped * 100;
+
+const capsule = {
+  mini: 'h-3 w-14',
+  grand: 'h-6 w-48',
+  hero: 'h-10 w-72',
+}[taille];
+
+const point = {
+  mini: 'w-2 h-2',
+  grand: 'w-4 h-4',
+  hero: 'w-6 h-6',
+}[taille];
+---
+<div
+  class={`niveau-a-bulle relative shrink-0 bg-tole shadow-etch ${capsule} ${className}`}
+  role="img"
+  aria-label={`Niveau de confiance éditoriale : ${Math.round(pct)} sur 100`}
+>
+  <div class="absolute inset-x-0 top-0 h-1/3 bg-atelier/50 pointer-events-none"></div>
+  <div class="absolute top-0 bottom-0 w-px bg-ligne" style="left: 30%"></div>
+  <div class="absolute top-0 bottom-0 w-px bg-ligne" style="left: 70%"></div>
+  <div
+    class={`niveau-a-bulle__point absolute top-1/2 rounded-full bg-cordeau border border-graphite ${point}`}
+    style={`left: ${pct}%; transform: translate(-50%, -50%);`}
+  ></div>
+</div>
+
+<style>
+  .niveau-a-bulle__point {
+    transition: left 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .niveau-a-bulle__point {
+      transition: none;
+    }
+  }
+</style>

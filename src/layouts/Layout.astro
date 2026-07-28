@@ -1,5 +1,16 @@
 ---
+// Poids explicitement listés à la section 3 (Typographie) du design-system,
+// rien de plus pour ne pas alourdir le payload.
+import '@fontsource/big-shoulders-display/700';
+import '@fontsource/big-shoulders-display/800';
+import '@fontsource/public-sans/400';
+import '@fontsource/public-sans/500';
+import '@fontsource/public-sans/600';
+import '@fontsource/ibm-plex-mono/400';
+import '@fontsource/ibm-plex-mono/500';
+import '../styles/global.css';
 import { SITE_URL } from '../lib/site';
+import ReglGraduee from '../components/ReglGraduee.astro';
 
 interface Props {
   title: string;
@@ -9,7 +20,7 @@ interface Props {
 }
 const {
   title,
-  description = 'Trouve le meilleur produit sans perdre de temps — comparatifs honnêtes, verdict clair.',
+  description = "Trouve-Tout : guides d'achat outillage et jardin — on vous aide à choisir, pas à acheter.",
   ogImage = '/og-default.png',
   canonicalPath,
 } = Astro.props;
@@ -55,36 +66,54 @@ const fullTitle = `${title} — Trouve-Tout`;
       '@type': 'WebSite',
       name: 'Trouve-Tout',
       url: siteUrl,
-      description: 'Comparatif produits honnête — verdict clair en 30 secondes.',
+      description: "Guides d'achat outillage honnêtes — on vous aide à choisir, pas à acheter.",
     })} />
   </head>
-  <body class="bg-gray-50 text-gray-900 min-h-screen">
-    <nav class="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-6 text-sm font-medium">
-      <a href="/" class="text-lg font-bold text-indigo-600">Trouve-Tout</a>
-      <a href="/categories" class="hover:text-indigo-600">Catégories</a>
-      <a href="/choix-express" class="hover:text-indigo-600">Choix Express</a>
-      <a href="/blog" class="hover:text-indigo-600">Guides</a>
-      <a href="/profil" class="ml-auto hover:text-indigo-600">Mon profil</a>
-    </nav>
-    <main>
-      <slot />
-    </main>
-    <footer class="mt-16 border-t border-gray-200 py-8 px-4">
-      <div class="max-w-5xl mx-auto space-y-4 text-xs text-gray-500">
+  <body class="bg-atelier text-graphite font-lecture text-lecture antialiased min-h-screen flex flex-col">
+    <a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-securite focus:text-graphite focus:px-4 focus:py-2">
+      Aller au contenu
+    </a>
+
+    <header class="border-b border-graphite">
+      <nav class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-6">
+        <a href="/" class="font-display text-display-m text-graphite tracking-tight">TROUVE-TOUT</a>
+        <div class="hidden sm:flex items-center gap-6 font-mono text-kicker uppercase text-graphite">
+          <a href="/categories" class="hover:text-cordeau transition-colors">Catégories</a>
+          <a href="/blog" class="hover:text-cordeau transition-colors">Guides</a>
+          <a href="/marques" class="hover:text-cordeau transition-colors">Marques</a>
+        </div>
+        <a
+          href="/choix-express"
+          class="ml-auto border border-cordeau text-cordeau font-mono text-kicker uppercase px-4 py-2 hover:bg-cordeau-light transition-colors"
+        >
+          Choix Express
+        </a>
+      </nav>
+    </header>
+
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 flex-1 w-full flex gap-4 sm:gap-6">
+      <ReglGraduee />
+      <main id="contenu" class="flex-1 min-w-0 py-8">
+        <slot />
+      </main>
+    </div>
+
+    <footer class="mt-16 border-t border-graphite py-8 px-4">
+      <div class="max-w-6xl mx-auto space-y-4 font-mono text-mono-base text-ligne">
         <div class="flex flex-col sm:flex-row justify-between gap-4">
           <div>© {new Date().getFullYear()} Trouve-Tout · Guides d'achat outillage indépendants</div>
           <div class="flex flex-wrap gap-4">
-            <a href="/categories" class="hover:text-gray-700">Catégories</a>
-            <a href="/blog" class="hover:text-gray-700">Guides</a>
-            <a href="/mentions-legales" class="hover:text-gray-700">Mentions légales</a>
-            <a href="/confidentialite" class="hover:text-gray-700">Confidentialité</a>
-            <a href="/sitemap.xml" class="hover:text-gray-700">Sitemap</a>
+            <a href="/categories" class="hover:text-cordeau transition-colors">Catégories</a>
+            <a href="/blog" class="hover:text-cordeau transition-colors">Guides</a>
+            <a href="/mentions-legales" class="hover:text-cordeau transition-colors">Mentions légales</a>
+            <a href="/confidentialite" class="hover:text-cordeau transition-colors">Confidentialité</a>
+            <a href="/sitemap.xml" class="hover:text-cordeau transition-colors">Sitemap</a>
           </div>
         </div>
-        <div class="pt-4 border-t border-gray-100 text-gray-400 leading-relaxed">
+        <div class="pt-4 border-t border-ligne/40 font-lecture text-legende leading-relaxed">
           <p>
-            Certains liens de ce site sont des liens d'affiliation : si tu achètes après avoir
-            cliqué, nous percevons une commission du marchand. <strong>Le prix que tu paies est
+            Certains liens de ce site sont des liens d'affiliation : si vous achetez après avoir
+            cliqué, nous percevons une commission du marchand. <strong class="text-graphite">Le prix que vous payez est
             strictement identique.</strong> Cela ne change ni nos recommandations ni l'ordre des
             produits présentés.
           </p>
@@ -99,11 +128,12 @@ const fullTitle = `${title} — Trouve-Tout`;
         </div>
       </div>
     </footer>
-    <!-- Vercel Web Analytics (a activer dans Vercel > Analytics) -->
+
+    <!-- Vercel Web Analytics (à activer dans Vercel > Analytics) -->
     <script defer src="/_vercel/insights/script.js"></script>
 
-    <!-- Tracking des clics affilies : sans ce compteur, impossible de savoir
-         si le probleme vient du trafic ou du contenu. -->
+    <!-- Tracking des clics affiliés : sans ce compteur, impossible de savoir
+         si le problème vient du trafic ou du contenu. -->
     <script is:inline>
       document.addEventListener('click', (e) => {
         const a = e.target.closest('a[data-affilie]');

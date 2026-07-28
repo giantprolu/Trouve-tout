@@ -1,0 +1,27 @@
+---
+/**
+ * Règle graduée en marge — motif signature de la mise en page (design-system.md §4).
+ * Purement décorative : un cadre de feuille à dessin, pas une navigation.
+ * Sur mobile elle se réduit à un simple trait fin de 8px, sans chiffres.
+ */
+interface Props {
+  reperes?: number;
+}
+const { reperes = 5 } = Astro.props;
+const points = Array.from({ length: reperes }, (_, i) => ({
+  n: i,
+  top: (i / (reperes - 1)) * 100,
+}));
+---
+<div class="regle-graduee hidden sm:block" aria-hidden="true">
+  <div class="regle-graduee__ligne">
+    {points.map((p) => (
+      <div class="regle-graduee__reper" style={`top: ${p.top}%`}>
+        <span class="font-mono text-mono-base text-ligne">{p.n}</span>
+      </div>
+    ))}
+  </div>
+</div>
+<div class="regle-graduee block sm:hidden" aria-hidden="true">
+  <div class="regle-graduee__ligne"></div>
+</div>

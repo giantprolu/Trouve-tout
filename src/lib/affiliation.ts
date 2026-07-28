@@ -70,3 +70,20 @@ export function trancheBudget(prixIndicatif: number): string {
   if (prixIndicatif < 400) return '250 – 400 €';
   return 'plus de 400 €';
 }
+
+/** Les 5 tranches affichées sur la jauge horizontale, dans l'ordre. */
+export const BORNES_BUDGET = [80, 150, 250, 400] as const;
+
+/**
+ * Position du produit sur la jauge de budget (composant TrancheBudget).
+ * `index` sert à mettre en évidence le bon segment, jamais à afficher le prix.
+ */
+export function segmentBudget(prixIndicatif: number): { index: number; total: number; label: string } {
+  const total = BORNES_BUDGET.length + 1;
+  const index = BORNES_BUDGET.findIndex((borne) => prixIndicatif < borne);
+  return {
+    index: index === -1 ? total - 1 : index,
+    total,
+    label: trancheBudget(prixIndicatif),
+  };
+}
