@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import EnteteCoque from '../../components/EnteteCoque.astro';
 import TableauComparatif from '../../components/TableauComparatif.astro';
 import VerdictProduit from '../../components/VerdictProduit.astro';
+import EncartPub from '../../components/EncartPub.astro';
 import {
   getCategorieBySlug,
   getMarquesByCategorie,
@@ -99,14 +100,16 @@ export function getStaticPaths() {
         )}
         <a
           href="/choix-express"
-          class="flex-1 min-h-[200px] rounded-tile bg-[repeating-linear-gradient(45deg,#DCE1D2,#DCE1D2_16px,#E8ECDD_16px,#E8ECDD_32px)] shadow-tile p-6 flex flex-col justify-between transition hover:-translate-y-0.5"
+          class="rounded-tile bg-[repeating-linear-gradient(45deg,#DCE1D2,#DCE1D2_16px,#E8ECDD_16px,#E8ECDD_32px)] shadow-tile p-5 flex items-center justify-between gap-4 transition hover:-translate-y-0.5"
         >
-          <span class="self-end grid h-11 w-11 place-items-center rounded-full bg-card text-ink" aria-hidden="true">↗</span>
           <span>
-            <span class="block font-display font-bold text-display-m text-ink">Pas le temps de comparer ?</span>
-            <span class="mt-2 block text-body text-ink/70">Trois questions et on tranche pour toi.</span>
+            <span class="block font-display font-bold text-body text-ink">Pas le temps de comparer ?</span>
+            <span class="mt-1 block text-small text-ink/70">Trois questions et on tranche pour toi.</span>
           </span>
+          <span class="grid h-11 w-11 flex-none place-items-center rounded-full bg-card text-ink" aria-hidden="true">↗</span>
         </a>
+
+        <EncartPub class="flex-1 min-h-[250px]" />
       </div>
     </div>
   </section>
