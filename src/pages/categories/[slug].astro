@@ -27,29 +27,29 @@ export function getStaticPaths() {
   title={`${categorie.nom} — ${categorie.sousTitre}`}
   description={categorie.description}
 >
-  <nav class="font-mono text-legende text-graphite mb-6" aria-label="Fil d'ariane">
-    <a href="/" class="hover:text-cordeau transition-colors">Accueil</a> ›
-    <a href="/categories" class="hover:text-cordeau transition-colors mx-1">Catégories</a> ›
-    <span class="text-graphite">{categorie.nom}</span>
+  <nav class="font-mono text-small text-ink mb-6" aria-label="Fil d'ariane">
+    <a href="/" class="hover:text-accent transition-colors">Accueil</a> ›
+    <a href="/categories" class="hover:text-accent transition-colors mx-1">Catégories</a> ›
+    <span class="text-ink">{categorie.nom}</span>
   </nav>
 
   <div class="mb-12">
-    <p class="font-mono text-kicker uppercase text-graphite mb-3">{categorie.sousTitre}</p>
-    <h1 class="font-display text-display-l text-graphite mb-3">{categorie.nom}</h1>
-    <p class="font-lecture text-lecture-l text-graphite max-w-2xl">{categorie.description}</p>
+    <p class="font-mono text-label uppercase text-ink mb-3">{categorie.sousTitre}</p>
+    <h1 class="font-display text-display-l text-ink mb-3">{categorie.nom}</h1>
+    <p class="font-body text-body-lg text-ink max-w-2xl">{categorie.description}</p>
   </div>
 
   {marquesListe.map(marque => {
     const produitsDuMarque = getProduitsByMarque(marque.slug);
     const meilleur = produitsDuMarque.find(p => p.segment === 'meilleur_rapport');
     return (
-      <section class="mb-16 border-t border-graphite pt-8">
+      <section class="mb-16 border-t border-ink pt-8">
         <div class="flex flex-wrap items-baseline justify-between gap-4 mb-5">
           <div>
-            <h2 class="font-display text-display-m text-graphite">{marque.nom}</h2>
-            <p class="font-lecture text-legende text-graphite mt-1 max-w-xl">{marque.description}</p>
+            <h2 class="font-display text-display-m text-ink">{marque.nom}</h2>
+            <p class="font-body text-small text-ink mt-1 max-w-xl">{marque.description}</p>
           </div>
-          <a href={`/marques/${marque.slug}`} class="font-mono text-kicker uppercase text-cordeau hover:text-graphite transition-colors shrink-0">
+          <a href={`/marques/${marque.slug}`} class="font-mono text-label uppercase text-accent hover:text-ink transition-colors shrink-0">
             Voir tous les produits →
           </a>
         </div>
@@ -66,13 +66,13 @@ export function getStaticPaths() {
   })}
 
   {guides.length > 0 && (
-    <section class="mt-16 border-t border-graphite pt-8">
-      <p class="font-mono text-kicker uppercase text-graphite mb-6">Guides d'achat {categorie.nom}</p>
+    <section class="mt-16 border-t border-ink pt-8">
+      <p class="font-mono text-label uppercase text-ink mb-6">Guides d'achat {categorie.nom}</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {guides.map(g => (
-          <a href={`/blog/${g.slug}`} class="bg-tole border-t-[3px] border-cordeau px-5 py-5 block hover:bg-cordeau-light/40 transition-colors">
-            <h3 class="font-display text-display-m text-graphite mb-2">{g.titre}</h3>
-            <p class="font-lecture text-legende text-graphite">{g.description}</p>
+          <a href={`/blog/${g.slug}`} class="bg-surface border-t-[3px] border-accent px-5 py-5 block hover:bg-accent/10 transition-colors">
+            <h3 class="font-display text-display-m text-ink mb-2">{g.titre}</h3>
+            <p class="font-body text-small text-ink">{g.description}</p>
           </a>
         ))}
       </div>

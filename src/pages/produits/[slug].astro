@@ -44,16 +44,16 @@ export function getStaticPaths() {
 >
   <script is:inline type="application/ld+json" set:html={schema} />
 
-  <nav class="font-mono text-legende text-graphite mb-6" aria-label="Fil d'ariane">
-    <a href="/" class="hover:text-cordeau transition-colors">Accueil</a> ›
-    <a href={`/categories/${produit.categorieSlug}`} class="hover:text-cordeau transition-colors mx-1">{categorie?.nom}</a> ›
-    <a href={`/marques/${produit.marqueSlug}`} class="hover:text-cordeau transition-colors mx-1">{marque?.nom}</a> ›
-    <span class="text-graphite">{produit.nom}</span>
+  <nav class="font-mono text-small text-ink mb-6" aria-label="Fil d'ariane">
+    <a href="/" class="hover:text-accent transition-colors">Accueil</a> ›
+    <a href={`/categories/${produit.categorieSlug}`} class="hover:text-accent transition-colors mx-1">{categorie?.nom}</a> ›
+    <a href={`/marques/${produit.marqueSlug}`} class="hover:text-accent transition-colors mx-1">{marque?.nom}</a> ›
+    <span class="text-ink">{produit.nom}</span>
   </nav>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
     <div class="lg:col-span-2">
-      <h1 class="font-display text-display-l text-graphite mb-6">{produit.nom}</h1>
+      <h1 class="font-display text-display-l text-ink mb-6">{produit.nom}</h1>
 
       <div class="mb-8">
         <VerdictProduit produit={produit} />
@@ -61,7 +61,7 @@ export function getStaticPaths() {
 
       {autresDuMarque.length > 0 && (
         <section>
-          <p class="font-mono text-kicker uppercase text-graphite mb-4">
+          <p class="font-mono text-label uppercase text-ink mb-4">
             Comparaison avec les autres {marque?.nom}
           </p>
           <TableauComparatif produits={autresDuMarque} />
@@ -70,11 +70,11 @@ export function getStaticPaths() {
     </div>
 
     <aside class="lg:col-span-1">
-      <div class="bg-atelier border border-graphite px-5 py-5">
-        <p class="font-lecture text-lecture text-graphite mb-3">
+      <div class="bg-bg border border-ink px-5 py-5">
+        <p class="font-body text-body text-ink mb-3">
           <strong>Pas sûr(e) ?</strong>
         </p>
-        <a href="/choix-express" class="font-mono text-kicker uppercase text-cordeau hover:text-graphite transition-colors">
+        <a href="/choix-express" class="font-mono text-label uppercase text-accent hover:text-ink transition-colors">
           Utiliser le Choix Express →
         </a>
       </div>

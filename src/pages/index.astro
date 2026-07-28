@@ -9,42 +9,45 @@ export const prerender = true;
   description="Guides d'achat outillage et jardin : les critères qui comptent vraiment, sans jargon et sans classement bidon."
 >
   <section class="py-8 sm:py-12 max-w-2xl">
-    <h1 class="font-display text-display-xl text-graphite mb-6">
+    <h1 class="font-display text-display-xl text-ink mb-6">
       On vous aide à choisir, pas à acheter.
     </h1>
-    <p class="font-lecture text-lecture-l text-graphite mb-8">
+    <p class="font-body text-body-lg text-ink mb-8">
       Des guides d'achat qui expliquent les critères au lieu de vous vendre un classement.
       Perçage, sciage, ponçage, jardin.
     </p>
     <a
       href="/choix-express"
-      class="inline-block border border-cordeau text-cordeau font-mono text-kicker uppercase px-6 py-3 hover:bg-cordeau-light transition-colors"
+      class="inline-block rounded border border-accent text-accent font-mono text-label uppercase px-6 py-3 hover:bg-accent/10 transition-colors"
     >
       Commencer le Choix Express →
     </a>
   </section>
 
-  <section class="py-10 border-t border-graphite">
-    <p class="font-mono text-kicker uppercase text-graphite mb-6">Guides récents</p>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-      {guides.slice(0, 3).map(g => (
-        <a href={`/blog/${g.slug}`} class="bg-tole border-t-[3px] border-cordeau px-5 py-5 block hover:bg-cordeau-light/40 transition-colors">
-          <h2 class="font-display text-display-m text-graphite mb-2">{g.titre}</h2>
-          <p class="font-lecture text-legende text-graphite">{g.description}</p>
+  <section class="py-10 border-t border-line/40">
+    <p class="font-mono text-label uppercase text-ink mb-6">Guides récents</p>
+    <div class="flex flex-col sm:flex-row gap-6">
+      {guides.slice(0, 3).map((g, i) => (
+        <a
+          href={`/blog/${g.slug}`}
+          class={`bg-surface border-t-[3px] border-accent px-5 py-5 block hover:bg-accent/10 transition-colors ${i === 0 ? 'sm:flex-[1.4]' : 'sm:flex-1'}`}
+        >
+          <h2 class="font-display text-display-m text-ink mb-2">{g.titre}</h2>
+          <p class="font-body text-small text-ink">{g.description}</p>
         </a>
       ))}
     </div>
   </section>
 
-  <section class="py-10 border-t border-graphite">
-    <p class="font-mono text-kicker uppercase text-graphite mb-6">Par type d'outil</p>
-    <div class="flex flex-col divide-y divide-ligne/30">
+  <section class="py-10 border-t border-line/40">
+    <p class="font-mono text-label uppercase text-ink mb-6">Par type d'outil</p>
+    <div class="flex flex-col divide-y divide-line/30">
       {categories.map(c => (
         <a href={`/categories/${c.slug}`} class="py-5 flex items-baseline gap-4 group">
-          <h2 class="font-display text-display-m text-graphite group-hover:text-cordeau transition-colors">
+          <h2 class="font-display text-display-m text-ink group-hover:text-accent transition-colors">
             {c.nom}
           </h2>
-          <p class="font-lecture text-lecture text-graphite">{c.sousTitre}</p>
+          <p class="font-body text-body text-ink">{c.sousTitre}</p>
         </a>
       ))}
     </div>

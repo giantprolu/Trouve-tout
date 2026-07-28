@@ -3,7 +3,7 @@ import type { Produit } from '../lib/data';
 import { niveauConfiance } from '../lib/data';
 import { trancheBudget } from '../lib/affiliation';
 import CTAAffilie from './CTAAffilie.astro';
-import NiveauABulle from './NiveauABulle.astro';
+import Cote from './Cote.astro';
 
 interface Props {
   produits: Produit[];
@@ -15,40 +15,51 @@ const segmentLabel: Record<string, string> = {
   milieu: 'Équilibre',
   moins_cher: 'Budget',
 };
+
+// Le produit recommandé est celui à la plus haute confiance éditoriale du
+// lot — sa ligne est mise en avant par le fond, pas par un badge doré.
+const slugRecommande = produits.reduce((meilleur, p) =>
+  niveauConfiance(p) > niveauConfiance(meilleur) ? p : meilleur
+, produits[0])?.slug;
 ---
-<div class="overflow-x-auto shadow-etch">
-  <table class="w-full text-lecture">
+<div class="overflow-x-auto shadow-card rounded">
+  <table class="w-full text-body">
     <thead>
-      <tr class="bg-graphite text-atelier">
-        <th scope="col" class="text-left px-4 py-3 font-lecture font-semibold">Produit</th>
-        <th scope="col" class="text-center px-3 py-3 font-lecture font-semibold">Budget</th>
-        <th scope="col" class="text-center px-3 py-3 font-lecture font-semibold">Adéquation</th>
-        <th scope="col" class="text-center px-3 py-3 font-lecture font-semibold">Segment</th>
+      <tr>
+        <th scope="col" class="text-left px-4 py-3 font-display text-display-m lowercase text-ink">produit</th>
+        <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">budget</th>
+        <th scope="col" class="text-center px-3 py-3 font-display text-display-m lowercase text-ink">adéquation</th>
+        <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">segment</th>
         <th scope="col" class="px-3 py-3"><span class="sr-only">Lien marchand</span></th>
       </tr>
     </thead>
     <tbody>
-      {produits.map((p, i) => (
-        <tr class="bg-tole border-b border-ligne">
-          <td class="px-4 py-4">
-            <a href={`/produits/${p.slug}`} class="font-lecture font-semibold text-graphite hover:text-cordeau transition-colors">
-              {p.nom}
-            </a>
-          </td>
-          <td class="text-center px-3 py-4 font-mono text-mono-base text-graphite whitespace-nowrap">
-            {trancheBudget(p.prixIndicatif)}
-          </td>
-          <td class="px-3 py-4">
-            <NiveauABulle niveau={niveauConfiance(p)} taille="mini" class="mx-auto" />
-          </td>
-          <td class="text-center px-3 py-4 font-mono text-mono-base text-graphite">
-            {segmentLabel[p.segment]}
-          </td>
-          <td class="px-3 py-4 text-center">
-            <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir ↗" />
-          </td>
-        </tr>
-      ))}
+      {produits.map((p, i) => {
+        const estRecommande = p.slug === slugRecommande;
+        const fond = estRecommande ? 'bg-surface' : i % 2 === 0 ? 'bg-bg' : 'bg-surface';
+        const score = Math.round(niveauConfiance(p) * 10);
+        return (
+          <tr class={`${fond} ${estRecommande ? 'border-l-2 border-accent' : ''}`}>
+            <td class="px-4 py-4">
+              <a href={`/produits/${p.slug}`} class="font-body font-semibold text-ink hover:text-accent transition-colors">
+                {p.nom}
+              </a>
+            </td>
+            <td class="text-right px-3 py-4 font-mono text-data text-ink whitespace-nowrap">
+              {trancheBudget(p.prixIndicatif)}
+            </td>
+            <td class="px-3 py-4">
+              <Cote valeur={score} max={10} label={`${score}/10`} class="mx-auto max-w-[8rem]" />
+            </td>
+            <td class="text-right px-3 py-4 font-mono text-data text-ink">
+              {segmentLabel[p.segment]}
+            </td>
+            <td class="px-3 py-4 text-center">
+              <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir" />
+            </td>
+          </tr>
+        );
+      })}
     </tbody>
   </table>
 </div>

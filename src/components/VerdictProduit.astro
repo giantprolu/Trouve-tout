@@ -3,7 +3,7 @@ import type { Produit } from '../lib/data';
 import { niveauConfiance } from '../lib/data';
 import CTAAffilie from './CTAAffilie.astro';
 import EncartTransparence from './EncartTransparence.astro';
-import NiveauABulle from './NiveauABulle.astro';
+import Cote from './Cote.astro';
 import TrancheBudget from './TrancheBudget.astro';
 
 interface Props {
@@ -11,25 +11,29 @@ interface Props {
   numero?: number;
 }
 const { produit, numero } = Astro.props;
+const score = Math.round(niveauConfiance(produit) * 10);
 ---
-<div class="bg-tole border-t-[3px] border-cordeau px-6 py-6">
+<div class="coin-coupe bg-surface border border-line px-6 py-6">
   {numero && (
-    <p class="font-mono text-kicker uppercase text-graphite mb-3">N°{numero}</p>
+    <p class="font-mono text-label uppercase text-ink mb-3">N°{numero}</p>
   )}
 
-  <NiveauABulle niveau={niveauConfiance(produit)} taille="grand" class="mb-4" />
+  <p class="font-mono text-label uppercase text-ink mb-1">Pour qui ?</p>
+  <h2 class="font-display text-display-m text-ink mb-2">{produit.verdict}</h2>
+  <p class="font-body text-body text-ink mb-5">{produit.description}</p>
 
-  <h2 class="font-display text-display-m text-graphite mb-2">{produit.verdict}</h2>
-  <p class="font-lecture text-lecture text-graphite mb-5">{produit.description}</p>
+  <div class="mb-6">
+    <Cote valeur={score} max={10} label={`${score}/10`} />
+  </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
     <div>
-      <p class="font-mono text-kicker uppercase text-graphite mb-1">Ce qui compte</p>
-      <p class="font-lecture text-lecture text-graphite">{produit.pourQui}</p>
+      <p class="font-mono text-label uppercase text-ink mb-1">Ce qui compte</p>
+      <p class="font-body text-body text-ink">{produit.pourQui}</p>
     </div>
     <div>
-      <p class="font-mono text-kicker uppercase text-graphite mb-1">Ce qui ne compte pas</p>
-      <p class="font-lecture text-lecture text-graphite">{produit.contreQui}</p>
+      <p class="font-mono text-label uppercase text-ink mb-1">Ce qui ne compte pas</p>
+      <p class="font-body text-body text-ink">{produit.contreQui}</p>
     </div>
   </div>
 

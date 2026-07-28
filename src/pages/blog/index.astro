@@ -5,22 +5,22 @@ import { guides, getCategorieBySlug } from '../../lib/data';
 export const prerender = true;
 ---
 <Layout title="Guides d'achat" description="Guides honnêtes pour choisir le bon produit rapidement.">
-  <p class="font-mono text-kicker uppercase text-graphite mb-4">Guides</p>
-  <h1 class="font-display text-display-l text-graphite mb-3">Guides d'achat</h1>
-  <p class="font-lecture text-lecture-l text-graphite mb-10 max-w-2xl">
+  <p class="font-mono text-label uppercase text-ink mb-4">Guides</p>
+  <h1 class="font-display text-display-l text-ink mb-3">Guides d'achat</h1>
+  <p class="font-body text-body-lg text-ink mb-10 max-w-2xl">
     Des articles qui expliquent les critères de choix — pas un classement de produits.
   </p>
 
-  <div class="flex flex-col divide-y divide-ligne/30">
+  <div class="flex flex-col divide-y divide-line/30">
     {guides.map(g => {
       const cat = getCategorieBySlug(g.categorieSlug);
       return (
         <a href={`/blog/${g.slug}`} class="py-6 block group">
-          <p class="font-mono text-kicker uppercase text-graphite mb-2">{cat?.nom}</p>
-          <h2 class="font-display text-display-m text-graphite group-hover:text-cordeau transition-colors mb-2">
+          <p class="font-mono text-label uppercase text-ink mb-2">{cat?.nom}</p>
+          <h2 class="font-display text-display-m text-ink group-hover:text-accent transition-colors mb-2">
             {g.titre}
           </h2>
-          <p class="font-lecture text-lecture text-graphite max-w-2xl">{g.description}</p>
+          <p class="font-body text-body text-ink max-w-2xl">{g.description}</p>
         </a>
       );
     })}

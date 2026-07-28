@@ -31,44 +31,44 @@ if (Astro.request.method === 'POST') {
 ---
 <Layout title="Mon profil" description="Personnalisez vos préférences pour des recommandations sur mesure.">
   <div class="max-w-xl">
-    <p class="font-mono text-kicker uppercase text-graphite mb-3">Préférences</p>
-    <h1 class="font-display text-display-l text-graphite mb-8">Mon profil</h1>
+    <p class="font-mono text-label uppercase text-ink mb-3">Préférences</p>
+    <h1 class="font-display text-display-l text-ink mb-8">Mon profil</h1>
 
     {saved && (
-      <div class="border border-graphite bg-tole px-4 py-3 mb-6 font-lecture text-lecture text-graphite">
+      <div class="border border-ink bg-surface px-4 py-3 mb-6 font-body text-body text-ink">
         Profil enregistré.
       </div>
     )}
 
-    <form method="POST" class="space-y-6 bg-tole border-t-[3px] border-cordeau px-6 py-6">
+    <form method="POST" class="space-y-6 bg-surface border-t-[3px] border-accent px-6 py-6">
       <div>
-        <label class="block font-lecture text-lecture font-semibold text-graphite mb-2">Email</label>
+        <label class="block font-body text-body font-semibold text-ink mb-2">Email</label>
         <input type="email" name="email" value={profil.email} placeholder="vous@exemple.com"
-          class="w-full border border-graphite bg-atelier px-4 py-2 font-lecture text-lecture text-graphite focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau" />
+          class="w-full border border-ink bg-bg px-4 py-2 font-body text-body text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" />
       </div>
 
       <div>
-        <label class="block font-lecture text-lecture font-semibold text-graphite mb-2">Prénom</label>
+        <label class="block font-body text-body font-semibold text-ink mb-2">Prénom</label>
         <input type="text" name="name" value={profil.name} placeholder="Votre prénom"
-          class="w-full border border-graphite bg-atelier px-4 py-2 font-lecture text-lecture text-graphite focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau" />
+          class="w-full border border-ink bg-bg px-4 py-2 font-body text-body text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" />
       </div>
 
       <div>
-        <label class="block font-lecture text-lecture font-semibold text-graphite mb-2">Budget habituel (€)</label>
+        <label class="block font-body text-body font-semibold text-ink mb-2">Budget habituel (€)</label>
         <div class="flex gap-3 items-center">
           <input type="number" name="budget_min" value={profil.budgetMin} placeholder="Min" min="0"
-            class="w-1/2 border border-graphite bg-atelier px-4 py-2 font-lecture text-lecture text-graphite focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau" />
-          <span class="text-graphite">–</span>
+            class="w-1/2 border border-ink bg-bg px-4 py-2 font-body text-body text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" />
+          <span class="text-ink">–</span>
           <input type="number" name="budget_max" value={profil.budgetMax} placeholder="Max" min="0"
-            class="w-1/2 border border-graphite bg-atelier px-4 py-2 font-lecture text-lecture text-graphite focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau" />
+            class="w-1/2 border border-ink bg-bg px-4 py-2 font-body text-body text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" />
         </div>
       </div>
 
       <div>
-        <label class="block font-lecture text-lecture font-semibold text-graphite mb-2">Priorité globale</label>
+        <label class="block font-body text-body font-semibold text-ink mb-2">Priorité globale</label>
         <div class="flex gap-3">
           {[['prix', 'Prix'], ['equilibre', 'Équilibre'], ['qualite', 'Qualité']].map(([val, label]) => (
-            <label class="flex-1 border border-graphite px-3 py-3 text-center cursor-pointer font-mono text-kicker uppercase text-graphite hover:bg-atelier has-[:checked]:bg-cordeau has-[:checked]:text-atelier has-[:checked]:border-cordeau transition-colors">
+            <label class="flex-1 border border-ink px-3 py-3 text-center cursor-pointer font-mono text-label uppercase text-ink hover:bg-bg has-[:checked]:bg-accent has-[:checked]:text-bg has-[:checked]:border-accent transition-colors">
               <input type="radio" name="priorite" value={val} class="sr-only"
                 checked={profil.priorite === val} />
               {label}
@@ -78,7 +78,7 @@ if (Astro.request.method === 'POST') {
       </div>
 
       <button type="submit"
-        class="w-full border border-cordeau bg-cordeau text-atelier py-3 font-mono text-kicker uppercase hover:bg-graphite hover:border-graphite transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau">
+        class="w-full border border-accent bg-accent text-bg py-3 font-mono text-label uppercase hover:bg-ink hover:border-ink transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
         Enregistrer mon profil
       </button>
     </form>
