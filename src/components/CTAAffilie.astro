@@ -10,7 +10,7 @@ interface Props {
 const { url, marchand, label, variant = 'primary' } = Astro.props;
 
 const href = lienAffilie(marchand, url);
-const texte = label ?? `Voir le prix chez ${nomMarchand[marchand]} ↗`;
+const texte = label ?? `Voir le prix chez ${nomMarchand[marchand]}`;
 
 // rel="sponsored" est la valeur attendue par Google pour un lien commercial.
 const rel = 'sponsored nofollow noopener noreferrer';
@@ -22,11 +22,12 @@ const rel = 'sponsored nofollow noopener noreferrer';
       target="_blank"
       rel={rel}
       data-affilie={marchand}
-      class="inline-flex items-center gap-2 bg-securite hover:bg-securite-dark text-graphite border border-graphite px-6 py-3 font-lecture text-lecture font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau"
+      class="inline-flex flex-col items-start gap-1 rounded bg-signal px-6 py-3 text-ink transition-[filter] hover:brightness-[0.92] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
-      {texte}
+      <span class="font-mono text-label uppercase">Chez {nomMarchand[marchand]}</span>
+      <span class="font-body text-body font-bold">{texte} <span aria-hidden="true">→</span></span>
     </a>
-    <p class="mt-2 text-legende text-graphite">Lien affilié — le prix est le même pour vous.</p>
+    <p class="mt-2 text-small text-ink">Lien affilié — le prix est le même pour vous.</p>
   </div>
 ) : (
   <a
@@ -34,8 +35,8 @@ const rel = 'sponsored nofollow noopener noreferrer';
     target="_blank"
     rel={rel}
     data-affilie={marchand}
-    class="text-cordeau hover:text-graphite text-legende font-medium underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau"
+    class="text-accent hover:text-ink text-small font-medium underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
   >
-    {texte}
+    {texte} <span aria-hidden="true">→</span>
   </a>
 )}

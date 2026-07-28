@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import VerdictProduit from '../../components/VerdictProduit.astro';
-import NiveauABulle from '../../components/NiveauABulle.astro';
+import Cote from '../../components/Cote.astro';
 import { recommanderChoixExpress, categories, niveauConfiance } from '../../lib/data';
 
 let resultat = null;
@@ -21,15 +21,15 @@ if (Astro.request.method === 'POST') {
 ---
 <Layout title="Choix Express" description="3 questions, 1 recommandation personnalisée — sans compte.">
   <div class="max-w-xl">
-    <p class="font-mono text-kicker uppercase text-graphite mb-3">3 questions, sans compte</p>
-    <h1 class="font-display text-display-l text-graphite mb-8">Choix Express</h1>
+    <p class="font-mono text-label uppercase text-ink mb-3">3 questions, sans compte</p>
+    <h1 class="font-display text-display-l text-ink mb-8">Choix Express</h1>
 
     {!resultat && (
       <form method="POST" class="space-y-8">
         <div>
-          <label class="block font-lecture text-lecture font-semibold text-graphite mb-2">Quelle catégorie ?</label>
+          <label class="block font-body text-body font-semibold text-ink mb-2">Quelle catégorie ?</label>
           <select name="categorie" required
-            class="w-full border border-graphite bg-atelier px-4 py-3 font-lecture text-lecture text-graphite focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau">
+            class="w-full border border-ink bg-bg px-4 py-3 font-body text-body text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
             <option value="">Choisir…</option>
             {categories.map(c => (
               <option value={c.slug} selected={valeurs.categorie === c.slug}>
@@ -40,9 +40,9 @@ if (Astro.request.method === 'POST') {
         </div>
 
         <div>
-          <label class="block font-lecture text-lecture font-semibold text-graphite mb-2">Budget maximum ?</label>
+          <label class="block font-body text-body font-semibold text-ink mb-2">Budget maximum ?</label>
           <select name="budget" required
-            class="w-full border border-graphite bg-atelier px-4 py-3 font-lecture text-lecture text-graphite focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau">
+            class="w-full border border-ink bg-bg px-4 py-3 font-body text-body text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
             <option value="100">Moins de 100 €</option>
             <option value="300" selected>100 – 300 €</option>
             <option value="600">300 – 600 €</option>
@@ -51,10 +51,10 @@ if (Astro.request.method === 'POST') {
         </div>
 
         <div>
-          <label class="block font-lecture text-lecture font-semibold text-graphite mb-2">Priorité ?</label>
+          <label class="block font-body text-body font-semibold text-ink mb-2">Priorité ?</label>
           <div class="flex gap-3">
             {[['prix', 'Prix bas'], ['equilibre', 'Équilibré'], ['qualite', 'Qualité max']].map(([val, label]) => (
-              <label class="flex-1 border border-graphite px-3 py-3 text-center cursor-pointer font-mono text-kicker uppercase text-graphite hover:bg-tole has-[:checked]:bg-cordeau has-[:checked]:text-atelier has-[:checked]:border-cordeau transition-colors">
+              <label class="flex-1 border border-ink px-3 py-3 text-center cursor-pointer font-mono text-label uppercase text-ink hover:bg-surface has-[:checked]:bg-accent has-[:checked]:text-bg has-[:checked]:border-accent transition-colors">
                 <input type="radio" name="priorite" value={val} class="sr-only"
                   checked={valeurs.priorite === val} required />
                 {label}
@@ -64,13 +64,13 @@ if (Astro.request.method === 'POST') {
         </div>
 
         {erreur && (
-          <div class="border border-graphite bg-tole px-4 py-3 font-lecture text-lecture text-graphite">
+          <div class="border border-ink bg-surface px-4 py-3 font-body text-body text-ink">
             {erreur}
           </div>
         )}
 
         <button type="submit"
-          class="w-full border border-cordeau bg-cordeau text-atelier py-3 font-mono text-kicker uppercase hover:bg-graphite hover:border-graphite transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cordeau">
+          class="w-full border border-accent bg-accent text-bg py-3 font-mono text-label uppercase hover:bg-ink hover:border-ink transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
           Trouver mon produit →
         </button>
       </form>
@@ -78,21 +78,21 @@ if (Astro.request.method === 'POST') {
 
     {resultat && (
       <div>
-        <p class="font-mono text-legende text-graphite mb-6">
+        <p class="font-mono text-small text-ink mb-6">
           Vos réponses : {valeurs.categorie} · sous {valeurs.budget} € · priorité {valeurs.priorite}
         </p>
 
-        <div class="flex justify-center mb-8">
-          <NiveauABulle niveau={niveauConfiance(resultat)} taille="hero" />
+        <div class="mb-8 max-w-xs mx-auto">
+          <Cote valeur={Math.round(niveauConfiance(resultat) * 10)} max={10} label={`${Math.round(niveauConfiance(resultat) * 10)}/10`} />
         </div>
 
-        <h2 class="font-display text-display-l text-graphite mb-3 text-center">Ce qu'on vous conseille</h2>
-        <p class="font-lecture text-lecture text-graphite mb-8 text-center">{resultat.verdict}</p>
+        <h2 class="font-display text-display-l text-ink mb-3 text-center">Ce qu'on vous conseille</h2>
+        <p class="font-body text-body text-ink mb-8 text-center">{resultat.verdict}</p>
 
         <VerdictProduit produit={resultat} />
 
         <div class="mt-8 text-center">
-          <a href="/choix-express" class="font-mono text-kicker uppercase text-graphite hover:text-cordeau transition-colors">
+          <a href="/choix-express" class="font-mono text-label uppercase text-ink hover:text-accent transition-colors">
             ← Refaire le test
           </a>
         </div>

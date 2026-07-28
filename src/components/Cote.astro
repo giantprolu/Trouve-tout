@@ -1,0 +1,72 @@
+---
+/**
+ * Élément signature — le repère de cote (design-system.md §5).
+ * Situe une valeur sur une échelle (score, prix, position) : jamais
+ * décoratif, jamais plus d'une cote par bloc de contenu, jamais sur du
+ * texte narratif.
+ */
+interface Props {
+  valeur: number;
+  max?: number;
+  label: string;
+  couleur?: 'accent' | 'line';
+  class?: string;
+}
+const { valeur, max = 10, label, couleur = 'accent', class: className = '' } = Astro.props;
+const pct = Math.max(0, Math.min(100, (valeur / max) * 100));
+const traitClass = couleur === 'accent' ? 'bg-accent' : 'bg-line';
+---
+
+<div class={`cote relative w-full h-8 ${className}`} role="img" aria-label={label}>
+  <span
+    class="absolute bottom-3 -translate-x-1/2 font-mono text-label text-ink whitespace-nowrap"
+    style={`left: ${pct}%`}
+  >
+    {label}
+  </span>
+  <div class="cote__reveal absolute inset-x-0 bottom-0">
+    <div class="h-px w-full bg-line/60"></div>
+    <div
+      class={`cote__repere absolute bottom-0 -translate-x-1/2 translate-y-1/2 ${traitClass}`}
+      style={`left: ${pct}%`}
+    ></div>
+  </div>
+</div>
+
+<style>
+  .cote__reveal {
+    clip-path: inset(0 100% 0 0);
+    animation: cote-dessin 400ms ease-out forwards;
+  }
+  .cote__repere {
+    width: 1.5px;
+    height: 10px;
+  }
+  .cote__repere::before,
+  .cote__repere::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    width: 7px;
+    height: 1.5px;
+    background: inherit;
+    transform: translateX(-50%);
+  }
+  .cote__repere::before {
+    top: 0;
+  }
+  .cote__repere::after {
+    bottom: 0;
+  }
+  @keyframes cote-dessin {
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cote__reveal {
+      animation: none;
+      clip-path: inset(0 0 0 0);
+    }
+  }
+</style>

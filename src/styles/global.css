@@ -16,46 +16,17 @@ html {
 }
 
 body {
-  background-color: #EDEEE9;
-  color: #1D201F;
+  background-color: #EDEFE8;
+  color: #1C1E1A;
 }
 
 :focus-visible {
-  outline: 2px solid #2C4A6E;
+  outline: 2px solid #3C6E58;
   outline-offset: 2px;
 }
 
-/* Règle graduée en marge gauche — motif signature (design-system.md §4). */
-.regle-graduee {
-  width: 24px;
-  flex-shrink: 0;
-}
-.regle-graduee__ligne {
-  position: relative;
-  height: 100%;
-  min-height: 100%;
-  border-left: 1px solid #6E7268;
-}
-.regle-graduee__reper {
-  position: absolute;
-  left: 0;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.regle-graduee__reper::before {
-  content: '';
-  display: block;
-  width: 6px;
-  height: 1px;
-  background: #6E7268;
-}
-@media (max-width: 639px) {
-  .regle-graduee {
-    width: 8px;
-  }
-  .regle-graduee__reper {
-    display: none;
-  }
+/* Coin coupé à 45° sur 12px — clin d'œil "étiquette de contrôle qualité"
+   partagé par le bloc verdict et l'encart de transparence (design-system.md §6). */
+.coin-coupe {
+  clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%, 0 12px);
 }

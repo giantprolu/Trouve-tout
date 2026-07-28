@@ -26,22 +26,22 @@ export function getStaticPaths() {
 <Layout title={guide.titre} description={guide.description}>
   <script is:inline type="application/ld+json" set:html={schema} />
 
-  <nav class="font-mono text-legende text-graphite mb-6" aria-label="Fil d'ariane">
-    <a href="/" class="hover:text-cordeau transition-colors">Accueil</a> ›
-    <a href="/blog" class="hover:text-cordeau transition-colors mx-1">Guides</a> ›
-    <span class="text-graphite">{guide.titre}</span>
+  <nav class="font-mono text-small text-ink mb-6" aria-label="Fil d'ariane">
+    <a href="/" class="hover:text-accent transition-colors">Accueil</a> ›
+    <a href="/blog" class="hover:text-accent transition-colors mx-1">Guides</a> ›
+    <span class="text-ink">{guide.titre}</span>
   </nav>
 
   <article class="max-w-3xl">
-    <p class="font-mono text-kicker uppercase text-graphite mb-3">{categorie?.nom}</p>
-    <h1 class="font-display text-display-l text-graphite mb-6">{guide.titre}</h1>
+    <p class="font-mono text-label uppercase text-ink mb-3">{categorie?.nom}</p>
+    <h1 class="font-display text-display-l text-ink mb-6">{guide.titre}</h1>
 
-    <nav class="mb-10 border-y border-graphite py-4" aria-label="Sommaire du guide">
-      <p class="font-mono text-kicker uppercase text-graphite mb-2">Sommaire</p>
+    <nav class="mb-10 border-y border-ink py-4" aria-label="Sommaire du guide">
+      <p class="font-mono text-label uppercase text-ink mb-2">Sommaire</p>
       <ul class="flex flex-col gap-1">
         {guide.sections.map(s => (
           <li>
-            <a href={`#${s.titre.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} class="font-lecture text-lecture text-cordeau hover:text-graphite transition-colors">
+            <a href={`#${s.titre.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} class="font-body text-body text-accent hover:text-ink transition-colors">
               {s.titre}
             </a>
           </li>
@@ -49,25 +49,25 @@ export function getStaticPaths() {
       </ul>
     </nav>
 
-    <p class="font-lecture text-lecture-l text-graphite mb-10 border-l-2 border-cordeau pl-5">{guide.intro}</p>
+    <p class="font-body text-body-lg text-ink mb-10 border-l-2 border-accent pl-5">{guide.intro}</p>
 
     <div class="space-y-10">
       {guide.sections.map(s => (
-        <section id={s.titre.toLowerCase().replace(/[^a-z0-9]+/g, '-')} class="border-t border-graphite pt-8">
-          <h2 class="font-display text-display-m text-graphite mb-4">{s.titre}</h2>
-          <p class="font-lecture text-lecture text-graphite leading-relaxed max-w-[68ch]"
+        <section id={s.titre.toLowerCase().replace(/[^a-z0-9]+/g, '-')} class="border-t border-ink pt-8">
+          <h2 class="font-display text-display-m text-ink mb-4">{s.titre}</h2>
+          <p class="font-body text-body text-ink leading-relaxed max-w-[68ch]"
             set:html={s.contenu.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')} />
         </section>
       ))}
     </div>
 
-    <div class="mt-14 bg-tole border-t-[3px] border-cordeau px-6 py-8 text-center">
-      <p class="font-display text-display-m text-graphite mb-5">Prêt à choisir ?</p>
+    <div class="mt-14 bg-surface border-t-[3px] border-accent px-6 py-8 text-center">
+      <p class="font-display text-display-m text-ink mb-5">Prêt à choisir ?</p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="/choix-express" class="border border-cordeau text-cordeau font-mono text-kicker uppercase px-5 py-3 hover:bg-cordeau-light transition-colors">
+        <a href="/choix-express" class="border border-accent text-accent font-mono text-label uppercase px-5 py-3 hover:bg-accent/10 transition-colors">
           Faire le Choix Express →
         </a>
-        <a href={`/categories/${guide.categorieSlug}`} class="font-mono text-kicker uppercase text-graphite px-5 py-3 hover:text-cordeau transition-colors">
+        <a href={`/categories/${guide.categorieSlug}`} class="font-mono text-label uppercase text-ink px-5 py-3 hover:text-accent transition-colors">
           Voir les comparatifs {categorie?.nom}
         </a>
       </div>

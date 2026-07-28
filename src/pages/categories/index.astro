@@ -5,13 +5,16 @@ import { categories } from '../../lib/data';
 export const prerender = true;
 ---
 <Layout title="Catégories" description="Toutes les catégories d'outillage et jardin couvertes par Trouve-Tout.">
-  <p class="font-mono text-kicker uppercase text-graphite mb-4">Catégories</p>
-  <h1 class="font-display text-display-l text-graphite mb-10">Toutes les catégories</h1>
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-    {categories.map(cat => (
-      <a href={`/categories/${cat.slug}`} class="bg-tole border-t-[3px] border-cordeau px-6 py-6 block hover:bg-cordeau-light/40 transition-colors">
-        <h2 class="font-display text-display-m text-graphite mb-2">{cat.nom}</h2>
-        <p class="font-lecture text-lecture text-graphite">{cat.description}</p>
+  <p class="font-mono text-label uppercase text-ink mb-4">Catégories</p>
+  <h1 class="font-display text-display-l text-ink mb-10">Toutes les catégories</h1>
+  <div class="flex flex-col sm:flex-row flex-wrap gap-6">
+    {categories.map((cat, i) => (
+      <a
+        href={`/categories/${cat.slug}`}
+        class={`bg-surface border-t-[3px] border-accent px-6 py-6 block hover:bg-accent/10 transition-colors ${i === 0 ? 'sm:flex-[1.6] sm:basis-full' : 'sm:flex-1 sm:basis-[calc(50%-1.5rem)]'}`}
+      >
+        <h2 class="font-display text-display-m text-ink mb-2">{cat.nom}</h2>
+        <p class="font-body text-body text-ink">{cat.description}</p>
       </a>
     ))}
   </div>
