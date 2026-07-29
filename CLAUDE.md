@@ -39,15 +39,17 @@ pour le suivi.
 
 ## Prix
 
-Le prix exact est affiché (`formaterPrix()`), décision explicite prise le
-2026-07-29 malgré le risque documenté : Amazon comme Awin interdisent
-officiellement un prix figé sans flux temps réel, et un prix figé devient
-faux en quelques jours. Ce risque est assumé sciemment, pas oublié — si un
-prix affiché ne correspond plus à la fiche marchand, ce n'est pas un bug,
-c'est le compromis accepté. `prixIndicatif` vient du dernier export CSV
-marchand disponible ; il n'y a pas de flux temps réel, donc pas de mécanisme
-de rafraîchissement automatique — retraiter un nouveau CSV est aujourd'hui le
-seul moyen de mettre les prix à jour.
+Le prix d'un produit s'affiche en fourchette (`fourchettePrix()`), centrée
+sur `prixIndicatif` avec un écart maximum de 50 €, décision prise le
+2026-07-29 qui remplace l'affichage du prix exact décidé plus tôt le même
+jour : `prixIndicatif` vient d'un export CSV marchand figé, sans flux temps
+réel, donc un prix exact devient faux en quelques jours — la fourchette
+absorbe cette dérive au lieu de l'exposer telle quelle. `formaterPrix()`
+reste utilisée uniquement pour des bornes déjà réelles (ex. min/max de prix
+d'une catégorie), jamais pour le prix d'un produit isolé. Il n'y a toujours
+pas de flux temps réel, donc pas de mécanisme de rafraîchissement
+automatique — retraiter un nouveau CSV est aujourd'hui le seul moyen de
+mettre les prix à jour.
 
 ## Données structurées
 
