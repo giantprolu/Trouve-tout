@@ -18,6 +18,12 @@ const score = Math.round(niveauConfiance(produit) * 10);
     <p class="font-mono text-label uppercase text-ink mb-3">N°{numero}</p>
   )}
 
+  {produit.image && (
+    <div class="mb-4 h-32 rounded bg-white flex items-center justify-center">
+      <img src={produit.image} alt={produit.nom} class="max-h-full max-w-full object-contain" loading="lazy" />
+    </div>
+  )}
+
   <p class="font-mono text-label uppercase text-ink mb-1">Pour qui ?</p>
   <h2 class="font-display text-display-m text-ink mb-2">{produit.verdict}</h2>
   <p class="font-body text-body text-ink mb-5">{produit.description}</p>
