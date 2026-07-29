@@ -1,14 +1,12 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import EnteteCoque from '../../components/EnteteCoque.astro';
-import TableauComparatif from '../../components/TableauComparatif.astro';
-import VerdictProduit from '../../components/VerdictProduit.astro';
+import CarrouselProduits from '../../components/CarrouselProduits.astro';
 import EncartPub from '../../components/EncartPub.astro';
 import { imageTaille } from '../../lib/image';
 import {
   getCategorieBySlug,
   getMarquesByCategorie,
-  getProduitsByMarque,
   getProduitsByCategorie,
   getGuidesByCategorie,
   niveauConfiance,
@@ -22,15 +20,15 @@ if (!categorie) return Astro.redirect('/categories');
 const marquesListe = getMarquesByCategorie(slug!);
 const guidesCategorie = getGuidesByCategorie(slug!);
 
+// Carrousel : tous les produits de la categorie, marques et prix confondus,
+// tries du moins cher au plus cher pour donner un vrai parcours budgetaire.
+const produitsCategorie = getProduitsByCategorie(slug!).sort((a, b) => a.prixIndicatif - b.prixIndicatif);
+
 // Photo de la categorie : le produit le plus digne de confiance parmi ceux
 // qui ont une vraie photo (les fiches encore verifie:false n'en ont pas).
-const produitVedette = getProduitsByCategorie(slug!)
+const produitVedette = produitsCategorie
   .filter((p) => p.image)
   .sort((a, b) => niveauConfiance(b) - niveauConfiance(a))[0];
-
-function ancre(nom: string): string {
-  return nom.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-}
 
 export const prerender = true;
 
@@ -56,7 +54,7 @@ export function getStaticPaths() {
             {marquesListe.length > 0 && (
               <div class="mt-7 flex flex-wrap gap-2.5">
                 {marquesListe.map((m) => (
-                  <a href={`#${ancre(m.nom)}`} class="rounded-full bg-white px-4.5 py-2 text-small font-semibold text-ink hover:bg-surface transition-colors">
+                  <a href={`/marques/${m.slug}`} class="rounded-full bg-white px-4.5 py-2 text-small font-semibold text-ink hover:bg-surface transition-colors">
                     {m.nom}
                   </a>
                 ))}
@@ -70,31 +68,11 @@ export function getStaticPaths() {
           )}
         </div>
 
-        {marquesListe.map((marque) => {
-          const produitsDuMarque = getProduitsByMarque(marque.slug).filter(p => p.categorieSlug === slug);
-          const meilleur = produitsDuMarque.find(p => p.segment === 'meilleur_rapport') ?? produitsDuMarque[0];
-          return (
-            <div id={ancre(marque.nom)} class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-col gap-6">
-              <div class="flex flex-wrap items-baseline justify-between gap-3">
-                <div>
-                  <h2 class="m-0 font-display font-bold text-display-m text-ink">{marque.nom}</h2>
-                  <p class="mt-1.5 max-w-xl text-small text-ink/70">{marque.description}</p>
-                </div>
-                <a href={`/marques/${marque.slug}`} class="shrink-0 text-small font-semibold text-accent hover:text-ink transition-colors">
-                  Voir tous les produits →
-                </a>
-              </div>
-
-              <TableauComparatif produits={produitsDuMarque} />
-
-              {meilleur && (
-                <div class="w-full">
-                  <VerdictProduit produit={meilleur} horizontal />
-                </div>
-              )}
-            </div>
-          );
-        })}
+        <div class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-col gap-2">
+          <h2 class="m-0 font-display font-bold text-display-m text-ink">Les produits {categorie.nom.toLowerCase()}</h2>
+          <p class="mt-1 mb-2 max-w-xl text-small text-ink/70">Toutes marques et tous budgets confondus, du moins cher au plus premium.</p>
+          <CarrouselProduits produits={produitsCategorie} />
+        </div>
       </div>
 
       <div class="flex-1 min-w-[260px] flex flex-col gap-4">

@@ -4,7 +4,6 @@ import { niveauConfiance, SEGMENT_LABEL } from '../lib/data';
 import { formaterPrix } from '../lib/affiliation';
 import { imageTaille } from '../lib/image';
 import CTAAffilie from './CTAAffilie.astro';
-import Cote from './Cote.astro';
 
 interface Props {
   produits: Produit[];
@@ -24,7 +23,6 @@ const slugRecommande = produits.reduce((meilleur, p) =>
         <th scope="col" class="px-3 py-3"><span class="sr-only">Photo</span></th>
         <th scope="col" class="text-left px-4 py-3 font-display text-display-m lowercase text-ink">produit</th>
         <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">budget</th>
-        <th scope="col" class="text-center px-3 py-3 font-display text-display-m lowercase text-ink">adéquation</th>
         <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">segment</th>
         <th scope="col" class="px-3 py-3"><span class="sr-only">Lien marchand</span></th>
       </tr>
@@ -33,7 +31,6 @@ const slugRecommande = produits.reduce((meilleur, p) =>
       {produits.map((p, i) => {
         const estRecommande = p.slug === slugRecommande;
         const fond = estRecommande ? 'bg-surface' : i % 2 === 0 ? 'bg-bg' : 'bg-surface';
-        const score = Math.round(niveauConfiance(p) * 10);
         return (
           <tr class={`${fond} ${estRecommande ? 'border-l-2 border-accent' : ''}`}>
             <td class="px-3 py-4">
@@ -50,9 +47,6 @@ const slugRecommande = produits.reduce((meilleur, p) =>
             </td>
             <td class="text-right px-3 py-4 font-mono text-data text-ink whitespace-nowrap">
               {formaterPrix(p.prixIndicatif)}
-            </td>
-            <td class="px-3 py-4">
-              <Cote valeur={score} max={10} label={`${score}/10`} class="mx-auto max-w-[8rem]" />
             </td>
             <td class="text-right px-3 py-4 font-mono text-data text-ink">
               {SEGMENT_LABEL[p.segment]}
