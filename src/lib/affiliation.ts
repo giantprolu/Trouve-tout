@@ -33,6 +33,11 @@ if (!affiliationConfiguree) {
  * sur la bonne page, mais la vente n'est pas attribuée).
  */
 export function lienManoMano(urlProduit: string): string {
+  // Certaines fiches stockent un lien Awin deja pre-tracke (pclick.php), recu
+  // tel quel d'un export de candidats produits qui ne fournissait pas d'URL
+  // manomano.fr brute. Le re-envelopper dans cread.php ajouterait un second
+  // redirect pour rien : on le renvoie tel quel.
+  if (urlProduit.startsWith('https://www.awin1.com/')) return urlProduit;
   if (!affiliationConfiguree) return urlProduit;
   const ued = encodeURIComponent(urlProduit);
   return `https://www.awin1.com/cread.php?awinmid=${AWIN_MERCHANT_MANOMANO_FR}&awinaffid=${AWIN_ID}&ued=${ued}`;

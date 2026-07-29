@@ -58,7 +58,7 @@ export function getStaticPaths() {
         </div>
 
         {marquesListe.map((marque) => {
-          const produitsDuMarque = getProduitsByMarque(marque.slug);
+          const produitsDuMarque = getProduitsByMarque(marque.slug).filter(p => p.categorieSlug === slug);
           const meilleur = produitsDuMarque.find(p => p.segment === 'meilleur_rapport') ?? produitsDuMarque[0];
           return (
             <div id={ancre(marque.nom)} class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-col gap-6">

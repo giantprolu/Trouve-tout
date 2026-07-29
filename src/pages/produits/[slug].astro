@@ -23,7 +23,9 @@ if (!produit) return Astro.redirect('/categories');
 
 const marque = getMarqueBySlug(produit.marqueSlug);
 const categorie = getCategorieBySlug(produit.categorieSlug);
-const autresDuMarque = getProduitsByMarque(produit.marqueSlug).filter(p => p.slug !== produit.slug);
+const autresDuMarque = getProduitsByMarque(produit.marqueSlug).filter(
+  p => p.slug !== produit.slug && p.categorieSlug === produit.categorieSlug,
+);
 const guideCategorie = getGuidesByCategorie(produit.categorieSlug)[0];
 const backHref = guideCategorie ? `/blog/${guideCategorie.slug}` : `/categories/${produit.categorieSlug}`;
 const backLabel = guideCategorie ? `← Retour au guide ${categorie?.nom.toLowerCase()}` : `← Retour à ${categorie?.nom}`;
