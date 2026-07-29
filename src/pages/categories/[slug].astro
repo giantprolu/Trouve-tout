@@ -88,8 +88,8 @@ export function getStaticPaths() {
               <TableauComparatif produits={produitsDuMarque} />
 
               {meilleur && (
-                <div class="max-w-md">
-                  <VerdictProduit produit={meilleur} />
+                <div class="w-full">
+                  <VerdictProduit produit={meilleur} horizontal />
                 </div>
               )}
             </div>

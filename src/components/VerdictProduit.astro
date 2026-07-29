@@ -10,45 +10,48 @@ import TrancheBudget from './TrancheBudget.astro';
 interface Props {
   produit: Produit;
   numero?: number;
+  horizontal?: boolean;
 }
-const { produit, numero } = Astro.props;
+const { produit, numero, horizontal = false } = Astro.props;
 const score = Math.round(niveauConfiance(produit) * 10);
 ---
-<div class="coin-coupe bg-surface border border-line px-6 py-6">
+<div class={`coin-coupe bg-surface border border-line px-6 py-6 ${horizontal ? 'flex flex-wrap items-start gap-6' : ''}`}>
   {numero && (
-    <p class="font-mono text-label uppercase text-ink mb-3">N°{numero}</p>
+    <p class={`font-mono text-label uppercase text-ink ${horizontal ? 'w-full' : 'mb-3'}`}>N°{numero}</p>
   )}
 
   {produit.image && (
-    <div class="mb-4 h-32 rounded bg-white flex items-center justify-center">
+    <div class={`rounded bg-white flex items-center justify-center ${horizontal ? 'h-32 w-32 flex-none' : 'mb-4 h-32'}`}>
       <img src={imageTaille(produit.image, 260)} width="128" height="128" alt={produit.nom} class="max-h-full max-w-full object-contain" loading="lazy" decoding="async" />
     </div>
   )}
 
-  <p class="font-mono text-label uppercase text-ink mb-1">Pour qui ?</p>
-  <h2 class="font-display text-display-m text-ink mb-2">{produit.verdict}</h2>
-  <p class="font-body text-body text-ink mb-5">{produit.description}</p>
+  <div class={horizontal ? 'flex-1 min-w-[220px]' : ''}>
+    <p class="font-mono text-label uppercase text-ink mb-1">Pour qui ?</p>
+    <h2 class="font-display text-display-m text-ink mb-2">{produit.verdict}</h2>
+    <p class={`font-body text-body text-ink ${horizontal ? '' : 'mb-5'}`}>{produit.description}</p>
+  </div>
 
-  <div class="mb-6">
+  <div class={horizontal ? 'flex-none' : 'mb-6'}>
     <Cote valeur={score} max={10} label={`${score}/10`} />
   </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-    <div>
+  <div class={horizontal ? 'flex flex-wrap gap-6' : 'grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6'}>
+    <div class={horizontal ? 'flex-1 min-w-[180px]' : ''}>
       <p class="font-mono text-label uppercase text-ink mb-1">Ce qui compte</p>
       <p class="font-body text-body text-ink">{produit.pourQui}</p>
     </div>
-    <div>
+    <div class={horizontal ? 'flex-1 min-w-[180px]' : ''}>
       <p class="font-mono text-label uppercase text-ink mb-1">Ce qui ne compte pas</p>
       <p class="font-body text-body text-ink">{produit.contreQui}</p>
     </div>
   </div>
 
-  <div class="mb-6">
+  <div class={horizontal ? 'flex-none' : 'mb-6'}>
     <TrancheBudget prixIndicatif={produit.prixIndicatif} />
   </div>
 
-  <div class="space-y-3">
+  <div class={`space-y-3 ${horizontal ? 'flex-1 min-w-[200px]' : ''}`}>
     <CTAAffilie url={produit.urlMarchand} marchand={produit.marchand} />
     <EncartTransparence />
   </div>
