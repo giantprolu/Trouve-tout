@@ -90,13 +90,11 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
               <span id="vedette-temps" class="font-mono text-data text-ink/55">{tempsLectureGuide(guideVedette)} min de lecture</span>
             </div>
           </div>
-          <div class="flex-1 min-w-[220px] min-h-[280px] rounded-lg bg-white flex items-center justify-center p-4">
-            {imageVedette ? (
+          {imageVedette && (
+            <div class="flex-1 min-w-[220px] min-h-[280px] rounded-lg bg-white flex items-center justify-center p-4">
               <img id="vedette-image" src={imageTaille(imageVedette, 700)} width="280" height="280" alt="" loading="eager" decoding="async" class="max-h-[280px] w-auto object-contain" />
-            ) : (
-              <div id="vedette-image-vide" class="h-full w-full rounded-lg bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_14px,#F0F3E8_14px,#F0F3E8_28px)]"></div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         <div class="flex flex-wrap gap-4">
@@ -142,14 +140,12 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
           class="flex-1 min-h-[300px] rounded-tile bg-[repeating-linear-gradient(45deg,#DCE1D2,#DCE1D2_16px,#E8ECDD_16px,#E8ECDD_32px)] shadow-tile p-6 flex flex-col gap-4 justify-between transition hover:-translate-y-0.5"
         >
           <div class="flex items-start justify-between gap-3">
-            {imageSecondaire ? (
+            {imageSecondaire && (
               <span class="h-16 w-16 flex-none rounded bg-white/90 flex items-center justify-center p-1.5">
                 <img id="secondaire-image" src={imageTaille(imageSecondaire, 200)} width="64" height="64" alt="" loading="lazy" decoding="async" class="max-h-full max-w-full object-contain" />
               </span>
-            ) : (
-              <span id="secondaire-image-vide" class="h-16 w-16 flex-none rounded bg-white/60"></span>
             )}
-            <span class="grid h-11 w-11 flex-none place-items-center rounded-full bg-card text-ink" aria-hidden="true">↗</span>
+            <span class="grid h-11 w-11 flex-none place-items-center rounded-full bg-card text-ink ml-auto" aria-hidden="true">↗</span>
           </div>
           <span>
             <span id="secondaire-titre" class="block font-display font-bold text-display-m text-ink">{guideSecondaire.titre}</span>

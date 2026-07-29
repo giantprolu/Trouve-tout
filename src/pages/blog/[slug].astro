@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import EnteteCoque from '../../components/EnteteCoque.astro';
 import TableauComparatif from '../../components/TableauComparatif.astro';
 import EncartPub from '../../components/EncartPub.astro';
+import { imageTaille } from '../../lib/image';
 import {
   getGuideBySlug,
   guides,
@@ -73,7 +74,11 @@ export function getStaticPaths() {
               )}
             </div>
           </div>
-          <div class="flex-1 min-w-[240px] min-h-[280px] rounded-lg bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_14px,#F0F3E8_14px,#F0F3E8_28px)]"></div>
+          {produitRecommande?.image && (
+            <div class="flex-1 min-w-[240px] min-h-[280px] rounded-lg bg-white flex items-center justify-center p-4">
+              <img src={imageTaille(produitRecommande.image, 700)} width="240" height="240" alt="" loading="eager" decoding="async" class="max-h-[280px] w-auto object-contain" />
+            </div>
+          )}
         </div>
 
         {guide.sections.map((s) => (
