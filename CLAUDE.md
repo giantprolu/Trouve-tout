@@ -39,10 +39,15 @@ pour le suivi.
 
 ## Prix
 
-N'affiche jamais un prix exact. Amazon comme Awin l'interdisent sans flux
-temps réel, et un prix figé devient faux en quelques jours. Affiche des
-tranches de budget (`trancheBudget()`). Le montant indicatif peut rester dans
-les données pour le filtrage, jamais dans le rendu.
+Le prix exact est affiché (`formaterPrix()`), décision explicite prise le
+2026-07-29 malgré le risque documenté : Amazon comme Awin interdisent
+officiellement un prix figé sans flux temps réel, et un prix figé devient
+faux en quelques jours. Ce risque est assumé sciemment, pas oublié — si un
+prix affiché ne correspond plus à la fiche marchand, ce n'est pas un bug,
+c'est le compromis accepté. `prixIndicatif` vient du dernier export CSV
+marchand disponible ; il n'y a pas de flux temps réel, donc pas de mécanisme
+de rafraîchissement automatique — retraiter un nouveau CSV est aujourd'hui le
+seul moyen de mettre les prix à jour.
 
 ## Données structurées
 

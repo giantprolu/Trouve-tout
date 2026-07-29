@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import EnteteCoque from '../../components/EnteteCoque.astro';
 import TableauComparatif from '../../components/TableauComparatif.astro';
 import TrancheBudget from '../../components/TrancheBudget.astro';
+import { imageTaille } from '../../lib/image';
 import CTAAffilie from '../../components/CTAAffilie.astro';
 import EncartTransparence from '../../components/EncartTransparence.astro';
 import Cote from '../../components/Cote.astro';
@@ -83,7 +84,7 @@ export function getStaticPaths() {
           </div>
           <div class="flex-1 min-w-[260px] min-h-[300px] rounded-lg bg-white flex items-center justify-center p-4">
             {produit.image ? (
-              <img src={produit.image} alt={produit.nom} class="max-h-[280px] w-auto object-contain" />
+              <img src={imageTaille(produit.image, 900)} width="280" height="280" alt={produit.nom} class="max-h-[280px] w-auto object-contain" decoding="async" />
             ) : (
               <div class="h-full w-full rounded-lg bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_14px,#F0F3E8_14px,#F0F3E8_28px)] flex items-end justify-center p-4">
                 <span class="font-mono text-label text-line bg-white/90 rounded-full px-3.5 py-1.5">photo à venir</span>

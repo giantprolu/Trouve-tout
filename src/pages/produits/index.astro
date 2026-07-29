@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { categories, getProduitsByCategorie } from '../../lib/data';
-import { trancheBudget } from '../../lib/affiliation';
+import { formaterPrix } from '../../lib/affiliation';
 
 export const prerender = true;
 ---
@@ -26,7 +26,7 @@ export const prerender = true;
                 <span class="font-body text-body font-semibold text-ink group-hover:text-accent transition-colors">
                   {p.nom}
                 </span>
-                <span class="font-mono text-data text-ink shrink-0">{trancheBudget(p.prixIndicatif)}</span>
+                <span class="font-mono text-data text-ink shrink-0">{formaterPrix(p.prixIndicatif)}</span>
               </a>
             </li>
           ))}

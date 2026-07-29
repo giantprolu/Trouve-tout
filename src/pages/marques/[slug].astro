@@ -3,6 +3,8 @@ import Layout from '../../layouts/Layout.astro';
 import EnteteCoque from '../../components/EnteteCoque.astro';
 import TableauComparatif from '../../components/TableauComparatif.astro';
 import VerdictProduit from '../../components/VerdictProduit.astro';
+import LogoMarque from '../../components/LogoMarque.astro';
+import EncartPub from '../../components/EncartPub.astro';
 import {
   getMarqueBySlug,
   getProduitsByMarque,
@@ -39,8 +41,8 @@ export function getStaticPaths() {
             </h1>
             <p class="mt-4 max-w-[460px] text-body-lg text-ink/70">{marque.description}</p>
           </div>
-          <div class="flex-1 min-w-[240px] min-h-[200px] rounded-lg bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_14px,#F0F3E8_14px,#F0F3E8_28px)] flex items-center justify-center p-4">
-            <span class="font-mono text-label text-line bg-white/90 rounded-full px-3.5 py-1.5">logo {marque.nom}</span>
+          <div class="flex-1 min-w-[240px] min-h-[200px] rounded-lg bg-white flex items-center justify-center p-4">
+            <LogoMarque slug={marque.slug} nom={marque.nom} size={96} />
           </div>
         </div>
 
@@ -82,6 +84,7 @@ export function getStaticPaths() {
             <span class="mt-2 block text-body text-ink/70">Trois questions et on tranche pour toi.</span>
           </span>
         </a>
+        <EncartPub slot="1077057729" class="flex-1 min-h-[250px]" />
       </div>
     </div>
   </section>

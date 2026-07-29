@@ -1,7 +1,8 @@
 ---
 import type { Produit } from '../lib/data';
 import { niveauConfiance, SEGMENT_LABEL } from '../lib/data';
-import { trancheBudget } from '../lib/affiliation';
+import { formaterPrix } from '../lib/affiliation';
+import { imageTaille } from '../lib/image';
 import CTAAffilie from './CTAAffilie.astro';
 import Cote from './Cote.astro';
 
@@ -38,7 +39,7 @@ const slugRecommande = produits.reduce((meilleur, p) =>
             <td class="px-3 py-4">
               <a href={`/produits/${p.slug}`} class="block h-12 w-12 rounded bg-white overflow-hidden">
                 {p.image ? (
-                  <img src={p.image} alt="" loading="lazy" class="h-full w-full object-contain" />
+                  <img src={imageTaille(p.image, 120)} width="48" height="48" alt="" loading="lazy" decoding="async" class="h-full w-full object-contain" />
                 ) : (
                   <span class="block h-full w-full bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_4px,#F0F3E8_4px,#F0F3E8_8px)]"></span>
                 )}
@@ -50,7 +51,7 @@ const slugRecommande = produits.reduce((meilleur, p) =>
               </a>
             </td>
             <td class="text-right px-3 py-4 font-mono text-data text-ink whitespace-nowrap">
-              {trancheBudget(p.prixIndicatif)}
+              {formaterPrix(p.prixIndicatif)}
             </td>
             <td class="px-3 py-4">
               <Cote valeur={score} max={10} label={`${score}/10`} class="mx-auto max-w-[8rem]" />
