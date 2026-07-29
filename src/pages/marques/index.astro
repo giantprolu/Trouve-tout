@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import EnteteCoque from '../../components/EnteteCoque.astro';
 import { marques, getProduitsByMarque } from '../../lib/data';
+import LogoMarque from '../../components/LogoMarque.astro';
 
 export const prerender = true;
 ---
@@ -17,7 +18,7 @@ export const prerender = true;
         Toutes les marques
       </h1>
       <p class="mt-4 max-w-[520px] text-body-lg text-ink/70">
-        Quatre marques, quatre positionnements différents — jamais la même conclusion pour tout le monde.
+        {marques.length} marques, {marques.length} positionnements différents — jamais la même conclusion pour tout le monde.
       </p>
     </div>
 
@@ -30,7 +31,10 @@ export const prerender = true;
             class={`${i === 0 ? 'flex-[2] min-w-[320px]' : 'flex-1 min-w-[260px]'} rounded-tile bg-card shadow-tile p-6 sm:p-7 flex flex-col justify-between gap-6 transition hover:-translate-y-0.5 hover:shadow-tile-hover`}
           >
             <div>
-              <span class="font-mono text-label uppercase text-accent">{m.positionnement}</span>
+              <div class="flex items-center gap-3">
+                <LogoMarque slug={m.slug} nom={m.nom} size={36} />
+                <span class="font-mono text-label uppercase text-accent">{m.positionnement}</span>
+              </div>
               <p class="mt-4 font-display font-bold text-display-m text-ink">{m.nom}</p>
               <p class="mt-2 text-body text-ink/70">{m.description}</p>
             </div>

@@ -1,0 +1,32 @@
+---
+/**
+ * Logo de marque. Seul Bosch a un vrai logo (Simple Icons, licence libre,
+ * /public/logos). Les autres marques (Makita, Ryobi, Dewalt, Stanley, Facom,
+ * Einhell) n'existent pas dans ce jeu d'icônes — plutôt que d'aller chercher
+ * des logos officiels sans source fiable, on retombe sur un traitement
+ * typographique avec les tokens déjà définis (aucune couleur inventée).
+ */
+interface Props {
+  slug: string;
+  nom: string;
+  size?: number;
+  class?: string;
+}
+const { slug, nom, size = 64, class: className = '' } = Astro.props;
+
+const LOGOS_REELS: Record<string, string> = {
+  bosch: '/logos/bosch.svg',
+};
+const logo = LOGOS_REELS[slug];
+---
+{logo ? (
+  <img src={logo} alt={`Logo ${nom}`} width={size} height={size} loading="lazy" decoding="async" class={`object-contain ${className}`} />
+) : (
+  <span
+    class={`inline-flex items-center justify-center rounded-full bg-ink text-bg font-logo font-extrabold uppercase ${className}`}
+    style={`width:${size}px; height:${size}px; font-size:${size * 0.34}px;`}
+    aria-label={`${nom} (pas de logo officiel disponible)`}
+  >
+    {nom.slice(0, 2)}
+  </span>
+)}

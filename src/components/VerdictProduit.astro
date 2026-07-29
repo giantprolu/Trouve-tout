@@ -1,6 +1,7 @@
 ---
 import type { Produit } from '../lib/data';
 import { niveauConfiance } from '../lib/data';
+import { imageTaille } from '../lib/image';
 import CTAAffilie from './CTAAffilie.astro';
 import EncartTransparence from './EncartTransparence.astro';
 import Cote from './Cote.astro';
@@ -20,7 +21,7 @@ const score = Math.round(niveauConfiance(produit) * 10);
 
   {produit.image && (
     <div class="mb-4 h-32 rounded bg-white flex items-center justify-center">
-      <img src={produit.image} alt={produit.nom} class="max-h-full max-w-full object-contain" loading="lazy" />
+      <img src={imageTaille(produit.image, 260)} width="128" height="128" alt={produit.nom} class="max-h-full max-w-full object-contain" loading="lazy" decoding="async" />
     </div>
   )}
 

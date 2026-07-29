@@ -26,7 +26,7 @@ export interface Produit {
   nom: string;
   marqueSlug: string;
   categorieSlug: string;
-  /** Ordre de grandeur, usage INTERNE (filtrage budget). Jamais affiche tel quel. */
+  /** Prix constate chez le marchand au moment de la redaction. Affiche tel quel (formaterPrix) : peut devenir obsolete, voir CLAUDE.md section "Prix". */
   prixIndicatif: number;
   segment: 'meilleur_rapport' | 'milieu' | 'moins_cher';
   qualite: number;

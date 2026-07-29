@@ -62,13 +62,11 @@ export const nomMarchand: Record<Marchand, string> = {
 };
 
 /**
- * Tranche de budget affichée à la place d'un prix exact.
- *
- * Amazon comme Awin interdisent d'afficher un prix figé : il devient faux en
- * quelques jours et engage ta responsabilité. On affiche une fourchette, qui
- * reste utile au lecteur sans jamais mentir.
+ * Tranche de budget — encore utilisée pour positionner le curseur sur la
+ * jauge visuelle (TrancheBudget), mais plus affichée telle quelle comme
+ * texte : voir formaterPrix ci-dessous.
  */
-export function trancheBudget(prixIndicatif: number): string {
+function trancheBudget(prixIndicatif: number): string {
   if (prixIndicatif < 80) return 'moins de 80 €';
   if (prixIndicatif < 150) return '80 – 150 €';
   if (prixIndicatif < 250) return '150 – 250 €';
@@ -79,10 +77,7 @@ export function trancheBudget(prixIndicatif: number): string {
 /** Les 5 tranches affichées sur la jauge horizontale, dans l'ordre. */
 export const BORNES_BUDGET = [80, 150, 250, 400] as const;
 
-/**
- * Position du produit sur la jauge de budget (composant TrancheBudget).
- * `index` sert à mettre en évidence le bon segment, jamais à afficher le prix.
- */
+/** Position du produit sur la jauge de budget (composant TrancheBudget). */
 export function segmentBudget(prixIndicatif: number): { index: number; total: number; label: string } {
   const total = BORNES_BUDGET.length + 1;
   const index = BORNES_BUDGET.findIndex((borne) => prixIndicatif < borne);
@@ -91,4 +86,14 @@ export function segmentBudget(prixIndicatif: number): { index: number; total: nu
     total,
     label: trancheBudget(prixIndicatif),
   };
+}
+
+/**
+ * Prix exact affiché tel quel — décision explicite du 2026-07-29 qui déroge
+ * à la règle "jamais de prix figé" de CLAUDE.md (le prix vient du dernier
+ * export CSV marchand et peut donc être obsolète en quelques jours). Voir
+ * la section "Prix" de CLAUDE.md pour le contexte complet de cet arbitrage.
+ */
+export function formaterPrix(prixIndicatif: number): string {
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(prixIndicatif);
 }
