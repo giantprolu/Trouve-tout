@@ -27,9 +27,21 @@ export const GET: APIRoute = () => {
     url('/confidentialite', '0.2', 'yearly'),
   ];
 
-  const catPages = categories.map(c => url(`/categories/${c.slug}`, '0.8', 'weekly'));
-  const marquePages = marques.map(m => url(`/marques/${m.slug}`, '0.7', 'weekly'));
-  const produitPages = produits.map(p => url(`/produits/${p.slug}`, '0.6', 'monthly'));
+  // Une fiche produit n'est indexable que lorsqu'elle pointe vers une vraie
+  // page marchand relue (verifie: true) — voir la règle d'honnêteté du
+  // contenu dans CLAUDE.md. Tant que ce n'est pas le cas, la page existe
+  // (accessible en direct) mais ne doit pas être poussée à Google.
+  const produitsVerifies = produits.filter(p => p.verifie);
+  const categoriesAvecProduitVerifie = new Set(produitsVerifies.map(p => p.categorieSlug));
+  const marquesAvecProduitVerifie = new Set(produitsVerifies.map(p => p.marqueSlug));
+
+  const catPages = categories
+    .filter(c => categoriesAvecProduitVerifie.has(c.slug))
+    .map(c => url(`/categories/${c.slug}`, '0.8', 'weekly'));
+  const marquePages = marques
+    .filter(m => marquesAvecProduitVerifie.has(m.slug))
+    .map(m => url(`/marques/${m.slug}`, '0.7', 'weekly'));
+  const produitPages = produitsVerifies.map(p => url(`/produits/${p.slug}`, '0.6', 'monthly'));
   const guidePages = guides.map(g => url(`/blog/${g.slug}`, '0.7', 'monthly'));
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
