@@ -55,7 +55,7 @@ export function getStaticPaths() {
 
         <div class="rounded-tile bg-card shadow-tile p-6 sm:p-8">
           <h2 class="m-0 mb-6 font-display font-bold text-display-m text-ink">Détail de chaque modèle</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {produitsDuMarque.map((p, i) => (
               <VerdictProduit produit={p} numero={i + 1} />
             ))}

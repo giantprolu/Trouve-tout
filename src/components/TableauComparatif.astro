@@ -37,13 +37,11 @@ const slugRecommande = produits.reduce((meilleur, p) =>
         return (
           <tr class={`${fond} ${estRecommande ? 'border-l-2 border-accent' : ''}`}>
             <td class="px-3 py-4">
-              <a href={`/produits/${p.slug}`} class="block h-12 w-12 rounded bg-white overflow-hidden">
-                {p.image ? (
+              {p.image && (
+                <a href={`/produits/${p.slug}`} class="block h-12 w-12 rounded bg-white overflow-hidden">
                   <img src={imageTaille(p.image, 120)} width="48" height="48" alt="" loading="lazy" decoding="async" class="h-full w-full object-contain" />
-                ) : (
-                  <span class="block h-full w-full bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_4px,#F0F3E8_4px,#F0F3E8_8px)]"></span>
-                )}
-              </a>
+                </a>
+              )}
             </td>
             <td class="px-4 py-4">
               <a href={`/produits/${p.slug}`} class="font-body font-semibold text-ink hover:text-accent transition-colors">

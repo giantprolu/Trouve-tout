@@ -63,13 +63,11 @@ export function getStaticPaths() {
               </div>
             )}
           </div>
-          <div class="flex-1 min-w-[240px] min-h-[240px] rounded-lg bg-white flex items-center justify-center p-4">
-            {produitVedette ? (
+          {produitVedette && (
+            <div class="flex-1 min-w-[240px] min-h-[240px] rounded-lg bg-white flex items-center justify-center p-4">
               <img src={imageTaille(produitVedette.image!, 700)} width="240" height="240" alt="" loading="eager" decoding="async" class="max-h-[240px] w-auto object-contain" />
-            ) : (
-              <div class="h-full w-full rounded-lg bg-[repeating-linear-gradient(45deg,#E3E7DA,#E3E7DA_14px,#F0F3E8_14px,#F0F3E8_28px)]"></div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {marquesListe.map((marque) => {

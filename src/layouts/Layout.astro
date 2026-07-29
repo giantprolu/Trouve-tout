@@ -91,7 +91,7 @@ const fullTitle = `${title} — Trouve-Tout`;
 
     {!hideHeader && (
       <header class="border-b border-line/40">
-        <nav class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-6">
+        <nav class="max-w-[1600px] mx-auto px-4 sm:px-6 py-4 flex items-center gap-6">
           <a href="/" aria-label="Trouve-Tout — accueil"><Logo size={30} /></a>
           <div class="hidden sm:flex items-center gap-6 font-mono text-label uppercase text-ink">
             <a href="/categories" class="hover:text-accent transition-colors">Catégories</a>
@@ -108,12 +108,12 @@ const fullTitle = `${title} — Trouve-Tout`;
       </header>
     )}
 
-    <main id="contenu" class="max-w-6xl mx-auto px-4 sm:px-6 flex-1 w-full py-8">
+    <main id="contenu" class="max-w-[1600px] mx-auto px-4 sm:px-6 flex-1 w-full py-8">
       <slot />
     </main>
 
     <footer class="mt-16 border-t border-line/40 py-8 px-4">
-      <div class="max-w-6xl mx-auto space-y-4 font-mono text-data text-ink">
+      <div class="max-w-[1600px] mx-auto space-y-4 font-mono text-data text-ink">
         <div class="flex flex-col sm:flex-row justify-between gap-4">
           <div>© {new Date().getFullYear()} Trouve-Tout · Guides d'achat outillage indépendants</div>
           <div class="flex flex-wrap gap-4">
