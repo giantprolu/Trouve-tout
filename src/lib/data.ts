@@ -26,7 +26,7 @@ export interface Produit {
   nom: string;
   marqueSlug: string;
   categorieSlug: string;
-  /** Prix constate chez le marchand au moment de la redaction. Affiche tel quel (formaterPrix) : peut devenir obsolete, voir CLAUDE.md section "Prix". */
+  /** Prix constate chez le marchand au moment de la redaction. Affiche en fourchette de 50 € max (fourchettePrix) : peut devenir obsolete, voir CLAUDE.md section "Prix". */
   prixIndicatif: number;
   segment: 'meilleur_rapport' | 'milieu' | 'moins_cher';
   qualite: number;

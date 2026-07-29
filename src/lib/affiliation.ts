@@ -88,12 +88,26 @@ export function segmentBudget(prixIndicatif: number): { index: number; total: nu
   };
 }
 
-/**
- * Prix exact affiché tel quel — décision explicite du 2026-07-29 qui déroge
- * à la règle "jamais de prix figé" de CLAUDE.md (le prix vient du dernier
- * export CSV marchand et peut donc être obsolète en quelques jours). Voir
- * la section "Prix" de CLAUDE.md pour le contexte complet de cet arbitrage.
- */
+/** Formatage brut d'un montant — utilisé pour des bornes déjà réelles (ex. min/max d'une catégorie), pas pour le prix d'un produit isolé. */
 export function formaterPrix(prixIndicatif: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(prixIndicatif);
+}
+
+/** Largeur maximale de la fourchette affichée pour le prix d'un produit. */
+const LARGEUR_FOURCHETTE = 50;
+
+/**
+ * Fourchette de prix centrée sur le prixIndicatif — décision du 2026-07-29
+ * qui remplace l'affichage du prix exact (voir section "Prix" de CLAUDE.md) :
+ * le prix vient d'un export CSV marchand figé et peut devenir faux en
+ * quelques jours, la fourchette absorbe cette dérive sans jamais dépasser
+ * 50 € d'écart.
+ */
+export function fourchettePrix(prixIndicatif: number): string {
+  const demiLargeur = LARGEUR_FOURCHETTE / 2;
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n);
+  const basse = Math.max(0, Math.round(prixIndicatif - demiLargeur));
+  const haute = Math.round(prixIndicatif + demiLargeur);
+  return `${fmt(basse)} – ${fmt(haute)}`;
 }

@@ -7,7 +7,7 @@
  */
 import type { Produit } from '../lib/data';
 import { SEGMENT_LABEL } from '../lib/data';
-import { formaterPrix } from '../lib/affiliation';
+import { fourchettePrix } from '../lib/affiliation';
 import { imageTaille } from '../lib/image';
 import { getMarqueBySlug } from '../lib/data';
 import CTAAffilie from './CTAAffilie.astro';
@@ -35,7 +35,7 @@ const { produits } = Astro.props;
             {marque && <p class="m-0 font-mono text-label uppercase text-ink/55">{marque.nom}</p>}
             <p class="m-0 mt-1 font-display font-bold text-body text-ink leading-snug hover:text-accent transition-colors">{p.nom}</p>
           </div>
-          <p class="m-0 font-mono text-data font-semibold text-ink">{formaterPrix(p.prixIndicatif)}</p>
+          <p class="m-0 font-mono text-data font-semibold text-ink">{fourchettePrix(p.prixIndicatif)}</p>
         </a>
         <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir le produit" />
       </div>
