@@ -48,7 +48,7 @@ const score = Math.round(niveauConfiance(produit) * 10);
   </div>
 
   <div class={horizontal ? 'flex-none' : 'mb-6'}>
-    <TrancheBudget prixIndicatif={produit.prixIndicatif} />
+    <TrancheBudget produit={produit} />
   </div>
 
   <div class={`space-y-3 ${horizontal ? 'flex-1 min-w-[200px]' : ''}`}>

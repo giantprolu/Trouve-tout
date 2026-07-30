@@ -1,19 +1,22 @@
 ---
-import { segmentBudget, BORNES_BUDGET, fourchettePrix } from '../lib/affiliation';
+import { segmentBudget, BORNES_BUDGET, prixActuel, prixAffichage } from '../lib/affiliation';
+import type { Produit } from '../lib/data';
 import Cote from './Cote.astro';
 
 /**
  * Bandeau de prix gradué — design-system.md §6.
- * Affiche une fourchette de 50 € max autour du prix constaté (decision du
- * 2026-07-29, voir CLAUDE.md section "Prix") ; la jauge garde son utilite
- * visuelle pour situer ce prix parmi les autres produits de la selection.
+ * Affiche le prix exact quand une synchronisation Awin fraîche existe, sinon
+ * une fourchette de 50 € max autour du prix constaté (voir CLAUDE.md section
+ * "Prix") ; la jauge garde son utilite visuelle pour situer ce prix parmi
+ * les autres produits de la selection.
  */
 interface Props {
-  prixIndicatif: number;
+  produit: Pick<Produit, 'slug' | 'prixIndicatif'>;
 }
-const { prixIndicatif } = Astro.props;
-const { index, total } = segmentBudget(prixIndicatif);
-const prixFormate = fourchettePrix(prixIndicatif);
+const { produit } = Astro.props;
+const { valeur, exact } = prixActuel(produit);
+const { index, total } = segmentBudget(valeur);
+const prixFormate = prixAffichage(produit);
 const segmentPct = 100 / total;
 const centrePct = segmentPct * index + segmentPct / 2;
 const debutPct = segmentPct * index;
@@ -32,5 +35,9 @@ const debutPct = segmentPct * index;
     <span>{BORNES_BUDGET[BORNES_BUDGET.length - 1]} €</span>
   </div>
 
-  <p class="mt-2 text-small text-ink">Fourchette basée sur le prix constaté chez le marchand au moment de la rédaction — le prix exact peut avoir changé depuis.</p>
+  <p class="mt-2 text-small text-ink">
+    {exact
+      ? 'Prix constaté chez le marchand, synchronisé automatiquement.'
+      : 'Fourchette basée sur le prix constaté chez le marchand au moment de la rédaction — le prix exact peut avoir changé depuis.'}
+  </p>
 </div>
