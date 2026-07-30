@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@astrojs/tailwind": "^6.0.2",
+    "csv-parse": "^7.0.1",
     "tailwindcss": "^3.4.19"
   }
 }

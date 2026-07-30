@@ -1,7 +1,7 @@
 ---
 import type { Produit } from '../lib/data';
 import { niveauConfiance, SEGMENT_LABEL } from '../lib/data';
-import { fourchettePrix } from '../lib/affiliation';
+import { prixAffichage } from '../lib/affiliation';
 import { imageTaille } from '../lib/image';
 import CTAAffilie from './CTAAffilie.astro';
 
@@ -46,7 +46,7 @@ const slugRecommande = produits.reduce((meilleur, p) =>
               </a>
             </td>
             <td class="text-right px-3 py-4 font-mono text-data text-ink whitespace-nowrap">
-              {fourchettePrix(p.prixIndicatif)}
+              {prixAffichage(p)}
             </td>
             <td class="text-right px-3 py-4 font-mono text-data text-ink">
               {SEGMENT_LABEL[p.segment]}

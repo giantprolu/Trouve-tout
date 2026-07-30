@@ -39,23 +39,42 @@ pour le suivi.
 
 ## Prix
 
-Le prix d'un produit s'affiche en fourchette (`fourchettePrix()`), centrée
-sur `prixIndicatif` avec un écart maximum de 50 €, décision prise le
-2026-07-29 qui remplace l'affichage du prix exact décidé plus tôt le même
-jour : `prixIndicatif` vient d'un export CSV marchand figé, sans flux temps
-réel, donc un prix exact devient faux en quelques jours — la fourchette
-absorbe cette dérive au lieu de l'exposer telle quelle. `formaterPrix()`
-reste utilisée uniquement pour des bornes déjà réelles (ex. min/max de prix
-d'une catégorie), jamais pour le prix d'un produit isolé. Il n'y a toujours
-pas de flux temps réel, donc pas de mécanisme de rafraîchissement
-automatique — retraiter un nouveau CSV est aujourd'hui le seul moyen de
-mettre les prix à jour.
+Le prix affiché vient de `prixActuel()`/`prixAffichage()`
+(`src/lib/affiliation.ts`) : prix exact si le produit a été synchronisé avec
+le flux Awin/ManoMano il y a moins de 72 h, fourchette (`fourchettePrix()`,
+écart max 50 €) sinon — décision du 2026-07-30 qui affine celle du
+2026-07-29 (prix exact proscrit). La fourchette existait parce que
+`prixIndicatif` venait d'un export CSV figé sans rafraîchissement : ce
+rafraîchissement existe désormais (voir "Synchronisation des prix"), donc
+un prix exact n'est plus une promesse en l'air — seulement quand la
+fraîcheur est vérifiée. Ne jamais afficher `prixIndicatif` brut ni appeler
+`formaterPrix()` directement dessus : `formaterPrix()` reste réservée aux
+bornes déjà réelles (ex. min/max de prix d'une catégorie), tout le reste
+passe par `prixActuel()`/`prixAffichage()`, seuls points qui savent si la
+fraîcheur est garantie.
+
+## Synchronisation des prix
+
+`scripts/sync-prix.mjs`, lancé deux fois par jour (8h/12h heure de Paris) par
+`.github/workflows/sync-prix.yml` (+ déclenchement manuel), télécharge le
+flux produit Awin (annonceur ManoMano FR 17547, URL dans le secret
+`AWIN_FEED_URL`) et régénère `src/data/prix-synchronises.json` — fichier
+généré, à ne jamais éditer à la main. Le matching se fait via le `p=<id>`
+déjà présent dans chaque `urlMarchand` (= colonne `aw_product_id` du flux),
+donc aucun identifiant supplémentaire à saisir par fiche. Le workflow commit
+et pousse directement sur `main` s'il y a un changement, ce qui déclenche un
+redéploiement Vercel automatique : exception assumée à la règle "ne pas
+déployer en production" ci-dessous, qui vise les actions manuelles de
+l'assistant, pas ce pipeline construit explicitement pour ça.
 
 ## Données structurées
 
-`Product` avec nom, description et marque, c'est tout. Pas de bloc `offers`
-sans flux marchand réel. Pas d'`aggregateRating` : une note maison avec
-`ratingCount: 1` est un avis auto-attribué, sanctionné par Google.
+`Product` avec nom, description et marque, plus `gtin13` et `offers` quand
+`prixActuel()` renvoie un prix exact — jamais avec une fourchette ou un prix
+approximatif : le prix et la disponibilité déclarés dans `offers` doivent
+toujours correspondre exactement à ce qui est affiché sur la page, sinon
+Google sanctionne le mismatch. Pas d'`aggregateRating` : une note maison
+avec `ratingCount: 1` est un avis auto-attribué, sanctionné par Google.
 
 ## Rendu
 
@@ -85,6 +104,7 @@ Ne pas fusionner `dev` dans `main`/`refonte` sans accord explicite (espace
 admin, routes API et comparateur de `dev` ont été jugés hors-scope : ils
 supposent une base Supabase que ce projet n'a plus, et un comparateur va à
 l'encontre du parti pris éditorial des guides). Ne pas déployer en
-production. Ne pas ajouter de dépendance sans justification. Ne pas remplir
+production (exception assumée : `sync-prix.yml`, voir "Synchronisation des
+prix"). Ne pas ajouter de dépendance sans justification. Ne pas remplir
 les mentions légales avec des informations plausibles : laisser les
 emplacements `[À COMPLÉTER]` vides et les signaler.

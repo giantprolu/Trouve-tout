@@ -169,7 +169,7 @@ const prioriteLabel = PRIORITES.find(p => p.valeur === valeurs.priorite)?.label 
                 </p>
                 <p class="mt-3 text-body text-ink/75 leading-[1.65]">{resultat.description}</p>
                 <div class="mt-9 max-w-[400px]">
-                  <TrancheBudget prixIndicatif={resultat.prixIndicatif} />
+                  <TrancheBudget produit={resultat} />
                 </div>
                 <div class="mt-8 flex flex-wrap items-center gap-4">
                   <CTAAffilie url={resultat.urlMarchand} marchand={resultat.marchand} />

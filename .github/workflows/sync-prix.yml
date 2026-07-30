@@ -1,0 +1,43 @@
+name: Synchronisation des prix ManoMano
+
+on:
+  schedule:
+    # GitHub Actions raisonne en UTC (pas de fuseau horaire natif) : 6h et 10h
+    # UTC correspondent à 8h et 12h heure de Paris en été (UTC+2). En hiver
+    # (UTC+1) ça glissera d'une heure vers 9h/13h jusqu'au prochain ajustement.
+    - cron: '0 6 * * *'
+    - cron: '0 10 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - run: node scripts/sync-prix.mjs
+        env:
+          AWIN_FEED_URL: ${{ secrets.AWIN_FEED_URL }}
+
+      - name: Commit et push si le flux a changé
+        run: |
+          if git diff --quiet -- src/data/prix-synchronises.json; then
+            echo "Aucun changement de prix."
+            exit 0
+          fi
+          git config user.name "trouve-tout-bot"
+          git config user.email "actions@github.com"
+          git add src/data/prix-synchronises.json
+          git commit -m "chore: sync prix ManoMano"
+          git push origin HEAD:main

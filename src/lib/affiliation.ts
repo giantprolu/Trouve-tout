@@ -10,6 +10,8 @@
  *   PUBLIC_AWIN_AFFILIATE_ID   → ton identifiant éditeur Awin (chiffres)
  *   PUBLIC_AMAZON_PARTNER_TAG  → optionnel, ton tag Amazon Partenaires
  */
+import type { Produit } from './data';
+import prixSynchronises from '../data/prix-synchronises.json';
 
 /** ID marchand ManoMano France sur Awin. */
 export const AWIN_MERCHANT_MANOMANO_FR = 17547;
@@ -110,4 +112,43 @@ export function fourchettePrix(prixIndicatif: number): string {
   const basse = Math.max(0, Math.round(prixIndicatif - demiLargeur));
   const haute = Math.round(prixIndicatif + demiLargeur);
   return `${fmt(basse)} – ${fmt(haute)}`;
+}
+
+/**
+ * Prix synchronisé automatiquement depuis le flux Awin/ManoMano — voir
+ * scripts/sync-prix.mjs. Le fichier est entièrement régénéré à chaque
+ * synchronisation, jamais édité à la main.
+ */
+const prixLive = prixSynchronises as Record<
+  string,
+  { prix: number; enStock: boolean; ean?: string; syncedAt: string }
+>;
+
+/**
+ * Marge sur la cadence de rafraîchissement du flux Awin (au mieux 24h côté
+ * marchand) : absorbe un run de cron manqué sans faire retomber la page sur
+ * la fourchette au moindre accroc.
+ */
+const FRAICHEUR_MAX_HEURES = 72;
+
+/**
+ * Décide si un produit a un prix exact fiable (synchronisation fraîche) ou
+ * s'il faut se replier sur la fourchette. Point de vérité unique : affichage
+ * et JSON-LD doivent tous deux passer par ici pour ne jamais se contredire
+ * (un écart entre le prix affiché et `offers.price` est sanctionné par
+ * Google — "price mismatch").
+ */
+export function prixActuel(
+  produit: Pick<Produit, 'slug' | 'prixIndicatif'>,
+): { valeur: number; exact: boolean; enStock?: boolean; ean?: string } {
+  const sync = prixLive[produit.slug];
+  const frais = sync && Date.now() - new Date(sync.syncedAt).getTime() < FRAICHEUR_MAX_HEURES * 3_600_000;
+  if (frais) return { valeur: sync.prix, exact: true, enStock: sync.enStock, ean: sync.ean };
+  return { valeur: produit.prixIndicatif, exact: false };
+}
+
+/** Prix exact si une synchronisation fraîche existe, fourchette sinon. */
+export function prixAffichage(produit: Pick<Produit, 'slug' | 'prixIndicatif'>): string {
+  const { valeur, exact } = prixActuel(produit);
+  return exact ? formaterPrix(valeur) : fourchettePrix(valeur);
 }
