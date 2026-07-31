@@ -17,7 +17,7 @@ import {
   niveauConfiance,
   SEGMENT_LABEL,
 } from '../../lib/data';
-import { prixActuel, lienAffilie } from '../../lib/affiliation';
+import { prixActuel, lienAffilie, imageActuelle } from '../../lib/affiliation';
 import { absoluteUrl } from '../../lib/site';
 
 const { slug } = Astro.params;
@@ -33,6 +33,7 @@ const guideCategorie = getGuidesByCategorie(produit.categorieSlug)[0];
 const backHref = guideCategorie ? `/blog/${guideCategorie.slug}` : `/categories/${produit.categorieSlug}`;
 const backLabel = guideCategorie ? `← Retour au guide ${categorie?.nom.toLowerCase()}` : `← Retour à ${categorie?.nom}`;
 const score = Math.round(niveauConfiance(produit) * 10);
+const image = imageActuelle(produit);
 
 // Schema.org Product JSON-LD
 const prix = prixActuel(produit);
@@ -120,9 +121,9 @@ const titre = produit.nom.length <= 40 ? `${produit.nom} — Avis et comparatif`
               <CTAAffilie url={produit.urlMarchand} marchand={produit.marchand} />
             </div>
           </div>
-          {produit.image && (
+          {image && (
             <div data-img-box class="flex-1 min-w-[260px] min-h-[300px] rounded-lg bg-white flex items-center justify-center p-4">
-              <img src={imageTaille(produit.image, 900)} width="280" height="280" alt={produit.nom} loading="eager" fetchpriority="high" class="max-h-[280px] w-auto object-contain" decoding="async" onerror="this.closest('[data-img-box]').style.display='none'" />
+              <img src={imageTaille(image, 900)} width="280" height="280" alt={produit.nom} loading="eager" fetchpriority="high" class="max-h-[280px] w-auto object-contain" decoding="async" onerror="this.closest('[data-img-box]').style.display='none'" />
             </div>
           )}
         </div>

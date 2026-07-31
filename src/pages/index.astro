@@ -9,7 +9,7 @@ import {
   tempsLectureGuide,
   niveauConfiance,
 } from '../lib/data';
-import { BORNES_BUDGET, formaterPrix } from '../lib/affiliation';
+import { BORNES_BUDGET, formaterPrix, imageActuelle } from '../lib/affiliation';
 import { imageTaille } from '../lib/image';
 
 export const prerender = true;
@@ -22,9 +22,10 @@ const guideVedette = getGuideBySlug('tondeuse-batterie-thermique-filaire')!;
 const guideSecondaire = getGuideBySlug('quelle-perceuse-visseuse-choisir')!;
 
 function imageRepresentative(categorieSlug: string): string | undefined {
-  return getProduitsByCategorie(categorieSlug)
-    .filter((p) => p.image)
-    .sort((a, b) => niveauConfiance(b) - niveauConfiance(a))[0]?.image;
+  const meilleur = getProduitsByCategorie(categorieSlug)
+    .filter((p) => imageActuelle(p))
+    .sort((a, b) => niveauConfiance(b) - niveauConfiance(a))[0];
+  return meilleur && imageActuelle(meilleur);
 }
 
 function bornesPrix(categorieSlug: string): { min: number; max: number } {

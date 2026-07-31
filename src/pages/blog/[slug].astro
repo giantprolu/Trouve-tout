@@ -4,6 +4,7 @@ import EnteteCoque from '../../components/EnteteCoque.astro';
 import CarrouselProduits from '../../components/CarrouselProduits.astro';
 import EncartPub from '../../components/EncartPub.astro';
 import { imageTaille } from '../../lib/image';
+import { imageActuelle } from '../../lib/affiliation';
 import { absoluteUrl } from '../../lib/site';
 import { dateDerniereModifDonnees } from '../../lib/fraicheur';
 import {
@@ -24,6 +25,7 @@ const produitsCategorie = getProduitsByCategorie(guide.categorieSlug)
   .slice()
   .sort((a, b) => niveauConfiance(b) - niveauConfiance(a));
 const produitRecommande = produitsCategorie[0];
+const imageRecommandee = produitRecommande && imageActuelle(produitRecommande);
 
 function ancre(titre: string): string {
   return titre.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -94,9 +96,9 @@ export function getStaticPaths() {
               )}
             </div>
           </div>
-          {produitRecommande?.image && (
+          {produitRecommande && imageRecommandee && (
             <div data-img-box class="flex-1 min-w-[240px] min-h-[280px] rounded-lg bg-white flex items-center justify-center p-4">
-              <img src={imageTaille(produitRecommande.image, 700)} width="240" height="240" alt={produitRecommande.nom} loading="eager" fetchpriority="high" decoding="async" class="max-h-[280px] w-auto object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
+              <img src={imageTaille(imageRecommandee, 700)} width="240" height="240" alt={produitRecommande.nom} loading="eager" fetchpriority="high" decoding="async" class="max-h-[280px] w-auto object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
             </div>
           )}
         </div>
