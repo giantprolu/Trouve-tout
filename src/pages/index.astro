@@ -81,7 +81,7 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
           </div>
           {imageVedette && (
             <div data-img-box class="flex-1 min-w-[220px] min-h-[280px] rounded-lg bg-white flex items-center justify-center p-4">
-              <img src={imageTaille(imageVedette, 700)} width="280" height="280" alt={guideVedette.titre} loading="eager" fetchpriority="high" decoding="async" class="max-h-[280px] w-auto object-contain" onload="window.signalerImageFallbackSiNoimage(this)" />
+              <img src={imageTaille(imageVedette, 700)} width="280" height="280" alt={guideVedette.titre} loading="eager" fetchpriority="high" decoding="async" class="max-h-[280px] w-auto object-contain" onload="window.masquerSiNoimage(this)" />
             </div>
           )}
         </div>
@@ -130,7 +130,7 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
           <div class="flex items-start justify-between gap-3">
             {imageSecondaire && (
               <span data-img-box class="h-16 w-16 flex-none rounded bg-white/90 flex items-center justify-center p-1.5">
-                <img src={imageTaille(imageSecondaire, 200)} width="64" height="64" alt={guideSecondaire.titre} loading="lazy" decoding="async" class="max-h-full max-w-full object-contain" onload="window.signalerImageFallbackSiNoimage(this)" />
+                <img src={imageTaille(imageSecondaire, 200)} width="64" height="64" alt={guideSecondaire.titre} loading="lazy" decoding="async" class="max-h-full max-w-full object-contain" onload="window.masquerSiNoimage(this)" />
               </span>
             )}
             <span class="grid h-11 w-11 flex-none place-items-center rounded-full bg-card text-ink ml-auto" aria-hidden="true">↗</span>

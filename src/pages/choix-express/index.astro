@@ -182,7 +182,7 @@ const prioriteLabel = PRIORITES.find(p => p.valeur === valeurs.priorite)?.label 
               </div>
               {imageResultat && (
                 <div data-img-box class="flex-1 min-w-[220px] min-h-[240px] rounded-lg bg-white flex items-center justify-center p-4">
-                  <img src={imageTaille(imageResultat, 500)} width="220" height="220" alt={resultat.nom} class="max-h-[220px] w-auto object-contain" decoding="async" onload="window.signalerImageFallbackSiNoimage(this)" />
+                  <img src={imageTaille(imageResultat, 500)} width="220" height="220" alt={resultat.nom} class="max-h-[220px] w-auto object-contain" decoding="async" onload="window.masquerSiNoimage(this)" />
                 </div>
               )}
             </div>

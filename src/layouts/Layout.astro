@@ -53,43 +53,22 @@ const fullTitle = `${title} — Trouve-Tout`;
     <link rel="preconnect" href="https://images2.productserve.com" crossorigin />
     <link rel="dns-prefetch" href="https://images2.productserve.com" />
 
-    <!-- Debug images cassées (diagnostic temporaire) : le cache Varnish
-         d'Awin sert parfois un fallback "noimage" périmé jusqu'à 31 jours
-         après la disparition du fichier source côté ManoMano, de façon
-         instable d'une requête à l'autre. Ce fallback arrive en 302 vers
-         /noimage.gif, qui se charge ensuite avec succès (200) : du point
-         de vue du <img>, c'est un chargement normal, aucun 'error' ne se
-         déclenche. /noimage.gif fait exactement 70×70px (vérifié), une
-         taille qu'aucune vraie photo produit n'utilise ici (toutes les
-         tailles demandées via imageTaille sont ≥120px) : comparer
-         naturalWidth/naturalHeight au chargement suffit à le repérer.
-         'erreur-reseau' se détecte via un listener 'error' délégué sur
-         window (capture) — fonctionne, vérifié en direct. En revanche
-         'load' sur <img> ne se propage PAS de façon fiable à un listener
-         délégué sur window même en capture (testé et reproduit en direct
-         sur cette prod : jamais déclenché, alors que error l'est) — d'où
-         le onload posé sur chaque <img> individuellement plutôt qu'un
-         listener global, voir les composants/pages qui l'utilisent.
-         Log console + événement Vercel Analytics pour repérer en prod
-         quelles fiches restent cassées sans devoir rouvrir les devtools
-         sur chaque page. À retirer une fois le problème résolu. -->
+    <!-- Filet de sécurité images : le cache Varnish d'Awin peut encore
+         parfois servir un fallback "noimage" (302 vers /noimage.gif, qui se
+         charge ensuite avec succès — aucun 'error' ne se déclenche) si le
+         fichier source disparaît côté ManoMano entre deux synchros. Masque
+         silencieusement la boîte plutôt que d'afficher le petit gif
+         "no image available". /noimage.gif fait exactement 70×70px, une
+         taille qu'aucune vraie photo produit n'utilise ici. -->
     <script is:inline>
-      function signalerImageCassee(img, raison) {
-        const box = img.closest('[data-img-box]');
-        if (!box) return;
-        const payload = { url: img.currentSrc || img.src, alt: img.alt, page: location.pathname, raison };
-        console.warn('[TT-IMG] image cassée', payload);
-        if (window.va) window.va('event', { name: 'image_cassee', data: payload });
-        box.style.display = 'none';
+      function masquerImageCassee(img) {
+        img.closest('[data-img-box]')?.style.setProperty('display', 'none');
       }
-      window.signalerImageFallbackSiNoimage = function (img) {
-        if (img.naturalWidth === 70 && img.naturalHeight === 70) signalerImageCassee(img, 'fallback-noimage');
+      window.masquerSiNoimage = function (img) {
+        if (img.naturalWidth === 70 && img.naturalHeight === 70) masquerImageCassee(img);
       };
-
       window.addEventListener('error', (e) => {
-        const img = e.target;
-        if (!img || img.tagName !== 'IMG' || !img.closest('[data-img-box]')) return;
-        signalerImageCassee(img, 'erreur-reseau');
+        if (e.target?.tagName === 'IMG') masquerImageCassee(e.target);
       }, true);
     </script>
 
