@@ -53,6 +53,30 @@ const fullTitle = `${title} — Trouve-Tout`;
     <link rel="preconnect" href="https://images2.productserve.com" crossorigin />
     <link rel="dns-prefetch" href="https://images2.productserve.com" />
 
+    <!-- Debug images cassées (diagnostic temporaire) : le cache Varnish
+         d'Awin sert parfois un fallback "noimage" périmé jusqu'à 31 jours
+         après la disparition du fichier source côté ManoMano, de façon
+         instable d'une requête à l'autre.
+         Log console + événement Vercel Analytics à chaque échec de
+         chargement pour repérer lesquelles restent cassées en prod, sans
+         devoir rouvrir les devtools sur chaque page. À retirer une fois le
+         problème résolu. Placé dans <head> (pas en fin de body) : les
+         images eager peuvent échouer avant que le parseur n'atteigne le
+         bas de la page, et 'error' sur <img> ne bubble pas — la capture
+         doit être posée avant le premier échec possible. -->
+    <script is:inline>
+      window.addEventListener('error', (e) => {
+        const img = e.target;
+        if (!img || img.tagName !== 'IMG') return;
+        const box = img.closest('[data-img-box]');
+        if (!box) return;
+        const payload = { url: img.currentSrc || img.src, alt: img.alt, page: location.pathname };
+        console.warn('[TT-IMG] échec de chargement', payload);
+        if (window.va) window.va('event', { name: 'image_cassee', data: payload });
+        box.style.display = 'none';
+      }, true);
+    </script>
+
     <!-- SEO -->
     <title>{fullTitle}</title>
     <meta name="description" content={description} />

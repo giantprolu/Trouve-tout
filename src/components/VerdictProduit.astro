@@ -24,7 +24,7 @@ const image = imageActuelle(produit);
 
   {image && (
     <div data-img-box class={`rounded bg-white flex items-center justify-center ${horizontal ? 'h-32 w-32 flex-none' : 'mb-4 h-32'}`}>
-      <img src={imageTaille(image, 260)} width="128" height="128" alt={produit.nom} class="max-h-full max-w-full object-contain" loading="lazy" decoding="async" onerror="this.closest('[data-img-box]').style.display='none'" />
+      <img src={imageTaille(image, 260)} width="128" height="128" alt={produit.nom} class="max-h-full max-w-full object-contain" loading="lazy" decoding="async" />
     </div>
   )}
 

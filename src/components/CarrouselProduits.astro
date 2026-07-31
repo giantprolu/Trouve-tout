@@ -29,7 +29,7 @@ const { produits } = Astro.props;
         <a href={`/produits/${p.slug}`} class="flex flex-1 flex-col gap-3">
           {image && (
             <div data-img-box class="flex h-28 items-center justify-center rounded bg-white p-2">
-              <img src={imageTaille(image, 260)} width="120" height="112" alt={p.nom} loading="lazy" decoding="async" class="max-h-full max-w-full object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
+              <img src={imageTaille(image, 260)} width="120" height="112" alt={p.nom} loading="lazy" decoding="async" class="max-h-full max-w-full object-contain" />
             </div>
           )}
           <div class="flex-1">
