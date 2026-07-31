@@ -16,52 +16,86 @@ const slugRecommande = produits.reduce((meilleur, p) =>
   niveauConfiance(p) > niveauConfiance(meilleur) ? p : meilleur
 , produits[0])?.slug;
 ---
-<div class="tableau-comparatif relative">
-  <div class="tableau-comparatif-scroll overflow-x-auto shadow-card rounded">
-    <table class="w-full text-body">
-      <thead>
-        <tr>
-          <th scope="col" class="px-3 py-3"><span class="sr-only">Photo</span></th>
-          <th scope="col" class="text-left px-4 py-3 font-display text-display-m lowercase text-ink">produit</th>
-          <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">budget</th>
-          <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">segment</th>
-          <th scope="col" class="px-3 py-3"><span class="sr-only">Lien marchand</span></th>
-        </tr>
-      </thead>
-      <tbody>
-        {produits.map((p, i) => {
-          const estRecommande = p.slug === slugRecommande;
-          const fond = estRecommande ? 'bg-surface' : i % 2 === 0 ? 'bg-bg' : 'bg-surface';
-          return (
-            <tr class={`${fond} ${estRecommande ? 'border-l-2 border-accent' : ''}`}>
-              <td class="px-3 py-4">
-                {p.image && (
-                  <a href={`/produits/${p.slug}`} data-img-box class="block h-12 w-12 rounded bg-white overflow-hidden">
-                    <img src={imageTaille(p.image, 120)} width="48" height="48" alt={p.nom} loading="lazy" decoding="async" class="h-full w-full object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
+<div class="tableau-comparatif">
+  <!-- Mobile (< sm) : liste de cartes empilées, aucun scroll horizontal requis. -->
+  <ul class="flex flex-col divide-y divide-line/30 shadow-card rounded sm:hidden">
+    {produits.map((p, i) => {
+      const estRecommande = p.slug === slugRecommande;
+      const fond = estRecommande ? 'bg-surface' : i % 2 === 0 ? 'bg-bg' : 'bg-surface';
+      return (
+        <li class={`${fond} ${estRecommande ? 'border-l-2 border-accent' : ''}`}>
+          <a href={`/produits/${p.slug}`} class="flex items-center gap-3 px-3 py-3">
+            {p.image && (
+              <span data-img-box class="block h-14 w-14 flex-none rounded bg-white overflow-hidden">
+                <img src={imageTaille(p.image, 120)} width="56" height="56" alt={p.nom} loading="lazy" decoding="async" class="h-full w-full object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
+              </span>
+            )}
+            <span class="min-w-0 flex-1">
+              <span class="block font-body font-semibold text-ink truncate">{p.nom}</span>
+              <span class="mt-1.5 flex items-center gap-2">
+                <span class="rounded-full bg-bg px-2.5 py-0.5 font-mono text-label uppercase text-ink/70">
+                  {SEGMENT_LABEL[p.segment]}
+                </span>
+                <span class="font-mono text-data text-ink whitespace-nowrap">{prixAffichage(p)}</span>
+              </span>
+            </span>
+            <span class="flex-none font-mono text-label uppercase text-accent">Voir→</span>
+          </a>
+        </li>
+      );
+    })}
+  </ul>
+
+  <!-- Desktop / tablette (sm+) : tableau, colonnes toujours visibles avec un rappel visuel si ça déborde encore. -->
+  <div class="relative hidden sm:block">
+    <div class="tableau-comparatif-scroll overflow-x-auto shadow-card rounded">
+      <table class="w-full text-body">
+        <thead>
+          <tr class="border-b border-line/40">
+            <th scope="col" class="px-3 py-3"><span class="sr-only">Photo</span></th>
+            <th scope="col" class="text-left px-4 py-3 font-display text-display-m lowercase text-ink">produit</th>
+            <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">budget</th>
+            <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">segment</th>
+            <th scope="col" class="px-3 py-3"><span class="sr-only">Lien marchand</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {produits.map((p, i) => {
+            const estRecommande = p.slug === slugRecommande;
+            const fond = estRecommande ? 'bg-surface' : i % 2 === 0 ? 'bg-bg' : 'bg-surface';
+            return (
+              <tr class={`${fond} ${estRecommande ? 'border-l-2 border-accent' : ''} hover:bg-card transition-colors`}>
+                <td class="px-3 py-4">
+                  {p.image && (
+                    <a href={`/produits/${p.slug}`} data-img-box class="block h-12 w-12 rounded bg-white overflow-hidden">
+                      <img src={imageTaille(p.image, 120)} width="48" height="48" alt={p.nom} loading="lazy" decoding="async" class="h-full w-full object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
+                    </a>
+                  )}
+                </td>
+                <td class="px-4 py-4">
+                  <a href={`/produits/${p.slug}`} class="font-body font-semibold text-ink hover:text-accent transition-colors">
+                    {p.nom}
                   </a>
-                )}
-              </td>
-              <td class="px-4 py-4">
-                <a href={`/produits/${p.slug}`} class="font-body font-semibold text-ink hover:text-accent transition-colors">
-                  {p.nom}
-                </a>
-              </td>
-              <td class="text-right px-3 py-4 font-mono text-data text-ink whitespace-nowrap">
-                {prixAffichage(p)}
-              </td>
-              <td class="text-right px-3 py-4 font-mono text-data text-ink">
-                {SEGMENT_LABEL[p.segment]}
-              </td>
-              <td class="px-3 py-4 text-center">
-                <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir" />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+                </td>
+                <td class="text-right px-3 py-4 font-mono text-data text-ink whitespace-nowrap">
+                  {prixAffichage(p)}
+                </td>
+                <td class="text-right px-3 py-4">
+                  <span class="inline-block rounded-full bg-bg px-2.5 py-0.5 font-mono text-label uppercase text-ink/70 whitespace-nowrap">
+                    {SEGMENT_LABEL[p.segment]}
+                  </span>
+                </td>
+                <td class="px-3 py-4 text-center">
+                  <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir" />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+    <div class="tableau-comparatif-fade pointer-events-none absolute right-0 top-0 h-full w-8 rounded-r bg-gradient-to-l from-bg to-transparent opacity-0 transition-opacity" aria-hidden="true"></div>
   </div>
-  <div class="tableau-comparatif-fade pointer-events-none absolute right-0 top-0 h-full w-8 rounded-r bg-gradient-to-l from-bg to-transparent opacity-0 transition-opacity" aria-hidden="true"></div>
 </div>
 
 <script is:inline>
