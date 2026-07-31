@@ -28,7 +28,7 @@ const score = Math.round(niveauConfiance(produit) * 10);
 
   <div class={horizontal ? 'flex-1 min-w-[220px]' : ''}>
     <p class="font-mono text-label uppercase text-ink mb-1">Pour qui ?</p>
-    <h2 class="font-display text-display-m text-ink mb-2">{produit.verdict}</h2>
+    <h3 class="font-display text-display-m text-ink mb-2">{produit.verdict}</h3>
     <p class={`font-body text-body text-ink ${horizontal ? '' : 'mb-5'}`}>{produit.description}</p>
   </div>
 
