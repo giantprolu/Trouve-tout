@@ -99,17 +99,17 @@ export function getStaticPaths() {
           )}
         </div>
 
-        {guide.sections.map((s) => (
-          <section id={ancre(s.titre)} class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-wrap gap-6">
-            <h2 class="flex-1 min-w-[200px] self-start m-0 font-display font-bold text-display-m text-ink">{s.titre}</h2>
-            <div class="flex-[2] min-w-[280px]">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {guide.sections.map((s) => (
+            <section id={ancre(s.titre)} class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-col gap-3">
+              <h2 class="m-0 font-display font-bold text-display-m text-ink">{s.titre}</h2>
               <p
-                class="m-0 text-body text-ink leading-[1.7] max-w-[68ch]"
+                class="m-0 text-body text-ink leading-[1.7]"
                 set:html={s.contenu.replace(/\*\*(.*?)\*\*/g, '<span class="font-mono text-accent">$1</span>')}
               />
-            </div>
-          </section>
-        ))}
+            </section>
+          ))}
+        </div>
 
         {produitsCategorie.length > 1 && (
           <div id="notre-choix" class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-col gap-2">
