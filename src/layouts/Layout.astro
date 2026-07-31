@@ -56,24 +56,48 @@ const fullTitle = `${title} — Trouve-Tout`;
     <!-- Debug images cassées (diagnostic temporaire) : le cache Varnish
          d'Awin sert parfois un fallback "noimage" périmé jusqu'à 31 jours
          après la disparition du fichier source côté ManoMano, de façon
-         instable d'une requête à l'autre.
-         Log console + événement Vercel Analytics à chaque échec de
-         chargement pour repérer lesquelles restent cassées en prod, sans
-         devoir rouvrir les devtools sur chaque page. À retirer une fois le
-         problème résolu. Placé dans <head> (pas en fin de body) : les
-         images eager peuvent échouer avant que le parseur n'atteigne le
-         bas de la page, et 'error' sur <img> ne bubble pas — la capture
-         doit être posée avant le premier échec possible. -->
+         instable d'une requête à l'autre. Ce fallback arrive en 302 vers
+         /noimage.gif, qui se charge ensuite avec succès (200) : du point
+         de vue du <img>, c'est un chargement normal, aucun 'error' ne se
+         déclenche. Le listener 'error' seul ne voit donc que les échecs
+         réseau francs (bloqué, timeout, 404 sans redirection) — on
+         re-fetch chaque image chargée pour lire l'URL finale après
+         redirection et repérer le cas noimage.gif, qui est le plus
+         fréquent ici. Coût volontairement ignoré (double requête, servie
+         par le cache HTTP) puisque c'est temporaire.
+         Log console + événement Vercel Analytics dans les deux cas, pour
+         repérer en prod quelles fiches restent cassées sans devoir rouvrir
+         les devtools sur chaque page. À retirer une fois le problème
+         résolu. Placé dans <head> (pas en fin de body) : les images eager
+         peuvent charger/échouer avant que le parseur n'atteigne le bas de
+         la page, et ni 'error' ni 'load' sur <img> ne bubble — la capture
+         doit être posée avant le premier chargement possible. -->
     <script is:inline>
-      window.addEventListener('error', (e) => {
-        const img = e.target;
-        if (!img || img.tagName !== 'IMG') return;
+      function signalerImageCassee(img, raison) {
         const box = img.closest('[data-img-box]');
         if (!box) return;
-        const payload = { url: img.currentSrc || img.src, alt: img.alt, page: location.pathname };
-        console.warn('[TT-IMG] échec de chargement', payload);
+        const payload = { url: img.currentSrc || img.src, alt: img.alt, page: location.pathname, raison };
+        console.warn('[TT-IMG] image cassée', payload);
         if (window.va) window.va('event', { name: 'image_cassee', data: payload });
         box.style.display = 'none';
+      }
+
+      window.addEventListener('error', (e) => {
+        const img = e.target;
+        if (!img || img.tagName !== 'IMG' || !img.closest('[data-img-box]')) return;
+        signalerImageCassee(img, 'erreur-reseau');
+      }, true);
+
+      window.addEventListener('load', (e) => {
+        const img = e.target;
+        if (!img || img.tagName !== 'IMG' || !img.closest('[data-img-box]')) return;
+        const src = img.currentSrc || img.src;
+        if (!src) return;
+        fetch(src, { cache: 'force-cache' })
+          .then((r) => {
+            if (r.url.includes('/noimage.gif')) signalerImageCassee(img, 'fallback-noimage');
+          })
+          .catch(() => {});
       }, true);
     </script>
 
