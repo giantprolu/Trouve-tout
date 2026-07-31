@@ -8,9 +8,16 @@
  *   AWIN_FEED_URL=https://productdata.awin.com/... node scripts/sync-prix.mjs
  *   AWIN_FEED_URL=./datafeed_3007871.csv node scripts/sync-prix.mjs
  *
- * Matching : chaque `urlMarchand` de src/lib/data.ts est une URL Awin
- * pré-trackée (`?p=<aw_product_id>&...`) — ce `p` est directement la colonne
- * `aw_product_id` du flux, donc aucun identifiant supplémentaire à saisir.
+ * Matching : la plupart des `urlMarchand` de src/lib/data.ts sont des URL
+ * Awin pré-trackées (`?p=<aw_product_id>&...`) — ce `p` est directement la
+ * colonne `aw_product_id` du flux, donc aucun identifiant supplémentaire à
+ * saisir. Une partie des fiches (liens ManoMano bruts, pas encore repassés
+ * par le générateur de lien tracké) portent à la place `?model_id=<id>` :
+ * cet id correspond à la colonne `merchant_product_id` du flux (l'id interne
+ * ManoMano, stable), pas à `aw_product_id` (qui varie d'une annonce Awin à
+ * l'autre pour un même produit — plusieurs annonces peuvent exister en
+ * doublon). On matche d'abord sur aw_product_id, puis en repli sur
+ * merchant_product_id pour les fiches qui n'ont que ça.
  */
 import { readFileSync, writeFileSync, createReadStream } from 'node:fs';
 import { Readable } from 'node:stream';
@@ -93,14 +100,16 @@ async function chargerFlux() {
   parseur.on('skip', () => { lignesIgnorees++; });
 
   const parFluxId = new Map();
+  const parMerchantId = new Map();
   let lignes = 0;
   for await (const ligne of parseur) {
     lignes++;
     const id = ligne.aw_product_id?.trim();
-    if (!id) continue;
+    const merchantId = ligne.merchant_product_id?.trim();
+    if (!id && !merchantId) continue;
     const prix = prixNumerique(ligne.search_price) ?? prixNumerique(ligne.store_price) ?? prixNumerique(ligne.display_price);
     if (prix === undefined) continue;
-    parFluxId.set(id, {
+    const entree = {
       prix,
       enStock: ligne.in_stock === '1',
       ean: ligne.ean?.trim() || ligne.product_GTIN?.trim() || undefined,
@@ -114,11 +123,17 @@ async function chargerFlux() {
       // ManoMano — pas rattrapable en re-synchronisant plus souvent.
       // aw_image_url reste en repli si le marchand ne fournit pas l'autre.
       image: ligne.merchant_image_url?.trim() || ligne.aw_image_url?.trim() || undefined,
-    });
+    };
+    if (id) parFluxId.set(id, entree);
+    // merchant_product_id peut apparaître sur plusieurs lignes (plusieurs
+    // annonces Awin en doublon pour le même produit ManoMano) : on garde la
+    // première rencontrée, sans tenter d'arbitrer entre doublons quasi
+    // identiques (prix généralement le même à quelques centimes près).
+    if (merchantId && !parMerchantId.has(merchantId)) parMerchantId.set(merchantId, entree);
   }
   if (lignes === 0) throw new Error('Flux Awin vide — 0 ligne parsée.');
   if (lignesIgnorees > 0) console.log(`(${lignesIgnorees} ligne(s) du flux ignorée(s) — mal échappées)`);
-  return parFluxId;
+  return { parFluxId, parMerchantId };
 }
 
 function produitsDeclares() {
@@ -131,19 +146,20 @@ function produitsDeclares() {
     const urlMarchand = b.match(/urlMarchand:\s*'([^']+)'/)?.[1];
     const nom = b.match(/nom:\s*'([^']+)'/)?.[1] ?? '?';
     const awProductId = urlMarchand?.match(/[?&]p=(\d+)/)?.[1];
-    return { slug, nom, awProductId };
-  }).filter((p) => p.slug && p.awProductId);
+    const modelId = urlMarchand?.match(/[?&]model_id=(\d+)/)?.[1];
+    return { slug, nom, awProductId, modelId };
+  }).filter((p) => p.slug && (p.awProductId || p.modelId));
 }
 
-const parFluxId = await chargerFlux();
+const { parFluxId, parMerchantId } = await chargerFlux();
 const produits = produitsDeclares();
 
 const synchronise = {};
 const nonTrouves = [];
 const syncedAt = new Date().toISOString();
 
-for (const { slug, nom, awProductId } of produits) {
-  const entree = parFluxId.get(awProductId);
+for (const { slug, nom, awProductId, modelId } of produits) {
+  const entree = (awProductId && parFluxId.get(awProductId)) || (modelId && parMerchantId.get(modelId));
   if (!entree) {
     nonTrouves.push(nom);
     continue;
