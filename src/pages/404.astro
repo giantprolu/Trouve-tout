@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { categories } from '../lib/data';
+
+export const prerender = true;
+---
+<Layout title="Page introuvable" description="Cette page n'existe pas ou plus." noindex>
+  <div class="max-w-xl">
+    <p class="font-mono text-label uppercase text-ink mb-3">Erreur 404</p>
+    <h1 class="font-display text-display-l text-ink mb-6">Cette page n'existe pas</h1>
+    <p class="text-body text-ink/70 mb-8">
+      Le lien est peut-être obsolète, ou l'adresse mal saisie. Voici où retrouver ce que vous cherchiez :
+    </p>
+    <div class="flex flex-wrap gap-3 mb-8">
+      <a href="/" class="rounded-full bg-accent px-5 py-2.5 font-body font-semibold text-bg hover:opacity-90 transition-opacity">Accueil</a>
+      <a href="/categories" class="rounded-full border border-line px-5 py-2.5 font-body font-semibold text-ink hover:bg-surface transition-colors">Toutes les catégories</a>
+      <a href="/blog" class="rounded-full border border-line px-5 py-2.5 font-body font-semibold text-ink hover:bg-surface transition-colors">Tous les guides</a>
+      <a href="/choix-express" class="rounded-full border border-line px-5 py-2.5 font-body font-semibold text-ink hover:bg-surface transition-colors">Choix Express</a>
+    </div>
+    <ul class="flex flex-wrap gap-3 font-mono text-label uppercase text-ink/60">
+      {categories.map((c) => (
+        <li><a href={`/categories/${c.slug}`} class="hover:text-accent transition-colors">{c.emoji} {c.nom}</a></li>
+      ))}
+    </ul>
+  </div>
+</Layout>
