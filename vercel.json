@@ -1,3 +1,11 @@
 {
-  "framework": "astro"
+  "framework": "astro",
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "trouve-tout-conseil.fr" }],
+      "destination": "https://www.trouve-tout-conseil.fr/$1",
+      "permanent": true
+    }
+  ]
 }

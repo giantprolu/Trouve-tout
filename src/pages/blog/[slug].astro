@@ -5,6 +5,7 @@ import TableauComparatif from '../../components/TableauComparatif.astro';
 import EncartPub from '../../components/EncartPub.astro';
 import { imageTaille } from '../../lib/image';
 import { absoluteUrl } from '../../lib/site';
+import { dateDerniereModifDonnees } from '../../lib/fraicheur';
 import {
   getGuideBySlug,
   guides,
@@ -28,6 +29,10 @@ function ancre(titre: string): string {
   return titre.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 }
 
+// dateModified vient du dernier commit git sur data.ts — jamais une date
+// inventee. Pas de datePublished : impossible a deriver honnetement par
+// guide depuis un fichier partage (voir CLAUDE.md, honnetete du contenu).
+const dateModifiee = dateDerniereModifDonnees();
 const schema = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'Article',
@@ -35,6 +40,7 @@ const schema = JSON.stringify({
   description: guide.description,
   author: { '@type': 'Organization', name: 'Trouve-Tout' },
   publisher: { '@type': 'Organization', name: 'Trouve-Tout' },
+  ...(dateModifiee && { dateModified: dateModifiee }),
 });
 
 const breadcrumb = JSON.stringify({
@@ -88,7 +94,7 @@ export function getStaticPaths() {
           </div>
           {produitRecommande?.image && (
             <div data-img-box class="flex-1 min-w-[240px] min-h-[280px] rounded-lg bg-white flex items-center justify-center p-4">
-              <img src={imageTaille(produitRecommande.image, 700)} width="240" height="240" alt={produitRecommande.nom} loading="eager" decoding="async" class="max-h-[280px] w-auto object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
+              <img src={imageTaille(produitRecommande.image, 700)} width="240" height="240" alt={produitRecommande.nom} loading="eager" fetchpriority="high" decoding="async" class="max-h-[280px] w-auto object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
             </div>
           )}
         </div>

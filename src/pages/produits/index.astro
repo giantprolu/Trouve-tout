@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import CarrouselProduits from '../../components/CarrouselProduits.astro';
 import { categories, getProduitsByCategorie } from '../../lib/data';
-import { prixAffichage } from '../../lib/affiliation';
 
 export const prerender = true;
 ---
@@ -13,24 +13,13 @@ export const prerender = true;
     const produitsCat = getProduitsByCategorie(cat.slug);
     return (
       <section class="mb-12 border-t border-ink pt-8">
-        <div class="flex items-baseline justify-between gap-4 mb-5">
+        <div class="flex items-baseline justify-between gap-4 mb-2">
           <h2 class="font-display text-display-m text-ink">{cat.nom}</h2>
           <a href={`/categories/${cat.slug}`} class="font-mono text-label uppercase text-accent hover:text-ink transition-colors shrink-0">
             Voir la catégorie →
           </a>
         </div>
-        <ul class="flex flex-col divide-y divide-line/30">
-          {produitsCat.map(p => (
-            <li>
-              <a href={`/produits/${p.slug}`} class="py-4 flex items-baseline justify-between gap-4 group">
-                <span class="font-body text-body font-semibold text-ink group-hover:text-accent transition-colors">
-                  {p.nom}
-                </span>
-                <span class="font-mono text-data text-ink shrink-0">{prixAffichage(p)}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
+        <CarrouselProduits produits={produitsCat} />
       </section>
     );
   })}

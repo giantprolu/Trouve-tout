@@ -48,6 +48,10 @@ const fullTitle = `${title} — Trouve-Tout`;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Photos produit servies par ce CDN sur quasi toutes les pages (voir
+         src/lib/image.ts) : preconnect raccourcit le TTFB de l'image LCP. -->
+    <link rel="preconnect" href="https://images2.productserve.com" crossorigin />
+    <link rel="dns-prefetch" href="https://images2.productserve.com" />
 
     <!-- SEO -->
     <title>{fullTitle}</title>
@@ -76,6 +80,17 @@ const fullTitle = `${title} — Trouve-Tout`;
       '@type': 'WebSite',
       name: 'Trouve-Tout',
       url: siteUrl,
+      description: "Guides d'achat outillage honnêtes — on vous aide à choisir, pas à acheter.",
+    })} />
+
+    <!-- Schema.org Organization — pas de SearchAction : le site n'a pas de
+         recherche interne, en ajouter un serait un balisage inexact. -->
+    <script is:inline type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Trouve-Tout',
+      url: siteUrl,
+      logo: `${siteUrl}/favicon.svg`,
       description: "Guides d'achat outillage honnêtes — on vous aide à choisir, pas à acheter.",
     })} />
 
@@ -139,6 +154,7 @@ const fullTitle = `${title} — Trouve-Tout`;
             <a href="/categories" class="hover:text-accent transition-colors">Catégories</a>
             <a href="/blog" class="hover:text-accent transition-colors">Guides</a>
             <a href="/marques" class="hover:text-accent transition-colors">Marques</a>
+            <a href="/produits" class="hover:text-accent transition-colors">Tous les produits</a>
             <a href="/mentions-legales" class="hover:text-accent transition-colors">Mentions légales</a>
             <a href="/confidentialite" class="hover:text-accent transition-colors">Confidentialité</a>
             <a href="/sitemap.xml" class="hover:text-accent transition-colors">Sitemap</a>
