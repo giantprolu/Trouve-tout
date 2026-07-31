@@ -66,7 +66,7 @@ const prioriteLabel = PRIORITES.find(p => p.valeur === valeurs.priorite)?.label 
     <EnteteCoque />
 
     {!resultat && (
-      <div class="flex flex-wrap gap-4">
+      <div class="flex flex-col lg:flex-row gap-4">
         <div class="flex-[3] min-w-0 rounded-panel bg-gradient-to-br from-[#F6F8F0] to-[#EDF0E4] shadow-tile p-6 sm:p-8 lg:p-11">
           <span class="inline-block rounded-full bg-white/90 px-4 py-2 font-mono text-label uppercase text-accent">
             Choix express · 3 questions rapides
@@ -152,7 +152,7 @@ const prioriteLabel = PRIORITES.find(p => p.valeur === valeurs.priorite)?.label 
     )}
 
     {resultat && (
-      <div class="flex flex-wrap gap-4">
+      <div class="flex flex-col lg:flex-row gap-4">
         <div class="flex-[3] min-w-0 flex flex-col gap-4">
           <div class="rounded-panel bg-gradient-to-br from-[#F6F8F0] to-[#EDF0E4] shadow-tile p-6 sm:p-8 lg:p-11">
             <span class="inline-block rounded-full bg-white/90 px-4 py-2 font-mono text-label uppercase text-accent">
