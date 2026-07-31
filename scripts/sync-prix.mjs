@@ -107,9 +107,13 @@ async function chargerFlux() {
       // Les photos codées en dur dans data.ts pourrissent avec le temps
       // (ManoMano renomme/déplace ses fichiers CDN) sans jamais être
       // rafraîchies ailleurs : on capte l'image du flux au même titre que
-      // le prix. aw_image_url est la colonne standard Awin, merchant_image_url
-      // le repli si l'annonceur ne fournit que celle-là.
-      image: ligne.aw_image_url?.trim() || ligne.merchant_image_url?.trim() || undefined,
+      // le prix. merchant_image_url (CDN ManoMano direct) en priorité : vérifié
+      // en direct plus fiable que aw_image_url, dont le cache Varnish reste
+      // parfois bloqué sur un ancien fallback "noimage" un mois entier
+      // (max-age=2678400) après la disparition du fichier source côté
+      // ManoMano — pas rattrapable en re-synchronisant plus souvent.
+      // aw_image_url reste en repli si le marchand ne fournit pas l'autre.
+      image: ligne.merchant_image_url?.trim() || ligne.aw_image_url?.trim() || undefined,
     });
   }
   if (lignes === 0) throw new Error('Flux Awin vide — 0 ligne parsée.');
