@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import EnteteCoque from '../../components/EnteteCoque.astro';
-import TableauComparatif from '../../components/TableauComparatif.astro';
+import CarrouselProduits from '../../components/CarrouselProduits.astro';
 import EncartPub from '../../components/EncartPub.astro';
 import { imageTaille } from '../../lib/image';
 import { absoluteUrl } from '../../lib/site';
@@ -112,16 +112,12 @@ export function getStaticPaths() {
         ))}
 
         {produitsCategorie.length > 1 && (
-          <div id="notre-choix" class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-wrap-reverse gap-6">
-            <div class="flex-[2] min-w-[280px]">
-              <TableauComparatif produits={produitsCategorie} />
-            </div>
-            <div class="flex-1 min-w-[200px]">
-              <h2 class="m-0 font-display font-bold text-display-m text-ink">Le comparatif</h2>
-              <p class="mt-3 text-small text-ink/70">
-                {produitsCategorie.length} outils comparés sur les critères qui changent vraiment à l'usage.
-              </p>
-            </div>
+          <div id="notre-choix" class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-col gap-2">
+            <h2 class="m-0 font-display font-bold text-display-m text-ink">Le comparatif</h2>
+            <p class="mt-1 mb-2 max-w-xl text-small text-ink/70">
+              {produitsCategorie.length} outils comparés sur les critères qui changent vraiment à l'usage.
+            </p>
+            <CarrouselProduits produits={produitsCategorie} />
           </div>
         )}
       </div>
