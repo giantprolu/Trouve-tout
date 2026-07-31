@@ -114,7 +114,7 @@ export function getStaticPaths() {
           </div>
           {produit.image && (
             <div data-img-box class="flex-1 min-w-[260px] min-h-[300px] rounded-lg bg-white flex items-center justify-center p-4">
-              <img src={imageTaille(produit.image, 900)} width="280" height="280" alt={produit.nom} class="max-h-[280px] w-auto object-contain" decoding="async" onerror="this.closest('[data-img-box]').style.display='none'" />
+              <img src={imageTaille(produit.image, 900)} width="280" height="280" alt={produit.nom} loading="eager" fetchpriority="high" class="max-h-[280px] w-auto object-contain" decoding="async" onerror="this.closest('[data-img-box]').style.display='none'" />
             </div>
           )}
         </div>

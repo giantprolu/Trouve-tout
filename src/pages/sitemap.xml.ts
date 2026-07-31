@@ -50,6 +50,12 @@ ${[...staticPages, ...catPages, ...marquePages, ...produitPages, ...guidePages].
 </urlset>`;
 
   return new Response(xml, {
-    headers: { 'Content-Type': 'application/xml' },
+    // Rendu serveur volontaire (voir CLAUDE.md), mais le contenu ne bouge
+    // qu'au déploiement : ce cache évite de reconstruire le XML à chaque
+    // passage de crawler sans jamais servir une version périmée plus d'1h.
+    headers: {
+      'Content-Type': 'application/xml',
+      'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
+    },
   });
 };
