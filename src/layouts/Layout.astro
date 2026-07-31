@@ -59,18 +59,21 @@ const fullTitle = `${title} — Trouve-Tout`;
          instable d'une requête à l'autre. Ce fallback arrive en 302 vers
          /noimage.gif, qui se charge ensuite avec succès (200) : du point
          de vue du <img>, c'est un chargement normal, aucun 'error' ne se
-         déclenche. Le listener 'error' seul ne voit donc que les échecs
-         réseau francs (bloqué, timeout, 404 sans redirection) — on
-         re-fetch chaque image chargée pour lire l'URL finale après
-         redirection et repérer le cas noimage.gif, qui est le plus
-         fréquent ici. Coût volontairement ignoré (double requête, servie
-         par le cache HTTP) puisque c'est temporaire.
-         Log console + événement Vercel Analytics dans les deux cas, pour
-         repérer en prod quelles fiches restent cassées sans devoir rouvrir
-         les devtools sur chaque page. À retirer une fois le problème
-         résolu. Placé dans <head> (pas en fin de body) : les images eager
-         peuvent charger/échouer avant que le parseur n'atteigne le bas de
-         la page, et ni 'error' ni 'load' sur <img> ne bubble — la capture
+         déclenche.
+         Un premier essai relisait l'URL finale via un second fetch() de
+         la même image, mais ce fetch ne restituait pas fiablement l'URL
+         post-redirection (cache/CORS) — testé en direct sur une fiche
+         cassée, rien ne remontait. Repli sur un signal plus simple et sans
+         réseau : /noimage.gif fait exactement 70×70px (vérifié), une
+         taille qu'aucune vraie photo produit n'utilise ici (toutes les
+         tailles demandées via imageTaille sont ≥120px) — comparer
+         naturalWidth/naturalHeight après chargement suffit.
+         Log console + événement Vercel Analytics pour repérer en prod
+         quelles fiches restent cassées sans devoir rouvrir les devtools
+         sur chaque page. À retirer une fois le problème résolu. Placé
+         dans <head> (pas en fin de body) : les images eager peuvent
+         charger/échouer avant que le parseur n'atteigne le bas de la
+         page, et ni 'error' ni 'load' sur <img> ne bubble — la capture
          doit être posée avant le premier chargement possible. -->
     <script is:inline>
       function signalerImageCassee(img, raison) {
@@ -91,13 +94,9 @@ const fullTitle = `${title} — Trouve-Tout`;
       window.addEventListener('load', (e) => {
         const img = e.target;
         if (!img || img.tagName !== 'IMG' || !img.closest('[data-img-box]')) return;
-        const src = img.currentSrc || img.src;
-        if (!src) return;
-        fetch(src, { cache: 'force-cache' })
-          .then((r) => {
-            if (r.url.includes('/noimage.gif')) signalerImageCassee(img, 'fallback-noimage');
-          })
-          .catch(() => {});
+        if (img.naturalWidth === 70 && img.naturalHeight === 70) {
+          signalerImageCassee(img, 'fallback-noimage');
+        }
       }, true);
     </script>
 
