@@ -16,47 +16,68 @@ const slugRecommande = produits.reduce((meilleur, p) =>
   niveauConfiance(p) > niveauConfiance(meilleur) ? p : meilleur
 , produits[0])?.slug;
 ---
-<div class="overflow-x-auto shadow-card rounded">
-  <table class="w-full text-body">
-    <thead>
-      <tr>
-        <th scope="col" class="px-3 py-3"><span class="sr-only">Photo</span></th>
-        <th scope="col" class="text-left px-4 py-3 font-display text-display-m lowercase text-ink">produit</th>
-        <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">budget</th>
-        <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">segment</th>
-        <th scope="col" class="px-3 py-3"><span class="sr-only">Lien marchand</span></th>
-      </tr>
-    </thead>
-    <tbody>
-      {produits.map((p, i) => {
-        const estRecommande = p.slug === slugRecommande;
-        const fond = estRecommande ? 'bg-surface' : i % 2 === 0 ? 'bg-bg' : 'bg-surface';
-        return (
-          <tr class={`${fond} ${estRecommande ? 'border-l-2 border-accent' : ''}`}>
-            <td class="px-3 py-4">
-              {p.image && (
-                <a href={`/produits/${p.slug}`} class="block h-12 w-12 rounded bg-white overflow-hidden">
-                  <img src={imageTaille(p.image, 120)} width="48" height="48" alt="" loading="lazy" decoding="async" class="h-full w-full object-contain" />
+<div class="tableau-comparatif relative">
+  <div class="tableau-comparatif-scroll overflow-x-auto shadow-card rounded">
+    <table class="w-full text-body">
+      <thead>
+        <tr>
+          <th scope="col" class="px-3 py-3"><span class="sr-only">Photo</span></th>
+          <th scope="col" class="text-left px-4 py-3 font-display text-display-m lowercase text-ink">produit</th>
+          <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">budget</th>
+          <th scope="col" class="text-right px-3 py-3 font-display text-display-m lowercase text-ink">segment</th>
+          <th scope="col" class="px-3 py-3"><span class="sr-only">Lien marchand</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {produits.map((p, i) => {
+          const estRecommande = p.slug === slugRecommande;
+          const fond = estRecommande ? 'bg-surface' : i % 2 === 0 ? 'bg-bg' : 'bg-surface';
+          return (
+            <tr class={`${fond} ${estRecommande ? 'border-l-2 border-accent' : ''}`}>
+              <td class="px-3 py-4">
+                {p.image && (
+                  <a href={`/produits/${p.slug}`} data-img-box class="block h-12 w-12 rounded bg-white overflow-hidden">
+                    <img src={imageTaille(p.image, 120)} width="48" height="48" alt={p.nom} loading="lazy" decoding="async" class="h-full w-full object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
+                  </a>
+                )}
+              </td>
+              <td class="px-4 py-4">
+                <a href={`/produits/${p.slug}`} class="font-body font-semibold text-ink hover:text-accent transition-colors">
+                  {p.nom}
                 </a>
-              )}
-            </td>
-            <td class="px-4 py-4">
-              <a href={`/produits/${p.slug}`} class="font-body font-semibold text-ink hover:text-accent transition-colors">
-                {p.nom}
-              </a>
-            </td>
-            <td class="text-right px-3 py-4 font-mono text-data text-ink whitespace-nowrap">
-              {prixAffichage(p)}
-            </td>
-            <td class="text-right px-3 py-4 font-mono text-data text-ink">
-              {SEGMENT_LABEL[p.segment]}
-            </td>
-            <td class="px-3 py-4 text-center">
-              <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir" />
-            </td>
-          </tr>
-        );
-      })}
-    </tbody>
-  </table>
+              </td>
+              <td class="text-right px-3 py-4 font-mono text-data text-ink whitespace-nowrap">
+                {prixAffichage(p)}
+              </td>
+              <td class="text-right px-3 py-4 font-mono text-data text-ink">
+                {SEGMENT_LABEL[p.segment]}
+              </td>
+              <td class="px-3 py-4 text-center">
+                <CTAAffilie url={p.urlMarchand} marchand={p.marchand} variant="small" label="Voir" />
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+  <div class="tableau-comparatif-fade pointer-events-none absolute right-0 top-0 h-full w-8 rounded-r bg-gradient-to-l from-bg to-transparent opacity-0 transition-opacity" aria-hidden="true"></div>
 </div>
+
+<script is:inline>
+  // Degrade visuel a droite du tableau tant qu'il reste du contenu a scroller
+  // horizontalement (mobile surtout) — sans lui, rien ne signale que la colonne
+  // segment/budget est coupee.
+  document.querySelectorAll('.tableau-comparatif').forEach((wrap) => {
+    const scrollEl = wrap.querySelector('.tableau-comparatif-scroll');
+    const fade = wrap.querySelector('.tableau-comparatif-fade');
+    if (!scrollEl || !fade) return;
+    const maj = () => {
+      const resteAScroller = scrollEl.scrollWidth - scrollEl.scrollLeft - scrollEl.clientWidth > 4;
+      fade.style.opacity = resteAScroller ? '1' : '0';
+    };
+    scrollEl.addEventListener('scroll', maj, { passive: true });
+    window.addEventListener('resize', maj);
+    maj();
+  });
+</script>
