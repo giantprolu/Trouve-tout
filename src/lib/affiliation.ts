@@ -121,7 +121,7 @@ export function fourchettePrix(prixIndicatif: number): string {
  */
 const prixLive = prixSynchronises as Record<
   string,
-  { prix: number; enStock: boolean; ean?: string; syncedAt: string }
+  { prix: number; enStock: boolean; ean?: string; image?: string; syncedAt: string }
 >;
 
 /**
@@ -151,4 +151,17 @@ export function prixActuel(
 export function prixAffichage(produit: Pick<Produit, 'slug' | 'prixIndicatif'>): string {
   const { valeur, exact } = prixActuel(produit);
   return exact ? formaterPrix(valeur) : fourchettePrix(valeur);
+}
+
+/**
+ * Photo synchronisée depuis le flux Awin si une synchronisation fraîche
+ * existe et fournit une image, sinon repli sur `produit.image` (codée en
+ * dur dans data.ts, peut pointer vers un fichier disparu du CDN ManoMano —
+ * voir CLAUDE.md). Jamais pire que l'existant : au pire on retombe sur
+ * l'ancien comportement.
+ */
+export function imageActuelle(produit: Pick<Produit, 'slug' | 'image'>): string | undefined {
+  const sync = prixLive[produit.slug];
+  const frais = sync && Date.now() - new Date(sync.syncedAt).getTime() < FRAICHEUR_MAX_HEURES * 3_600_000;
+  return (frais && sync.image) || produit.image;
 }

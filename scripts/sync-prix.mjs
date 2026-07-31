@@ -104,6 +104,12 @@ async function chargerFlux() {
       prix,
       enStock: ligne.in_stock === '1',
       ean: ligne.ean?.trim() || ligne.product_GTIN?.trim() || undefined,
+      // Les photos codées en dur dans data.ts pourrissent avec le temps
+      // (ManoMano renomme/déplace ses fichiers CDN) sans jamais être
+      // rafraîchies ailleurs : on capte l'image du flux au même titre que
+      // le prix. aw_image_url est la colonne standard Awin, merchant_image_url
+      // le repli si l'annonceur ne fournit que celle-là.
+      image: ligne.aw_image_url?.trim() || ligne.merchant_image_url?.trim() || undefined,
     });
   }
   if (lignes === 0) throw new Error('Flux Awin vide — 0 ligne parsée.');

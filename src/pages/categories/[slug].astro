@@ -4,6 +4,7 @@ import EnteteCoque from '../../components/EnteteCoque.astro';
 import CarrouselProduits from '../../components/CarrouselProduits.astro';
 import EncartPub from '../../components/EncartPub.astro';
 import { imageTaille } from '../../lib/image';
+import { imageActuelle } from '../../lib/affiliation';
 import { absoluteUrl } from '../../lib/site';
 import {
   getCategorieBySlug,
@@ -28,8 +29,9 @@ const produitsCategorie = getProduitsByCategorie(slug!).sort((a, b) => a.prixInd
 // Photo de la categorie : le produit le plus digne de confiance parmi ceux
 // qui ont une vraie photo (les fiches encore verifie:false n'en ont pas).
 const produitVedette = produitsCategorie
-  .filter((p) => p.image)
+  .filter((p) => imageActuelle(p))
   .sort((a, b) => niveauConfiance(b) - niveauConfiance(a))[0];
+const imageVedette = produitVedette && imageActuelle(produitVedette);
 
 const breadcrumb = JSON.stringify({
   '@context': 'https://schema.org',
@@ -73,9 +75,9 @@ export function getStaticPaths() {
               </div>
             )}
           </div>
-          {produitVedette && (
+          {produitVedette && imageVedette && (
             <div data-img-box class="flex-1 min-w-[240px] min-h-[240px] rounded-lg bg-white flex items-center justify-center p-4">
-              <img src={imageTaille(produitVedette.image!, 700)} width="240" height="240" alt={produitVedette.nom} loading="eager" fetchpriority="high" decoding="async" class="max-h-[240px] w-auto object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
+              <img src={imageTaille(imageVedette, 700)} width="240" height="240" alt={produitVedette.nom} loading="eager" fetchpriority="high" decoding="async" class="max-h-[240px] w-auto object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
             </div>
           )}
         </div>

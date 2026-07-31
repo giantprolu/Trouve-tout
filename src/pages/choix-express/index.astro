@@ -5,6 +5,7 @@ import CTAAffilie from '../../components/CTAAffilie.astro';
 import EncartTransparence from '../../components/EncartTransparence.astro';
 import TrancheBudget from '../../components/TrancheBudget.astro';
 import { imageTaille } from '../../lib/image';
+import { imageActuelle } from '../../lib/affiliation';
 import {
   recommanderChoixExpress,
   categories,
@@ -57,6 +58,7 @@ const budgetsAvecCompte = BUDGETS.map((b) => ({
   nbOutils: produits.filter((p) => p.prixIndicatif <= parseInt(b.valeur, 10)).length,
 }));
 
+const imageResultat = resultat && imageActuelle(resultat);
 const categorieChoisie = valeurs.categorie ? getCategorieBySlug(valeurs.categorie) : undefined;
 const budgetLabel = BUDGETS.find(b => b.valeur === valeurs.budget)?.label ?? '';
 const prioriteLabel = PRIORITES.find(p => p.valeur === valeurs.priorite)?.label ?? '';
@@ -178,9 +180,9 @@ const prioriteLabel = PRIORITES.find(p => p.valeur === valeurs.priorite)?.label 
                   </a>
                 </div>
               </div>
-              {resultat.image && (
-                <div class="flex-1 min-w-[220px] min-h-[240px] rounded-lg bg-white flex items-center justify-center p-4">
-                  <img src={imageTaille(resultat.image, 500)} width="220" height="220" alt={resultat.nom} class="max-h-[220px] w-auto object-contain" decoding="async" />
+              {imageResultat && (
+                <div data-img-box class="flex-1 min-w-[220px] min-h-[240px] rounded-lg bg-white flex items-center justify-center p-4">
+                  <img src={imageTaille(imageResultat, 500)} width="220" height="220" alt={resultat.nom} class="max-h-[220px] w-auto object-contain" decoding="async" onerror="this.closest('[data-img-box]').style.display='none'" />
                 </div>
               )}
             </div>
