@@ -81,12 +81,14 @@ export function getStaticPaths() {
             </p>
             <div class="mt-7 flex flex-wrap gap-2.5">
               {guide.sections.map((s) => (
-                <a href={`#${ancre(s.titre)}`} class="rounded-full bg-white px-4.5 py-2 text-small font-semibold text-ink hover:bg-surface transition-colors">
+                <a href={`#${ancre(s.titre)}`} class="inline-flex items-center gap-[9px] rounded-full border border-[#C3C9BC] bg-white/55 py-2 pl-3.5 pr-4 text-small font-semibold text-ink transition-colors duration-150 hover:bg-white hover:border-accent">
+                  <span class="h-[13px] w-0.5 rounded-[1px] bg-accent"></span>
                   {s.titre}
                 </a>
               ))}
               {produitRecommande && (
-                <a href="#notre-choix" class="rounded-full bg-white px-4.5 py-2 text-small font-semibold text-ink hover:bg-surface transition-colors">
+                <a href="#notre-choix" class="inline-flex items-center gap-[9px] rounded-full border border-[#C3C9BC] bg-white/55 py-2 pl-3.5 pr-4 text-small font-semibold text-ink transition-colors duration-150 hover:bg-white hover:border-accent">
+                  <span class="h-[13px] w-0.5 rounded-[1px] bg-accent"></span>
                   Notre choix
                 </a>
               )}
