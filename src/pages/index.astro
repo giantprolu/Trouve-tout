@@ -14,10 +14,10 @@ import { imageTaille } from '../lib/image';
 
 export const prerender = true;
 
-// Rotation cote client (voir script en bas de page) : le HTML pre-rendu ci-
-// dessous n'est que le repli affiche avant que le JS ne pioche au hasard,
-// necessaire puisque la page reste prerendue (pas de flux temps reel qui
-// justifierait du rendu serveur ici).
+// Guide a la une choisi editorialement (fixe) : une rotation cote client avait
+// ete tentee ici, mais elle changeait titre/image/prix sous les yeux du
+// visiteur juste apres le chargement — mauvaise UX percue, et incoherente
+// avec ce que Google indexe en SSR. Un choix stable evite les deux.
 const guideVedette = getGuideBySlug('tondeuse-batterie-thermique-filaire')!;
 const guideSecondaire = getGuideBySlug('quelle-perceuse-visseuse-choisir')!;
 
@@ -35,17 +35,6 @@ function bornesPrix(categorieSlug: string): { min: number; max: number } {
 const { min: prixMin, max: prixMax } = bornesPrix(guideVedette.categorieSlug);
 const imageVedette = imageRepresentative(guideVedette.categorieSlug);
 const imageSecondaire = imageRepresentative(guideSecondaire.categorieSlug);
-
-// Donnees serialisees pour le tirage aleatoire cote client : un guide par
-// entree, avec sa photo produit representative et ses bornes de prix.
-const guidesPourRotation = guides.map((g) => ({
-  slug: g.slug,
-  titre: g.titre,
-  description: g.description,
-  tempsLecture: tempsLectureGuide(g),
-  image: imageRepresentative(g.categorieSlug) ?? null,
-  ...bornesPrix(g.categorieSlug),
-}));
 
 const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
   i === 0 ? `moins de ${borne} €` : `${BORNES_BUDGET[i - 1]} – ${borne} €`,
@@ -66,33 +55,32 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
             <span class="self-start rounded bg-white/90 px-4 py-2 font-mono text-label uppercase text-accent">
               Guide à la une
             </span>
-            <h1 id="vedette-titre" class="mt-6 font-display font-extrabold text-[clamp(2.25rem,5vw,3.625rem)] leading-[1.02] tracking-[-0.035em] text-ink text-balance">
+            <h1 class="mt-6 font-display font-extrabold text-[clamp(2.25rem,5vw,3.625rem)] leading-[1.02] tracking-[-0.035em] text-ink text-balance">
               {guideVedette.titre}
             </h1>
-            <p id="vedette-description" class="mt-4 max-w-md text-body-lg text-ink/70">
+            <p class="mt-4 max-w-md text-body-lg text-ink/70">
               {guideVedette.description}
             </p>
             <div class="mt-10 max-w-md">
               <div class="h-px bg-line/60 relative">
-                <span id="vedette-prix-min" class="absolute left-0 top-3 font-mono text-label text-line">{formaterPrix(prixMin)}</span>
-                <span id="vedette-prix-max" class="absolute right-0 top-3 font-mono text-label text-line">{formaterPrix(prixMax)}</span>
+                <span class="absolute left-0 top-3 font-mono text-label text-line">{formaterPrix(prixMin)}</span>
+                <span class="absolute right-0 top-3 font-mono text-label text-line">{formaterPrix(prixMax)}</span>
               </div>
             </div>
             <div class="mt-12 flex flex-wrap items-center gap-4">
               <a
-                id="vedette-lien"
                 href={`/blog/${guideVedette.slug}`}
                 class="inline-flex items-center gap-3 rounded-full bg-accent pl-6 pr-1.5 py-1.5 shadow-tile transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
                 <span class="font-display font-bold text-body-lg text-bg">Lire le guide</span>
                 <span class="grid h-11 w-11 place-items-center rounded-full bg-ink text-bg" aria-hidden="true">↗</span>
               </a>
-              <span id="vedette-temps" class="font-mono text-data text-ink/55">{tempsLectureGuide(guideVedette)} min de lecture</span>
+              <span class="font-mono text-data text-ink/55">{tempsLectureGuide(guideVedette)} min de lecture</span>
             </div>
           </div>
           {imageVedette && (
-            <div class="flex-1 min-w-[220px] min-h-[280px] rounded-lg bg-white flex items-center justify-center p-4">
-              <img id="vedette-image" src={imageTaille(imageVedette, 700)} width="280" height="280" alt="" loading="eager" decoding="async" class="max-h-[280px] w-auto object-contain" />
+            <div data-img-box class="flex-1 min-w-[220px] min-h-[280px] rounded-lg bg-white flex items-center justify-center p-4">
+              <img src={imageTaille(imageVedette, 700)} width="280" height="280" alt={guideVedette.titre} loading="eager" decoding="async" class="max-h-[280px] w-auto object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
             </div>
           )}
         </div>
@@ -135,21 +123,20 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
         </div>
 
         <a
-          id="secondaire-lien"
           href={`/blog/${guideSecondaire.slug}`}
           class="flex-1 min-h-[300px] rounded-tile bg-[repeating-linear-gradient(45deg,#DCE1D2,#DCE1D2_16px,#E8ECDD_16px,#E8ECDD_32px)] shadow-tile p-6 flex flex-col gap-4 justify-between transition hover:-translate-y-0.5"
         >
           <div class="flex items-start justify-between gap-3">
             {imageSecondaire && (
-              <span class="h-16 w-16 flex-none rounded bg-white/90 flex items-center justify-center p-1.5">
-                <img id="secondaire-image" src={imageTaille(imageSecondaire, 200)} width="64" height="64" alt="" loading="lazy" decoding="async" class="max-h-full max-w-full object-contain" />
+              <span data-img-box class="h-16 w-16 flex-none rounded bg-white/90 flex items-center justify-center p-1.5">
+                <img src={imageTaille(imageSecondaire, 200)} width="64" height="64" alt={guideSecondaire.titre} loading="lazy" decoding="async" class="max-h-full max-w-full object-contain" onerror="this.closest('[data-img-box]').style.display='none'" />
               </span>
             )}
             <span class="grid h-11 w-11 flex-none place-items-center rounded-full bg-card text-ink ml-auto" aria-hidden="true">↗</span>
           </div>
           <span>
-            <span id="secondaire-titre" class="block font-display font-bold text-display-m text-ink">{guideSecondaire.titre}</span>
-            <span id="secondaire-description" class="mt-2 block text-body text-ink/70">{guideSecondaire.description}</span>
+            <span class="block font-display font-bold text-display-m text-ink">{guideSecondaire.titre}</span>
+            <span class="mt-2 block text-body text-ink/70">{guideSecondaire.description}</span>
           </span>
         </a>
       </div>
@@ -161,53 +148,4 @@ const tranchesBudget = BORNES_BUDGET.map((borne, i) =>
       le proposerait.
     </p>
   </section>
-
-  <script type="application/json" id="guides-rotation-data" set:html={JSON.stringify(guidesPourRotation)} />
-  <script is:inline>
-    // Rotation aleatoire du guide a la une + du guide secondaire, cote
-    // client : la page reste prerendue (SEO, cache), le tirage au sort ne
-    // peut donc pas se faire au moment du rendu serveur. Le contenu ci-dessus
-    // sert de repli tant que ce script n'a pas tourne (pas de JS, robot...).
-    (function () {
-      const donnees = document.getElementById('guides-rotation-data');
-      if (!donnees) return;
-      const guides = JSON.parse(donnees.textContent || '[]');
-      if (guides.length < 2) return;
-
-      function redimensionner(url, taille) {
-        if (!url || !url.startsWith('https://images2.productserve.com/')) return url;
-        return url.replace(/([?&])w=\d+&h=\d+/, `$1w=${taille}&h=${taille}`);
-      }
-      function formaterPrix(n) {
-        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(n);
-      }
-
-      const iVedette = Math.floor(Math.random() * guides.length);
-      let iSecondaire = Math.floor(Math.random() * (guides.length - 1));
-      if (iSecondaire >= iVedette) iSecondaire++;
-
-      const vedette = guides[iVedette];
-      const secondaire = guides[iSecondaire];
-
-      const set = (id, valeur) => { const el = document.getElementById(id); if (el) el.textContent = valeur; };
-      const setHref = (id, href) => { const el = document.getElementById(id); if (el) el.setAttribute('href', href); };
-      const setImg = (id, url, taille) => {
-        const el = document.getElementById(id);
-        if (el && url) el.src = redimensionner(url, taille);
-      };
-
-      set('vedette-titre', vedette.titre);
-      set('vedette-description', vedette.description);
-      set('vedette-prix-min', formaterPrix(vedette.min));
-      set('vedette-prix-max', formaterPrix(vedette.max));
-      set('vedette-temps', `${vedette.tempsLecture} min de lecture`);
-      setHref('vedette-lien', `/blog/${vedette.slug}`);
-      setImg('vedette-image', vedette.image, 700);
-
-      set('secondaire-titre', secondaire.titre);
-      set('secondaire-description', secondaire.description);
-      setHref('secondaire-lien', `/blog/${secondaire.slug}`);
-      setImg('secondaire-image', secondaire.image, 200);
-    })();
-  </script>
 </Layout>
