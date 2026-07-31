@@ -123,7 +123,7 @@ const titre = produit.nom.length <= 40 ? `${produit.nom} — Avis et comparatif`
           </div>
           {image && (
             <div data-img-box class="flex-1 min-w-[260px] min-h-[300px] rounded-lg bg-white flex items-center justify-center p-4">
-              <img src={imageTaille(image, 900)} width="280" height="280" alt={produit.nom} loading="eager" fetchpriority="high" class="max-h-[280px] w-auto object-contain" />
+              <img src={imageTaille(image, 900)} width="280" height="280" alt={produit.nom} loading="eager" fetchpriority="high" class="max-h-[280px] w-auto object-contain" onload="window.signalerImageFallbackSiNoimage(this)" />
             </div>
           )}
         </div>

@@ -28,7 +28,7 @@ const slugRecommande = produits.reduce((meilleur, p) =>
           <a href={`/produits/${p.slug}`} class="flex items-center gap-3 px-3 py-3">
             {image && (
               <span data-img-box class="block h-14 w-14 flex-none rounded bg-white overflow-hidden">
-                <img src={imageTaille(image, 120)} width="56" height="56" alt={p.nom} loading="lazy" decoding="async" class="h-full w-full object-contain" />
+                <img src={imageTaille(image, 120)} width="56" height="56" alt={p.nom} loading="lazy" decoding="async" class="h-full w-full object-contain" onload="window.signalerImageFallbackSiNoimage(this)" />
               </span>
             )}
             <span class="min-w-0 flex-1">
@@ -70,7 +70,7 @@ const slugRecommande = produits.reduce((meilleur, p) =>
                 <td class="px-3 py-4">
                   {image && (
                     <a href={`/produits/${p.slug}`} data-img-box class="block h-12 w-12 rounded bg-white overflow-hidden">
-                      <img src={imageTaille(image, 120)} width="48" height="48" alt={p.nom} loading="lazy" decoding="async" class="h-full w-full object-contain" />
+                      <img src={imageTaille(image, 120)} width="48" height="48" alt={p.nom} loading="lazy" decoding="async" class="h-full w-full object-contain" onload="window.signalerImageFallbackSiNoimage(this)" />
                     </a>
                   )}
                 </td>

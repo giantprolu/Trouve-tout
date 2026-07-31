@@ -59,22 +59,20 @@ const fullTitle = `${title} — Trouve-Tout`;
          instable d'une requête à l'autre. Ce fallback arrive en 302 vers
          /noimage.gif, qui se charge ensuite avec succès (200) : du point
          de vue du <img>, c'est un chargement normal, aucun 'error' ne se
-         déclenche.
-         Un premier essai relisait l'URL finale via un second fetch() de
-         la même image, mais ce fetch ne restituait pas fiablement l'URL
-         post-redirection (cache/CORS) — testé en direct sur une fiche
-         cassée, rien ne remontait. Repli sur un signal plus simple et sans
-         réseau : /noimage.gif fait exactement 70×70px (vérifié), une
+         déclenche. /noimage.gif fait exactement 70×70px (vérifié), une
          taille qu'aucune vraie photo produit n'utilise ici (toutes les
-         tailles demandées via imageTaille sont ≥120px) — comparer
-         naturalWidth/naturalHeight après chargement suffit.
+         tailles demandées via imageTaille sont ≥120px) : comparer
+         naturalWidth/naturalHeight au chargement suffit à le repérer.
+         'erreur-reseau' se détecte via un listener 'error' délégué sur
+         window (capture) — fonctionne, vérifié en direct. En revanche
+         'load' sur <img> ne se propage PAS de façon fiable à un listener
+         délégué sur window même en capture (testé et reproduit en direct
+         sur cette prod : jamais déclenché, alors que error l'est) — d'où
+         le onload posé sur chaque <img> individuellement plutôt qu'un
+         listener global, voir les composants/pages qui l'utilisent.
          Log console + événement Vercel Analytics pour repérer en prod
          quelles fiches restent cassées sans devoir rouvrir les devtools
-         sur chaque page. À retirer une fois le problème résolu. Placé
-         dans <head> (pas en fin de body) : les images eager peuvent
-         charger/échouer avant que le parseur n'atteigne le bas de la
-         page, et ni 'error' ni 'load' sur <img> ne bubble — la capture
-         doit être posée avant le premier chargement possible. -->
+         sur chaque page. À retirer une fois le problème résolu. -->
     <script is:inline>
       function signalerImageCassee(img, raison) {
         const box = img.closest('[data-img-box]');
@@ -84,19 +82,14 @@ const fullTitle = `${title} — Trouve-Tout`;
         if (window.va) window.va('event', { name: 'image_cassee', data: payload });
         box.style.display = 'none';
       }
+      window.signalerImageFallbackSiNoimage = function (img) {
+        if (img.naturalWidth === 70 && img.naturalHeight === 70) signalerImageCassee(img, 'fallback-noimage');
+      };
 
       window.addEventListener('error', (e) => {
         const img = e.target;
         if (!img || img.tagName !== 'IMG' || !img.closest('[data-img-box]')) return;
         signalerImageCassee(img, 'erreur-reseau');
-      }, true);
-
-      window.addEventListener('load', (e) => {
-        const img = e.target;
-        if (!img || img.tagName !== 'IMG' || !img.closest('[data-img-box]')) return;
-        if (img.naturalWidth === 70 && img.naturalHeight === 70) {
-          signalerImageCassee(img, 'fallback-noimage');
-        }
       }, true);
     </script>
 
