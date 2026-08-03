@@ -43,6 +43,7 @@ const schema = JSON.stringify({
   name: produit.nom,
   description: produit.description,
   brand: { '@type': 'Brand', name: marque?.nom },
+  ...(image && { image: imageTaille(image, 900) }),
   ...(prix.ean && { gtin13: prix.ean }),
   // `offers` uniquement quand une synchronisation Awin fraîche existe
   // (scripts/sync-prix.mjs) : le prix et la disponibilité déclarés ici
@@ -59,8 +60,15 @@ const schema = JSON.stringify({
       url: lienAffilie(produit.marchand, produit.urlMarchand),
     },
   }),
-  // Pas de bloc `aggregateRating` : une note editoriale maison avec
-  // ratingCount:1 est consideree comme un avis auto-attribue et sanctionnee.
+  // Pas de bloc `review`/`aggregateRating` : aucun avis n'a jamais ete
+  // collecte sur ce site, une note maison avec ratingCount:1 est un avis
+  // auto-attribue sanctionne par Google. Pas de `shippingDetails` ni
+  // `hasMerchantReturnPolicy` sur `offers` : la livraison et les retours
+  // sont geres par le marchand (ManoMano/Amazon), pas par Trouve-Tout, on
+  // n'a pas ces donnees et ne peut pas les garantir exactes par fiche.
+  // Ces 4 champs sont signales "non critique" par Search Console (n'empechent
+  // pas l'affichage), ce sont des suggestions, pas des erreurs a combler en
+  // inventant des donnees.
 });
 
 const breadcrumb = JSON.stringify({
