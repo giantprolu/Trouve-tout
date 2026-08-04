@@ -4,6 +4,7 @@ import EnteteCoque from '../../components/EnteteCoque.astro';
 import TableauComparatif from '../../components/TableauComparatif.astro';
 import TrancheBudget from '../../components/TrancheBudget.astro';
 import { imageTaille } from '../../lib/image';
+import { titreSeoProduit, metaProduit } from '../../lib/seo';
 import CTAAffilie from '../../components/CTAAffilie.astro';
 import EncartTransparence from '../../components/EncartTransparence.astro';
 import Cote from '../../components/Cote.astro';
@@ -89,17 +90,15 @@ export function getStaticPaths() {
   return produits.map((item) => ({ params: { slug: item.slug } }));
 }
 
-// Le titre final ajoute encore " — Trouve-Tout" (Layout) : au-dela de 60-70
+// Le titre final ajoute encore " — Trouve-Tout" (Layout) : au-dela de 60
 // caracteres, Google tronque le <title> dans les resultats de recherche.
-// Beaucoup de noms de produits sont deja longs (specs incluses) — on
-// n'ajoute le suffixe descriptif que quand il reste de la marge, plutot que
-// de raccourcir le nom du produit lui-meme (donnee factuelle, pas du texte
-// editorial a reecrire).
-const titre = produit.nom.length <= 40 ? `${produit.nom} — Avis et comparatif` : produit.nom;
+// Beaucoup de noms de produits depassent a eux seuls ce budget (specs et
+// conditionnement inclus) : titreSeoProduit retire d'abord ce que la page
+// affiche deja plus bas, puis coupe sur une frontiere de mot. Voir src/lib/seo.ts.
 ---
 <Layout
-  title={titre}
-  description={`${produit.verdict} — ${produit.description}`}
+  title={titreSeoProduit(produit)}
+  description={metaProduit(produit)}
   hideHeader
   noindex={!produit.verifie}
 >

@@ -42,14 +42,39 @@ const breadcrumb = JSON.stringify({
   ],
 });
 
+// La page liste des fiches sans les detailler : c'est le cas d'usage d'un
+// ItemList "page de synthese" (chaque entree pointe vers la fiche, aucun
+// prix ni disponibilite declare ici — ils vivent sur la fiche produit, seul
+// endroit ou la fraicheur est verifiee). Les fiches verifie:false sont en
+// noindex : les declarer reviendrait a pousser Google vers des pages qu'on
+// lui demande par ailleurs d'ignorer.
+const produitsIndexables = produitsCategorie.filter((p) => p.verifie);
+const itemList = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: `${categorie.nom} — ${categorie.sousTitre}`,
+  numberOfItems: produitsIndexables.length,
+  itemListElement: produitsIndexables.map((p, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: p.nom,
+    url: absoluteUrl(`/produits/${p.slug}`),
+  })),
+});
+
 export const prerender = true;
 
 export function getStaticPaths() {
   return categories.map((item) => ({ params: { slug: item.slug } }));
 }
 ---
-<Layout title={`${categorie.nom} — ${categorie.sousTitre}`} description={categorie.description} hideHeader>
+<Layout
+  title={categorie.titreSeo ?? `${categorie.nom} — ${categorie.sousTitre}`}
+  description={categorie.metaDescription ?? categorie.description}
+  hideHeader
+>
   <script is:inline type="application/ld+json" set:html={breadcrumb} />
+  {produitsIndexables.length > 0 && <script is:inline type="application/ld+json" set:html={itemList} />}
   <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
     <EnteteCoque />
 

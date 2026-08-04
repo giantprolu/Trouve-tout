@@ -10,6 +10,10 @@ export interface Categorie {
   emoji: string;
   description: string;
   sousTitre: string;
+  /** Balise <title> sans le suffixe " — Trouve-Tout" ajoute par Layout : 46 caracteres max pour tenir sous les 60 affiches par Google. */
+  titreSeo?: string;
+  /** <meta name="description"> — 155 caracteres max. Distinct de `description`, qui est affichee dans la page. */
+  metaDescription?: string;
 }
 
 export interface Marque {
@@ -52,6 +56,17 @@ export interface Guide {
   categorieSlug: string;
   intro: string;
   sections: { titre: string; contenu: string }[];
+  /** Balise <title> sans le suffixe " — Trouve-Tout" ajoute par Layout : 46 caracteres max pour tenir sous les 60 affiches par Google. */
+  titreSeo?: string;
+  /** <meta name="description"> — 155 caracteres max. Distinct de `description`, qui est affichee dans la page et dans le JSON-LD Article. */
+  metaDescription?: string;
+  /**
+   * Questions reelles dont la reponse est deja etablie dans les sections du
+   * guide — jamais une reponse nouvelle glissee par la bande. Rendues
+   * visiblement dans la page en plus du JSON-LD FAQPage : Google exige que
+   * le balisage corresponde a du contenu affiche.
+   */
+  faq?: { question: string; reponse: string }[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,6 +81,9 @@ export const categories: Categorie[] = [
     description:
       "Perceuses-visseuses, perforateurs, visseuses à chocs. Le premier outil qu'on achète, et celui qu'on garde dix ans.",
     sousTitre: "L'outil de base, celui qu'il ne faut pas rater",
+    titreSeo: 'Perceuse-visseuse : bien choisir la sienne',
+    metaDescription:
+      "Perceuse-visseuse, perforateur ou visseuse à chocs : voltage, percussion, brushless. Comprenez ce qui compte vraiment avant d'acheter.",
   },
   {
     slug: 'sciage',
@@ -74,6 +92,9 @@ export const categories: Categorie[] = [
     description:
       'Scies circulaires, scies sauteuses, scies à onglet. Couper droit, couper propre, sans y laisser un doigt.',
     sousTitre: 'Couper droit du premier coup',
+    titreSeo: 'Scie circulaire, sauteuse ou à onglet',
+    metaDescription:
+      'Scie circulaire, sauteuse ou à onglet : quelle machine pour quelle coupe, et pourquoi la lame compte plus. Comparez avant de trancher.',
   },
   {
     slug: 'poncage-finition',
@@ -82,6 +103,9 @@ export const categories: Categorie[] = [
     description:
       "Ponceuses excentriques, vibrantes, à bande. L'étape que tout le monde bâcle et qui fait 80 % du rendu final.",
     sousTitre: 'Là où se joue le rendu final',
+    titreSeo: 'Ponceuse : quel modèle pour quel usage',
+    metaDescription:
+      "Excentrique, vibrante, à bande ou delta : la ponceuse adaptée à votre chantier et le critère qu'on regrette toujours. Trouvez la bonne.",
   },
   {
     slug: 'jardin-exterieur',
@@ -90,6 +114,9 @@ export const categories: Categorie[] = [
     description:
       "Tondeuses, taille-haies, souffleurs, nettoyeurs. L'entretien extérieur sans y passer ses week-ends.",
     sousTitre: 'Reprendre le dessus sur le jardin',
+    titreSeo: 'Tondeuse et outils de jardin : le guide',
+    metaDescription:
+      'Tondeuses, taille-haies, souffleurs : les seuils de surface et de puissance qui décident du bon choix. Équipez-vous sans surpayer.',
   },
 ];
 
@@ -2291,6 +2318,9 @@ export const guides: Guide[] = [
   {
     slug: 'quelle-perceuse-visseuse-choisir',
     titre: 'Quelle perceuse-visseuse choisir ?',
+    titreSeo: 'Quelle perceuse-visseuse choisir ?',
+    metaDescription:
+      "Voltage, percussion, brushless, écosystème de batteries : les critères qui décident vraiment du bon achat. Lisez le guide avant de commander.",
     description:
       "Les critères qui comptent vraiment — et ceux que les fiches produits mettent en avant pour rien.",
     categorieSlug: 'percage-vissage',
@@ -2323,10 +2353,35 @@ export const guides: Guide[] = [
           "Le nombre de vitesses au-delà de deux, les LED d'éclairage (toutes équivalentes), les mallettes garnies d'accessoires bas de gamme, et les kits « 200 pièces » dont tu utiliseras six embouts.",
       },
     ],
+    faq: [
+      {
+        question: 'Faut-il choisir une perceuse 12V ou 18V ?',
+        reponse:
+          "Le voltage ne dit rien de la puissance : une 18V d'entrée de gamme sera moins performante qu'une 12V de marque pro. Regarde plutôt le couple en Newton-mètres — vise 50 Nm minimum pour un usage polyvalent — et l'ampérage en Ah, qui détermine l'autonomie et non la force.",
+      },
+      {
+        question: 'La percussion est-elle vraiment indispensable ?',
+        reponse:
+          "Seulement pour percer les matériaux durs : béton, pierre, brique pleine. Si tu ne perces que du bois, du placo et du métal, elle est inutile et alourdit l'outil. Dès qu'un mur porteur entre dans l'équation, elle devient indispensable : sans elle, tu brûles tes forets.",
+      },
+      {
+        question: 'Le moteur brushless vaut-il son surcoût ?',
+        reponse:
+          "Il coûte 40 à 60 € de plus, chauffe moins, dure plus longtemps et consomme moins de batterie. Il se justifie si tu bricoles au moins une fois par mois. Pour trois utilisations par an, un moteur à charbon tiendra largement.",
+      },
+      {
+        question: "Quel est le critère le plus important à l'achat ?",
+        reponse:
+          "L'écosystème de batteries, celui que personne ne regarde et qui coûte le plus cher à long terme. Une batterie représente 60 à 100 € pièce : si tu comptes acheter d'autres outils sans fil dans les cinq ans, choisis d'abord un système (Ryobi ONE+, Makita LXT, Bosch Power for All, Einhell Power X-Change) puis l'outil dedans.",
+      },
+    ],
   },
   {
     slug: 'scie-circulaire-ou-scie-sauteuse',
     titre: 'Scie circulaire ou scie sauteuse ?',
+    titreSeo: 'Scie circulaire ou sauteuse : laquelle ?',
+    metaDescription:
+      "Coupe droite ou courbe : la règle en une phrase pour trancher, et laquelle prendre si vous n'en achetez qu'une. Découvrez laquelle vous va.",
     description:
       "Deux outils souvent confondus qui ne font pas du tout le même travail. Comment choisir — ou savoir s'il faut les deux.",
     categorieSlug: 'sciage',
@@ -2359,10 +2414,35 @@ export const guides: Guide[] = [
           "La circulaire est l'outil le plus dangereux de cette liste, à cause du **rebond** : la lame se coince, la machine part vers l'arrière. Ne bloque jamais le carter de protection, cale toujours ta pièce, et tiens-toi hors de l'axe de la lame. Lunettes obligatoires sur les deux machines.",
       },
     ],
+    faq: [
+      {
+        question: 'Scie circulaire ou scie sauteuse : quelle différence ?',
+        reponse:
+          "La circulaire fait les coupes droites, longues et rapides ; la sauteuse fait les coupes courbes, les découpes intérieures et le travail fin. Une coupe droite de deux mètres à la sauteuse reste possible, mais le résultat sera irrégulier quel que soit ton niveau.",
+      },
+      {
+        question: "Si je n'en achète qu'une, laquelle prendre ?",
+        reponse:
+          "La sauteuse si tu fais surtout de la rénovation intérieure : plinthes, ouvertures dans un plan de travail, arrondis. La circulaire si tu construis : terrasse, ossature, découpe de panneaux OSB ou de contreplaqué.",
+      },
+      {
+        question: 'La lame compte-t-elle plus que la machine ?',
+        reponse:
+          "Oui. Une bonne lame sur une machine moyenne donne un meilleur résultat que l'inverse. Peu de dents donne une coupe rapide et grossière, beaucoup de dents une coupe lente et propre. Prévois au minimum deux lames par machine et change-les dès que la coupe force.",
+      },
+      {
+        question: 'Quel est le principal danger de la scie circulaire ?',
+        reponse:
+          "Le rebond : la lame se coince et la machine part vers l'arrière. Ne bloque jamais le carter de protection, cale toujours ta pièce et tiens-toi hors de l'axe de la lame. Les lunettes de protection sont obligatoires sur les deux machines.",
+      },
+    ],
   },
   {
     slug: 'quelle-ponceuse-pour-quel-usage',
     titre: 'Quelle ponceuse pour quel usage ?',
+    titreSeo: "Quelle ponceuse choisir selon l'usage ?",
+    metaDescription:
+      "Excentrique, vibrante, à bande ou delta : le bon type selon la surface, et l'aspiration à ne pas négliger. Choisissez en trois minutes.",
     description:
       'Excentrique, vibrante, à bande, delta : chacune a un seul vrai domaine. Le guide pour ne pas se tromper.',
     categorieSlug: 'poncage-finition',
@@ -2395,10 +2475,35 @@ export const guides: Guide[] = [
           "La poussière de ponçage est fine, elle s'infiltre partout et elle est nocive à l'inhalation. Une ponceuse **raccordable à un aspirateur** change complètement l'expérience — le simple bac à poussière intégré n'en capte qu'une fraction. Masque FFP2 dans tous les cas.",
       },
     ],
+    faq: [
+      {
+        question: "Quelle ponceuse choisir si je n'en prends qu'une ?",
+        reponse:
+          "L'excentrique. Son plateau tourne et oscille en même temps, ce qui empêche les marques circulaires. C'est la polyvalente : meubles, portes, plans de travail, préparation avant peinture.",
+      },
+      {
+        question: 'Quelle différence entre ponceuse excentrique et vibrante ?',
+        reponse:
+          "L'excentrique a un plateau rond qui tourne et oscille, plus polyvalent et plus agressif. La vibrante a un plateau rectangulaire qui vibre sans tourner : moins agressive, mais elle atteint les angles droits, ce qu'un plateau rond ne fera jamais.",
+      },
+      {
+        question: 'Quand faut-il une ponceuse à bande ?',
+        reponse:
+          "Pour le décapage lourd uniquement : parquet, poutres, vieille peinture épaisse. Elle enlève beaucoup de matière très vite, mais elle creuse le bois en quelques secondes d'inattention — à réserver aux surfaces qui en ont vraiment besoin.",
+      },
+      {
+        question: "L'aspiration est-elle un critère important ?",
+        reponse:
+          "Oui, c'est celui qu'on regrette. La poussière de ponçage est fine, s'infiltre partout et est nocive à l'inhalation. Une ponceuse raccordable à un aspirateur change complètement l'expérience : le bac à poussière intégré n'en capte qu'une fraction. Masque FFP2 dans tous les cas.",
+      },
+    ],
   },
   {
     slug: 'tondeuse-batterie-thermique-filaire',
     titre: 'Tondeuse : batterie, thermique ou filaire ?',
+    titreSeo: 'Tondeuse batterie ou thermique ?',
+    metaDescription:
+      'Batterie, thermique ou filaire : les seuils de surface qui décident, et ce que la batterie a vraiment changé. Comparez avant de choisir.',
     description:
       'Le choix dépend presque uniquement de la surface de ton terrain. Voici les seuils.',
     categorieSlug: 'jardin-exterieur',
@@ -2426,10 +2531,35 @@ export const guides: Guide[] = [
           "Une largeur plus grande fait gagner du temps mais rend la machine plus lourde et moins maniable autour des massifs. Le **réglage centralisé de hauteur** (une seule manette au lieu de quatre roues à régler) est le petit luxe qui se remarque à chaque tonte.",
       },
     ],
+    faq: [
+      {
+        question: 'Quelle tondeuse pour quelle surface de terrain ?',
+        reponse:
+          "Jusqu'à 300 m², la filaire suffit : légère, pas chère, sans entretien. De 300 à 800 m², la batterie est le meilleur compromis, avec une seconde batterie au-delà de 500 m². Au-delà de 800 m², thermique — ou autoportée si le terrain dépasse 1 500 m².",
+      },
+      {
+        question: 'La tondeuse à batterie remplace-t-elle la thermique ?',
+        reponse:
+          "Jusqu'à 800 m², oui : plus de vidange, plus de bougie, plus de carburant qui vieillit dans le bidon, démarrage immédiat et un niveau sonore qui permet de tondre le dimanche matin. En contrepartie, l'autonomie est limitée et la batterie se remplace au bout de 5 à 8 ans.",
+      },
+      {
+        question: "Qu'est-ce que le mulching et faut-il le choisir ?",
+        reponse:
+          "La tondeuse broie l'herbe finement et la laisse au sol comme engrais naturel : plus de bac à vider et un gazon en meilleure santé. En contrepartie, il faut tondre plus souvent, et jamais sur herbe haute ou mouillée, sinon ça fait des paquets.",
+      },
+      {
+        question: 'Faut-il privilégier une grande largeur de coupe ?',
+        reponse:
+          "Pas systématiquement : elle fait gagner du temps mais rend la machine plus lourde et moins maniable autour des massifs. Le réglage centralisé de hauteur, une seule manette au lieu de quatre roues, se remarque davantage à chaque tonte.",
+      },
+    ],
   },
   {
     slug: 'premier-equipement-bricolage',
     titre: 'Premier équipement : par quoi commencer ?',
+    titreSeo: "Premier équipement bricolage : l'essentiel",
+    metaDescription:
+      "Par quel outil commencer sans gaspiller : choisissez d'abord un système de batteries, pas une machine. Montez votre kit étape par étape.",
     description:
       "L'ordre d'achat qui évite de dépenser 800 € pour racheter les mêmes outils deux ans plus tard.",
     categorieSlug: 'percage-vissage',
@@ -2460,6 +2590,119 @@ export const guides: Guide[] = [
         titre: "Ce qu'il faut acheter en premier et qui ne coûte presque rien",
         contenu:
           "Avant tout outil électroportatif : des **lunettes de protection**, un **masque FFP2**, un **mètre de qualité**, un **niveau à bulle** et un **détecteur de métaux et câbles**. Ce dernier coûte une trentaine d'euros et évite de percer une canalisation ou une gaine électrique — le meilleur rapport sécurité/prix de toute la liste.",
+      },
+    ],
+    faq: [
+      {
+        question: 'Par quel outil faut-il commencer ?',
+        reponse:
+          "Par le choix d'un système de batteries, pas par une machine : c'est la décision structurante, tout le reste en découlera pendant dix ans. Regarde le catalogue complet de chaque marque — propose-t-elle aussi la tondeuse, le taille-haie, la ponceuse dont tu auras besoin plus tard ?",
+      },
+      {
+        question: 'Dans quel ordre acheter ses premiers outils ?',
+        reponse:
+          "La perceuse-visseuse à percussion d'abord, c'est celle que tu utiliseras le plus. Puis la scie sauteuse, le premier outil de coupe et le moins dangereux. Puis la ponceuse excentrique. La scie circulaire vient plus tard, quand un vrai projet de construction le justifie.",
+      },
+      {
+        question: 'Les coffrets « tout en un » en promotion valent-ils le coup ?',
+        reponse:
+          "C'est l'erreur classique. Deux ans plus tard, la moitié n'a jamais servi et l'autre moitié est à remplacer. Mieux vaut acheter dans l'ordre et mettre le budget sur la perceuse-visseuse.",
+      },
+      {
+        question: 'Que faut-il acheter avant le premier outil électroportatif ?',
+        reponse:
+          "Des lunettes de protection, un masque FFP2, un mètre de qualité, un niveau à bulle et un détecteur de métaux et câbles. Ce dernier coûte une trentaine d'euros et évite de percer une canalisation ou une gaine électrique : le meilleur rapport sécurité/prix de la liste.",
+      },
+    ],
+  },
+  {
+    slug: 'comparateur-prix-bricolage',
+    titre: 'Comparateur de prix bricolage : ce qu\'ils ne comparent pas',
+    titreSeo: 'Comparateur prix bricolage : le guide',
+    metaDescription:
+      "Comment un comparateur gagne sa vie, ce qu'il ne voit pas sur l'outillage et la méthode qui marche à la place. Comparez sans vous faire avoir.",
+    description:
+      "Ce qu'un comparateur de prix compare vraiment, ce qu'il ignore sur l'outillage, et comment s'y prendre à la place.",
+    categorieSlug: 'percage-vissage',
+    intro:
+      "Un comparateur donne l'impression de voir tout le marché d'un coup d'œil. Sur l'outillage, il en voit une partie seulement — et la partie qu'il montre est plus trompeuse qu'on ne croit. Voici ce qu'il compare vraiment, et ce qu'il faut faire à la place.",
+    sections: [
+      {
+        titre: 'Qui paie le comparateur',
+        contenu:
+          "**Un comparateur de prix est rémunéré par les marchands qu'il compare**, à hauteur de 1 à 15 % du prix de vente selon les secteurs, le plus souvent 3 à 6 %. Ça n'en fait pas un menteur, mais ça pose une limite structurelle : il ne compare que les marchands avec qui il a un contrat. Un vendeur absent de son portefeuille n'existe pas dans son classement, même s'il est le moins cher du marché.",
+      },
+      {
+        titre: 'Ce que la loi impose depuis 2016',
+        contenu:
+          "L'article L111-6 du Code de la consommation, précisé par le décret n° 2016-505 du 22 avril 2016, oblige tout comparateur à une information « loyale, claire et transparente » : critères de classement, existence d'une relation contractuelle avec les vendeurs, et affichage du caractère publicitaire des offres référencées à titre payant. **En pratique, cette information est presque toujours reléguée dans une page annexe**, jamais à l'endroit où tu regardes le prix.",
+      },
+      {
+        titre: "Pourquoi ça ne marche pas sur l'outillage",
+        contenu:
+          "Les grands comparateurs agrègent des marchands e-commerce généralistes. **Les enseignes qui font le marché français du bricolage — ManoMano, Leroy Merlin, Castorama, Bricomarché, Brico Dépôt — y sont absentes ou très partiellement couvertes.** Il existe bien un comparateur spécialisé côté matériaux de construction (ciment, plâtre, isolation), mais rien d'équivalent sur l'outillage. Le classement que tu lis ne couvre donc pas les vendeurs chez qui tu achèterais.",
+      },
+      {
+        titre: 'Piège 1 — le même outil à trois prix différents',
+        contenu:
+          "Une perceuse existe en version nue, avec une batterie, avec deux batteries, en coffret. **Ces variantes portent des références voisines et des prix qui vont du simple au triple.** Un tri par prix croissant remonte donc mécaniquement la version nue — sans batterie ni chargeur, inutilisable telle quelle si tu débutes dans la marque. Vérifie ce qu'il y a dans la boîte avant de comparer deux lignes.",
+      },
+      {
+        titre: 'Piège 2 — deux gammes derrière une même marque',
+        contenu:
+          "La plupart des grandes marques ont une gamme grand public et une gamme professionnelle, souvent distinguées par une simple couleur — le vert et le bleu chez Bosch. **Les performances, la durée de vie et la disponibilité des pièces détachées n'ont rien à voir**, et les batteries ne sont pas compatibles entre les deux. Un comparateur aligne les prix sans jamais signaler que tu compares deux catégories d'outils différentes.",
+      },
+      {
+        titre: "Piège 3 — le prix affiché n'est pas le prix payé",
+        contenu:
+          "Ajoute les frais de port et le seuil de livraison gratuite, puis compare avec le retrait en magasin, souvent gratuit et immédiat. **Sur l'outillage lourd — établi, tondeuse thermique, groupe électrogène — le transport peut représenter un tiers du prix produit.** Vérifie aussi la disponibilité réelle : un comparateur continue d'afficher des marchands qui n'ont plus le stock.",
+      },
+      {
+        titre: 'Piège 4 — lire un prix barré',
+        contenu:
+          "Depuis le 28 mai 2022, l'article L112-1-1 du Code de la consommation impose une règle simple : **le prix barré doit être le prix le plus bas pratiqué par ce vendeur au cours des trente derniers jours**, et non un prix conseillé théorique. Un « -50 % » calculé sur un tarif jamais appliqué est irrégulier. C'est ici qu'un comparateur rend son meilleur service : son historique de prix permet de vérifier si la promotion en est une.",
+      },
+      {
+        titre: "Le coût qu'aucun comparateur n'affiche",
+        contenu:
+          "Sur les outils sans fil, le prix de la machine n'est qu'une partie de la facture. **Ce qui t'engage, c'est le système de batteries** : une batterie coûte 60 à 100 € et ne fonctionne que dans sa propre plateforme. Prendre la perceuse la moins chère d'une marque puis la ponceuse la moins chère d'une autre revient à financer deux parcs de batteries. Aucun comparateur de prix ne sait afficher ce coût-là.",
+      },
+      {
+        titre: 'La méthode qui marche',
+        contenu:
+          "Dans l'ordre : fixe la référence exacte, conditionnement compris ; vérifie qu'elle appartient au système de batteries que tu as retenu ; relève le prix chez trois ou quatre marchands, **frais de port inclus** ; compare avec le retrait en magasin ; contrôle la disponibilité avant de valider. Un comparateur sert à la troisième étape, pas à décider à ta place.",
+      },
+      {
+        titre: 'Louer, acheter d\'occasion ou neuf',
+        contenu:
+          "Pour un outil que tu utiliseras une fois — carotteuse, ponceuse à béton, cloueur —, la location revient presque toujours moins cher que le meilleur prix d'achat. L'occasion se défend sur le filaire et les outils mécaniques simples. **Évite-la sur tout ce qui embarque une batterie** : c'est la pièce qui vieillit le plus vite et la plus chère à remplacer.",
+      },
+      {
+        titre: 'Le verdict',
+        contenu:
+          "Un comparateur de prix reste utile pour deux choses : vérifier qu'un prix n'est pas aberrant, et consulter un historique avant de croire à une promotion. **Il n'est pas fiable pour choisir un outil**, parce qu'il ne voit ni les enseignes de bricolage, ni le conditionnement, ni la gamme, ni le coût du système de batteries. C'est exactement pour ça que ce site publie des guides plutôt qu'un comparateur.",
+      },
+    ],
+    faq: [
+      {
+        question: 'Les comparateurs de prix sont-ils fiables ?',
+        reponse:
+          "Ils sont fiables sur ce qu'ils couvrent, et muets sur le reste. Un comparateur est rémunéré par les marchands qu'il référence, de 1 à 15 % du prix de vente, et ne compare que son portefeuille : rien ne garantit que le meilleur prix du marché s'y trouve. Utilise-le pour vérifier un ordre de grandeur, pas pour arbitrer un achat.",
+      },
+      {
+        question: "Pourquoi les enseignes de bricolage n'apparaissent pas dans les comparateurs ?",
+        reponse:
+          "Parce que les grands comparateurs agrègent des marchands e-commerce généralistes. ManoMano, Leroy Merlin, Castorama, Bricomarché ou Brico Dépôt y sont absents ou très partiellement couverts, alors que ce sont les enseignes chez qui se fait l'essentiel des achats d'outillage en France.",
+      },
+      {
+        question: "Comment vérifier qu'une promotion est réelle ?",
+        reponse:
+          "Depuis le 28 mai 2022, l'article L112-1-1 du Code de la consommation impose que le prix barré corresponde au prix le plus bas pratiqué par le vendeur durant les trente derniers jours. Si le prix de référence ressemble à un tarif conseillé jamais appliqué, la réduction est irrégulière. L'historique de prix d'un comparateur permet de le contrôler.",
+      },
+      {
+        question: "Faut-il acheter l'outil le moins cher trouvé par un comparateur ?",
+        reponse:
+          "Rarement, parce que le tri par prix croissant remonte les versions nues, sans batterie ni chargeur, et les gammes grand public d'une marque dont tu croyais acheter la gamme pro. Compare des références au conditionnement identique, frais de port inclus, dans le système de batteries que tu as déjà.",
       },
     ],
   },

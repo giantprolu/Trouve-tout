@@ -12,6 +12,7 @@ import {
   marques,
 } from '../../lib/data';
 import { absoluteUrl } from '../../lib/site';
+import { titreSeoMarque, metaMarque } from '../../lib/seo';
 
 const { slug } = Astro.params;
 const marque = getMarqueBySlug(slug!);
@@ -36,7 +37,7 @@ export function getStaticPaths() {
   return marques.map((item) => ({ params: { slug: item.slug } }));
 }
 ---
-<Layout title={`${marque.nom} — ${marque.positionnement}`} description={marque.description} hideHeader>
+<Layout title={titreSeoMarque(marque)} description={metaMarque(marque)} hideHeader>
   <script is:inline type="application/ld+json" set:html={breadcrumb} />
   <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
     <EnteteCoque />

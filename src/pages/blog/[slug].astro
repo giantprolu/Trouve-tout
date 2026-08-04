@@ -55,15 +55,37 @@ const breadcrumb = JSON.stringify({
   ],
 });
 
+// Le balisage n'est emis que si les questions sont aussi rendues plus bas :
+// un FAQPage sans equivalent visible est un balisage trompeur au sens des
+// consignes Google. A noter que les rich results FAQ ne s'affichent plus
+// pour un site comme celui-ci depuis 2023 — l'interet restant est la
+// comprehension du contenu par les moteurs, generatifs compris.
+const faqSchema = guide.faq?.length
+  ? JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: guide.faq.map(({ question, reponse }) => ({
+        '@type': 'Question',
+        name: question,
+        acceptedAnswer: { '@type': 'Answer', text: reponse },
+      })),
+    })
+  : undefined;
+
 export const prerender = true;
 
 export function getStaticPaths() {
   return guides.map((item) => ({ params: { slug: item.slug } }));
 }
 ---
-<Layout title={guide.titre} description={guide.description} hideHeader>
+<Layout
+  title={guide.titreSeo ?? guide.titre}
+  description={guide.metaDescription ?? guide.description}
+  hideHeader
+>
   <script is:inline type="application/ld+json" set:html={schema} />
   <script is:inline type="application/ld+json" set:html={breadcrumb} />
+  {faqSchema && <script is:inline type="application/ld+json" set:html={faqSchema} />}
 
   <section class="rounded-shell bg-gradient-to-br from-white/80 via-[#F2F4EC]/90 to-[#E9EDDC]/95 shadow-shell p-4 sm:p-6">
     <EnteteCoque />
@@ -122,6 +144,18 @@ export function getStaticPaths() {
               {produitsCategorie.length} outils comparés sur les critères qui changent vraiment à l'usage.
             </p>
             <CarrouselProduits produits={produitsCategorie} />
+          </div>
+        )}
+
+        {guide.faq && guide.faq.length > 0 && (
+          <div class="rounded-tile bg-card shadow-tile p-6 sm:p-8 flex flex-col gap-2">
+            <h2 class="m-0 mb-2 font-display font-bold text-display-m text-ink">Questions fréquentes</h2>
+            {guide.faq.map(({ question, reponse }) => (
+              <div class="border-t border-line/40 pt-4 mt-2 first:border-0 first:pt-0 first:mt-0">
+                <h3 class="m-0 font-display font-bold text-block-title text-ink">{question}</h3>
+                <p class="mt-2 m-0 text-body text-ink/80 leading-[1.7]">{reponse}</p>
+              </div>
+            ))}
           </div>
         )}
       </div>
