@@ -1,11 +1,18 @@
 /**
  * Synchronise src/data/prix-synchronises.json avec le flux produit Awin/ManoMano.
  *
- * Source du flux : AWIN_FEED_URL — l'URL "Create-a-Feed" Awin filtrée sur
- * l'annonceur ManoMano FR (17547). Accepte aussi un chemin de fichier local
- * (utile pour tester avec un CSV déjà téléchargé, sans toucher au réseau).
+ * Sources, par ordre de préférence :
  *
- *   AWIN_FEED_URL=https://productdata.awin.com/... node scripts/sync-prix.mjs
+ *  1. AWIN_DATAFEED_API_KEY — le script découvre alors lui-même les flux de
+ *     l'annonceur, les trie du plus fraîchement importé au plus ancien et les
+ *     parcourt jusqu'à retrouver toutes les fiches. C'est le mode à utiliser :
+ *     il survit au renommage d'un flux et, surtout, à son abandon par
+ *     l'annonceur — c'est exactement ce qui est arrivé le 2026-08-04, où
+ *     AWIN_FEED_URL pointait depuis trois mois sur un flux mort.
+ *  2. AWIN_FEED_URL — une URL unique, ou un chemin de fichier local pour
+ *     tester sans réseau.
+ *
+ *   AWIN_DATAFEED_API_KEY=… node scripts/sync-prix.mjs
  *   AWIN_FEED_URL=./datafeed_3007871.csv node scripts/sync-prix.mjs
  *
  * Matching : la plupart des `urlMarchand` de src/lib/data.ts sont des URL
@@ -25,8 +32,12 @@ import { createGunzip } from 'node:zlib';
 import { parse } from 'csv-parse';
 
 const feedUrl = process.env.AWIN_FEED_URL;
-if (!feedUrl) {
-  console.error('\n✖ AWIN_FEED_URL absent — impossible de récupérer le flux Awin.\n');
+if (!feedUrl && !process.env.AWIN_DATAFEED_API_KEY) {
+  console.error(
+    '\n✖ Ni AWIN_DATAFEED_API_KEY ni AWIN_FEED_URL — aucune source de prix.\n' +
+      '  La clé datafeed se récupère dans Awin, et laisse le script choisir\n' +
+      '  lui-même un flux à jour.\n',
+  );
   process.exit(1);
 }
 
@@ -118,14 +129,27 @@ function prixNumerique(brut) {
  */
 const AWIN_ANNONCEUR_MANOMANO = process.env.AWIN_ADVERTISER_ID ?? '17547';
 
-async function dateFluxDepuisListe() {
+/** Un flux dont la derniere importation remonte a plus de ca ne vaut plus rien. */
+const FLUX_PERIME_JOURS = Number(process.env.AWIN_FLUX_PERIME_JOURS ?? 7);
+
+/**
+ * Liste les flux de l'annonceur, du plus fraichement importe au plus ancien.
+ *
+ * C'est ce qui a permis de comprendre l'incident du 2026-08-04 : le compte
+ * avait acces a des flux "ManoMano FR - Part 1/2" abandonnes par l'annonceur
+ * le 2026-05-15, et a des flux vivants reimportes chaque nuit. `AWIN_FEED_URL`
+ * pointait sur un flux mort, d'ou trois mois de prix figes. Se fier a un
+ * ordre decroissant de `Last Imported` evite que ca se reproduise, meme si
+ * l'annonceur renomme ou renumerote ses flux.
+ */
+async function fluxDisponibles() {
   const cle = process.env.AWIN_DATAFEED_API_KEY;
-  if (!cle) return undefined;
+  if (!cle) return [];
   try {
     const res = await fetch(`https://productdata.awin.com/datafeed/list/apikey/${cle}`);
     if (!res.ok) {
-      console.log(`⚠ Liste des flux Awin injoignable (HTTP ${res.status}) — datation par repli.`);
-      return undefined;
+      console.log(`⚠ Liste des flux Awin injoignable (HTTP ${res.status}) — repli sur AWIN_FEED_URL.`);
+      return [];
     }
     const corps = Buffer.from(await res.arrayBuffer());
     const lignes = await new Promise((resoudre, rejeter) => {
@@ -136,27 +160,51 @@ async function dateFluxDepuisListe() {
         .on('end', () => resoudre(acc))
         .on('error', rejeter);
     });
-    if (!lignes.length) return undefined;
+    if (!lignes.length) return [];
 
     // Les intitules de colonnes d'Awin ont deja bouge par le passe : on les
     // reconnait par leur contenu plutot que par une egalite stricte.
     const cles = Object.keys(lignes[0]);
     const cleImport = cles.find((c) => /last.*import/i.test(c));
     const cleAnnonceur = cles.find((c) => /advertiser.*id/i.test(c));
-    if (!cleImport) {
-      console.log(`⚠ Pas de colonne "Last Imported" dans la liste Awin (colonnes : ${cles.join(', ')}).`);
-      return undefined;
+    const cleUrl = cles.find((c) => /^url$/i.test(c));
+    const cleNom = cles.find((c) => /feed.*name/i.test(c));
+    const cleId = cles.find((c) => /feed.*id/i.test(c));
+    if (!cleImport || !cleUrl) {
+      console.log(`⚠ Colonnes inattendues dans la liste Awin (${cles.join(', ')}) — repli sur AWIN_FEED_URL.`);
+      return [];
     }
-    const ligne =
-      (cleAnnonceur && lignes.find((l) => String(l[cleAnnonceur]).trim() === AWIN_ANNONCEUR_MANOMANO)) ||
-      lignes[0];
-    const d = new Date(String(ligne[cleImport]).trim().replace(' ', 'T') + 'Z');
-    if (Number.isNaN(d.getTime())) return undefined;
-    console.log(`Awin déclare le flux ${AWIN_ANNONCEUR_MANOMANO} mis à jour le ${ligne[cleImport]}.`);
-    return d;
+
+    const flux = lignes
+      .filter((l) => !cleAnnonceur || String(l[cleAnnonceur]).trim() === AWIN_ANNONCEUR_MANOMANO)
+      .map((l) => ({
+        id: cleId ? String(l[cleId]).trim() : '?',
+        nom: cleNom ? String(l[cleNom]).trim() : '?',
+        url: String(l[cleUrl]).trim(),
+        // Awin publie ces dates en UTC sans le marqueur de fuseau.
+        importeLe: new Date(String(l[cleImport]).trim().replace(' ', 'T') + 'Z'),
+      }))
+      .filter((f) => f.url && !Number.isNaN(f.importeLe.getTime()))
+      .sort((a, b) => b.importeLe - a.importeLe);
+
+    if (!flux.length) return [];
+    const limite = Date.now() - FLUX_PERIME_JOURS * 86_400_000;
+    const vivants = flux.filter((f) => f.importeLe.getTime() >= limite);
+    const jours = (f) => Math.round((Date.now() - f.importeLe) / 86_400_000);
+
+    console.log(`\n${flux.length} flux accessibles pour l'annonceur ${AWIN_ANNONCEUR_MANOMANO} :`);
+    console.log(`  · le plus récent : ${flux[0].nom} (${flux[0].id}), importé il y a ${jours(flux[0])} j`);
+    console.log(`  · ${vivants.length} de moins de ${FLUX_PERIME_JOURS} jours, ${flux.length - vivants.length} périmé(s)`);
+    if (!vivants.length) {
+      console.log(
+        `\n⚠ Aucun flux frais : le plus récent date de ${jours(flux[0])} jours. L'annonceur a\n` +
+          "  probablement cessé d'alimenter les flux auxquels ce compte a accès.",
+      );
+    }
+    return vivants.length ? vivants : flux.slice(0, 1);
   } catch (e) {
-    console.log(`⚠ Lecture de la liste des flux Awin impossible (${e.message}) — datation par repli.`);
-    return undefined;
+    console.log(`⚠ Lecture de la liste des flux Awin impossible (${e.message}) — repli sur AWIN_FEED_URL.`);
+    return [];
   }
 }
 
@@ -182,8 +230,14 @@ function detecterColonneDate(ligne) {
   return undefined;
 }
 
-async function chargerFlux() {
-  const { stream, genereLe } = await fluxCsv(feedUrl);
+/**
+ * Parcourt une source et retient les lignes correspondant aux fiches encore
+ * manquantes. Le catalogue ManoMano est decoupe en flux d'environ un million
+ * de produits chacun : sans arret anticipe, retrouver 118 references
+ * imposerait de lire plusieurs millions de lignes a chaque synchronisation.
+ */
+async function parcourirSource(source, index, trouve) {
+  const { stream, genereLe } = await fluxCsv(source.url);
   // relax_quotes + skip_records_with_error : un export marchand de 50k+ lignes
   // contient presque toujours quelques champs mal échappés (guillemet isolé
   // dans une description) — on ignore ces lignes-là plutôt que de faire
@@ -206,32 +260,34 @@ async function chargerFlux() {
   let lignesIgnorees = 0;
   parseur.on('skip', () => { lignesIgnorees++; });
 
-  const parFluxId = new Map();
-  const parMerchantId = new Map();
   let lignes = 0;
   let colonneDate;
-  let dateFlux;
+  let retenues = 0;
   for await (const ligne of parseur) {
     lignes++;
     if (lignes === 1) {
       colonneDate = detecterColonneDate(ligne);
       console.log(
         colonneDate
-          ? `Colonne de date détectée dans le flux : ${colonneDate}.`
-          : `Aucune colonne de date exploitable dans le flux (colonnes : ${Object.keys(ligne).join(', ')}).`,
+          ? `  colonne de date par produit : ${colonneDate}`
+          : '  pas de colonne de date par produit',
       );
-    }
-    if (colonneDate) {
-      // La date de generation du flux, c'est celle de sa donnee la plus
-      // recente : un produit peut tres bien n'avoir pas bouge depuis des mois.
-      const d = new Date(String(ligne[colonneDate]).trim());
-      if (!Number.isNaN(d.getTime()) && (!dateFlux || d > dateFlux)) dateFlux = d;
     }
     const id = ligne.aw_product_id?.trim();
     const merchantId = ligne.merchant_product_id?.trim();
     if (!id && !merchantId) continue;
+    // Priorite a aw_product_id : c'est l'annonce precise vers laquelle pointe
+    // le lien affilie de la fiche. merchant_product_id ne sert qu'aux fiches
+    // qui n'ont pas encore de lien tracke.
+    const slug = (id && index.parAw.get(id)) || (merchantId && index.parMerchant.get(merchantId));
+    if (!slug) continue;
+    const dejaVu = trouve.get(slug);
+    if (dejaVu?.viaAw && !(id && index.parAw.has(id))) continue;
     const prix = prixNumerique(ligne.search_price) ?? prixNumerique(ligne.store_price) ?? prixNumerique(ligne.display_price);
     if (prix === undefined) continue;
+    // Datation, par ordre de precision : la ligne elle-meme, sinon la date
+    // d'import du flux declaree par Awin.
+    const dateLigne = colonneDate ? new Date(String(ligne[colonneDate]).trim()) : undefined;
     const entree = {
       prix,
       enStock: ligne.in_stock === '1',
@@ -246,17 +302,61 @@ async function chargerFlux() {
       // ManoMano — pas rattrapable en re-synchronisant plus souvent.
       // aw_image_url reste en repli si le marchand ne fournit pas l'autre.
       image: ligne.merchant_image_url?.trim() || ligne.aw_image_url?.trim() || undefined,
+      viaAw: Boolean(id && index.parAw.has(id)),
+      dateDonnee: dateLigne && !Number.isNaN(dateLigne.getTime()) ? dateLigne : (source.importeLe ?? genereLe),
     };
-    if (id) parFluxId.set(id, entree);
-    // merchant_product_id peut apparaître sur plusieurs lignes (plusieurs
-    // annonces Awin en doublon pour le même produit ManoMano) : on garde la
-    // première rencontrée, sans tenter d'arbitrer entre doublons quasi
-    // identiques (prix généralement le même à quelques centimes près).
-    if (merchantId && !parMerchantId.has(merchantId)) parMerchantId.set(merchantId, entree);
+    // Plusieurs annonces Awin peuvent exister pour un meme produit ManoMano
+    // (marketplace : autant d'annonces que de vendeurs). A defaut de savoir
+    // laquelle ManoMano met en avant, on retient la moins chere en stock,
+    // qui est ce que la page produit affiche dans la grande majorite des cas.
+    const remplace =
+      !dejaVu ||
+      (entree.viaAw && !dejaVu.viaAw) ||
+      (entree.viaAw === dejaVu.viaAw && entree.enStock && !dejaVu.enStock) ||
+      (entree.viaAw === dejaVu.viaAw && entree.enStock === dejaVu.enStock && entree.prix < dejaVu.prix);
+    if (remplace) {
+      if (!dejaVu) retenues++;
+      trouve.set(slug, entree);
+    }
   }
-  if (lignes === 0) throw new Error('Flux Awin vide — 0 ligne parsée.');
-  if (lignesIgnorees > 0) console.log(`(${lignesIgnorees} ligne(s) du flux ignorée(s) — mal échappées)`);
-  return { parFluxId, parMerchantId, genereLe: genereLe ?? dateFlux };
+  if (lignes === 0) throw new Error(`Flux ${source.nom} vide — 0 ligne parsée.`);
+  if (lignesIgnorees > 0) console.log(`  (${lignesIgnorees} ligne(s) mal échappée(s), ignorées)`);
+  console.log(`  ${lignes} lignes lues, ${retenues} nouvelle(s) fiche(s) trouvée(s)`);
+}
+
+/**
+ * Enchaine les flux du plus frais au plus ancien et s'arrete des que toutes
+ * les fiches declarees ont ete retrouvees.
+ */
+async function chargerFlux(produits) {
+  const decouverts = await fluxDisponibles();
+  const sources = decouverts.length
+    ? decouverts
+    : [{ id: 'env', nom: 'AWIN_FEED_URL', url: feedUrl, importeLe: undefined }];
+  if (!sources[0].url) {
+    console.error('\n✖ Aucune source : ni AWIN_DATAFEED_API_KEY exploitable, ni AWIN_FEED_URL.\n');
+    process.exit(1);
+  }
+
+  const index = { parAw: new Map(), parMerchant: new Map() };
+  for (const p of produits) {
+    if (p.awProductId) index.parAw.set(p.awProductId, p.slug);
+    if (p.modelId) index.parMerchant.set(p.modelId, p.slug);
+  }
+
+  const trouve = new Map();
+  for (const source of sources) {
+    if (trouve.size >= produits.length) break;
+    const age = source.importeLe ? `importé il y a ${Math.round((Date.now() - source.importeLe) / 3_600_000)} h` : 'date inconnue';
+    console.log(`\n▸ ${source.nom} (${source.id}) — ${age}`);
+    try {
+      await parcourirSource(source, index, trouve);
+    } catch (e) {
+      console.log(`  ⚠ flux ignoré : ${e.message}`);
+    }
+    console.log(`  → ${trouve.size}/${produits.length} fiches couvertes`);
+  }
+  return trouve;
 }
 
 function produitsDeclares() {
@@ -274,18 +374,16 @@ function produitsDeclares() {
   }).filter((p) => p.slug && (p.awProductId || p.modelId));
 }
 
-const dateOfficielle = await dateFluxDepuisListe();
-const { parFluxId, parMerchantId, genereLe } = await chargerFlux();
 const produits = produitsDeclares();
+const trouve = await chargerFlux(produits);
 
 const synchronise = {};
-const nonTrouves = [];
+const nonTrouves = produits.filter((p) => !trouve.has(p.slug)).map((p) => p.nom);
 const maintenant = new Date();
 
 /**
- * Repli n°3, celui qui sert reellement sur ce flux : ni en-tete HTTP ni
- * colonne de date, donc la seule preuve qu'Awin a regenere son export est
- * que son contenu ait bouge.
+ * Dernier repli, quand aucune source ne date la donnee : la seule preuve
+ * qu'Awin a regenere son export est que son contenu ait bouge.
  *
  * Regle : si les valeurs metier de toutes les fiches sont identiques a la
  * synchronisation precedente, on conserve les `syncedAt` d'origine. Les
@@ -311,19 +409,9 @@ function valeursMetier({ prix, enStock, ean, image }) {
 }
 
 const precedent = snapshotPrecedent();
-// Ordre de confiance : ce qu'Awin declare officiellement, puis l'en-tete HTTP
-// du fichier, puis une colonne de date du flux. Une date posterieure a
-// maintenant serait absurde et vaut absence de date.
-const candidateDate = dateOfficielle ?? genereLe;
-const dateFluxConnue = candidateDate && candidateDate <= maintenant ? candidateDate : undefined;
 
-for (const { slug, nom, awProductId, modelId } of produits) {
-  const entree = (awProductId && parFluxId.get(awProductId)) || (modelId && parMerchantId.get(modelId));
-  if (!entree) {
-    nonTrouves.push(nom);
-    continue;
-  }
-  synchronise[slug] = entree;
+for (const [slug, { prix, enStock, ean, image }] of trouve) {
+  synchronise[slug] = { prix, enStock, ean, image };
 }
 
 const inchange =
@@ -332,39 +420,48 @@ const inchange =
     ([slug, e]) => precedent[slug] && valeursMetier(precedent[slug]) === valeursMetier(e),
   );
 
+let dates = 0;
 for (const [slug, entree] of Object.entries(synchronise)) {
-  // Priorite : date du flux si Awin la fournit ; sinon `syncedAt` d'origine
-  // tant que le contenu n'a pas bouge ; sinon l'heure du run.
-  const syncedAt = dateFluxConnue
-    ? dateFluxConnue.toISOString()
+  // Priorite : la date que la source attache a la donnee ; sinon le
+  // `syncedAt` d'origine tant que le contenu n'a pas bouge ; sinon l'heure
+  // du run, qui ne vaut que parce que le contenu vient de changer.
+  const dateSource = trouve.get(slug).dateDonnee;
+  const datee = dateSource && dateSource <= maintenant;
+  if (datee) dates++;
+  const syncedAt = datee
+    ? dateSource.toISOString()
     : inchange && precedent[slug]?.syncedAt
       ? precedent[slug].syncedAt
       : maintenant.toISOString();
   synchronise[slug] = { ...entree, syncedAt };
 }
 
-const reference = new Date(Object.values(synchronise)[0]?.syncedAt ?? maintenant);
-const ageHeures = (maintenant - reference) / 3_600_000;
+const ages = Object.values(synchronise).map((e) => (maintenant - new Date(e.syncedAt)) / 3_600_000);
+const ageMax = ages.length ? Math.max(...ages) : 0;
+const perimees = ages.filter((h) => h >= 72).length;
 
-if (dateFluxConnue) {
-  console.log(`\nFlux Awin daté à la source, généré il y a ${Math.round(ageHeures)} h.`);
+console.log('');
+if (dates === ages.length && dates > 0) {
+  console.log(`Toutes les fiches sont datées à la source, la plus ancienne remonte à ${Math.round(ageMax)} h.`);
+} else if (dates > 0) {
+  console.log(`${dates}/${ages.length} fiches datées à la source, les autres par comparaison.`);
 } else if (!inchange) {
   console.log(
-    '\nLe contenu du flux a changé depuis la dernière synchronisation : les prix\n' +
-      'sont donc bien rafraîchis, horodatage à maintenant.',
+    'Aucune source datée, mais le contenu du flux a changé depuis la dernière\n' +
+      'synchronisation : les prix sont donc bien rafraîchis, horodatage à maintenant.',
   );
 } else {
   console.log(
-    `\n⚠ Flux non daté et contenu identique depuis ${Math.round(ageHeures)} h : rien ne prouve\n` +
-      "  qu'Awin l'ait regénéré. Les `syncedAt` d'origine sont conservés, donc les\n" +
-      '  fiches repasseront en fourchette au-delà de 72 h. Ce fichier est inchangé,\n' +
-      '  le workflow ne redéploiera pas.',
+    `⚠ Aucune source datée et contenu identique depuis ${Math.round(ageMax)} h : rien ne prouve\n` +
+      "  qu'Awin ait regénéré son export. Les `syncedAt` d'origine sont conservés,\n" +
+      '  ce fichier est inchangé et le workflow ne redéploiera pas.',
   );
 }
-if (ageHeures >= 72) {
+if (perimees) {
   console.log(
-    '\n⚠ Les prix ont dépassé 72 h : le site affiche désormais des fourchettes.\n' +
-      "  Vérifier la configuration Create-a-Feed côté Awin.",
+    `\n⚠ ${perimees} fiche(s) au-delà de 72 h : le site les affiche en fourchette et\n` +
+      "  n'émet pas d'`offers` pour elles. Vérifier côté Awin que l'annonceur\n" +
+      '  alimente toujours les flux auxquels ce compte a accès.',
   );
 }
 

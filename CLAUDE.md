@@ -76,25 +76,34 @@ Awin faisait donc publier un `offers` JSON-LD faussement frais), et le
 garde-fou `git diff --quiet` du workflow voyait toujours un changement, d'où
 deux redéploiements par jour pour rien.
 
-Le script cherche donc une date de fraîcheur dans cet ordre : la liste des
-flux Awin (`https://productdata.awin.com/datafeed/list/apikey/<clé>`, colonne
-`Last Imported` — **seule datation officielle**, activée en renseignant le
-secret `AWIN_DATAFEED_API_KEY`, distinct de la clé Publisher API), puis
-l'en-tête HTTP `Last-Modified`, puis une colonne de date du flux, puis — à
-défaut — la comparaison au snapshot précédent. **Le flux ManoMano ne fournit
-ni en-tête ni colonne de date** (vérifié en production le 2026-08-04) : sans
-la clé datafeed, c'est donc le dernier cas qui s'applique — tant que les
-valeurs métier de toutes les fiches sont identiques, les `syncedAt` d'origine
-sont conservés et le fichier ne bouge pas. Un seul changement suffit à
-prouver que le flux est vivant et réhorodate tout.
+**Ne pas coder d'URL de flux en dur.** Le secret à renseigner est
+`AWIN_DATAFEED_API_KEY` (clé « datafeed », distincte de celle de la Publisher
+API, à récupérer dans Awin). Avec elle, le script interroge
+`https://productdata.awin.com/datafeed/list/apikey/<clé>`, trie les flux de
+l'annonceur par `Last Imported` décroissant, ignore ceux de plus de 7 jours et
+les parcourt du plus frais au plus ancien jusqu'à retrouver les 118 fiches —
+en s'arrêtant dès qu'elles y sont, les flux ManoMano faisant environ un
+million de lignes chacun. `AWIN_FEED_URL` ne reste qu'un repli.
 
-Épisode fondateur : le 2026-08-04, les 118 prix du flux étaient identiques au
-centime aux `prixIndicatif` figés le 2026-07-29, six jours plus tôt, alors
-que ManoMano affichait +5,8 % sur au moins une fiche. Le site publiait donc
-des `offers` faux. Les fiches ont été redatées à leur date réelle de constat
-et sont repassées en fourchette. Retenir de cet épisode qu'un flux qui se
-télécharge n'est pas un flux qui vit, et qu'aucune fraîcheur ne se déduit de
-l'heure d'un `cron`.
+La fraîcheur de chaque fiche vient, par ordre de précision : de la colonne
+`last_updated` de sa ligne, sinon du `Last Imported` de son flux, sinon de
+l'en-tête `Last-Modified`, sinon — à défaut de toute date — de la comparaison
+au snapshot précédent, auquel cas les `syncedAt` d'origine sont conservés tant
+que le contenu ne bouge pas et le fichier reste inchangé.
+
+Quand plusieurs annonces Awin existent pour une même référence (ManoMano est
+une marketplace : autant d'annonces que de vendeurs), c'est **la moins chère
+en stock** qui est retenue, une annonce liée au `p=` de la fiche primant
+toujours sur un simple `model_id`.
+
+Épisode fondateur, à ne pas réapprendre : le 2026-08-04, les 118 prix du flux
+étaient identiques au centime aux `prixIndicatif` figés le 2026-07-29, alors
+que ManoMano affichait +5,8 % sur au moins une fiche — le site publiait donc
+des `offers` faux. Cause : `AWIN_FEED_URL` pointait sur le flux « ManoMano FR
+- Part 1 », que l'annonceur avait cessé d'alimenter le **2026-05-15**, trois
+mois plus tôt, pendant que d'autres flux du même annonceur étaient réimportés
+chaque nuit. Un flux qui se télécharge n'est pas un flux qui vit, et aucune
+fraîcheur ne se déduit de l'heure d'un `cron`.
 
 Conséquence assumée : si le flux reste identique plus de 72 h, les fiches
 repassent en fourchette et les `offers` disparaissent. C'est le comportement
