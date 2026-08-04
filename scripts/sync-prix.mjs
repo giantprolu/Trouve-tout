@@ -40,6 +40,11 @@ if (!feedUrl) {
  * au moment du run, un "prix verifie il y a 2 h" entierement faux — et un
  * `offers` JSON-LD en decalage avec le prix reel du marchand, ce que Google
  * sanctionne. Voir CLAUDE.md, sections "Prix" et "Donnees structurees".
+ *
+ * Constat du 2026-08-04 : ce flux-ci ne renvoie pas de `Last-Modified`. La
+ * datation retombe alors sur les replis mis en place plus bas (colonne date
+ * du flux, puis comparaison au snapshot precedent). L'en-tete reste teste en
+ * premier au cas ou la configuration Awin changerait.
  */
 async function fluxBrut(source) {
   if (source.startsWith('http://') || source.startsWith('https://')) {
@@ -47,6 +52,14 @@ async function fluxBrut(source) {
     if (!res.ok || !res.body) throw new Error(`Flux Awin injoignable (HTTP ${res.status})`);
     const lastModified = res.headers.get('last-modified');
     const genereLe = lastModified ? new Date(lastModified) : undefined;
+    // Trace de diagnostic : si Awin se met un jour a dater ses exports, c'est
+    // par un de ces en-tetes qu'on le verra, sans avoir a instrumenter a la main.
+    const traces = ['last-modified', 'etag', 'age', 'date']
+      .map((h) => [h, res.headers.get(h)])
+      .filter(([, v]) => v);
+    if (traces.length) {
+      console.log(`En-têtes de datation : ${traces.map(([h, v]) => `${h}=${v}`).join(', ')}`);
+    }
     return {
       stream: Readable.fromWeb(res.body),
       genereLe: genereLe && !Number.isNaN(genereLe.getTime()) ? genereLe : undefined,
@@ -91,6 +104,28 @@ function prixNumerique(brut) {
   return Number.isFinite(n) ? n : undefined;
 }
 
+/**
+ * Repli n°2 quand l'en-tete HTTP manque : certains exports Awin embarquent
+ * la date de derniere mise a jour dans une colonne. On la cherche sur la
+ * premiere ligne parmi les intitules connus, et on ne la retient que si sa
+ * valeur se parse vraiment en date — une colonne "last_updated" remplie de
+ * chaines vides ne vaut pas mieux que pas de colonne du tout.
+ */
+const COLONNES_DATE = [
+  'last_updated', 'last_updated_date', 'date_updated', 'updated_at',
+  'timestamp', 'feed_date', 'date',
+];
+
+function detecterColonneDate(ligne) {
+  for (const nom of COLONNES_DATE) {
+    const brut = ligne[nom];
+    if (!brut) continue;
+    const d = new Date(String(brut).trim());
+    if (!Number.isNaN(d.getTime())) return nom;
+  }
+  return undefined;
+}
+
 async function chargerFlux() {
   const { stream, genereLe } = await fluxCsv(feedUrl);
   // relax_quotes + skip_records_with_error : un export marchand de 50k+ lignes
@@ -118,8 +153,24 @@ async function chargerFlux() {
   const parFluxId = new Map();
   const parMerchantId = new Map();
   let lignes = 0;
+  let colonneDate;
+  let dateFlux;
   for await (const ligne of parseur) {
     lignes++;
+    if (lignes === 1) {
+      colonneDate = detecterColonneDate(ligne);
+      console.log(
+        colonneDate
+          ? `Colonne de date détectée dans le flux : ${colonneDate}.`
+          : `Aucune colonne de date exploitable dans le flux (colonnes : ${Object.keys(ligne).join(', ')}).`,
+      );
+    }
+    if (colonneDate) {
+      // La date de generation du flux, c'est celle de sa donnee la plus
+      // recente : un produit peut tres bien n'avoir pas bouge depuis des mois.
+      const d = new Date(String(ligne[colonneDate]).trim());
+      if (!Number.isNaN(d.getTime()) && (!dateFlux || d > dateFlux)) dateFlux = d;
+    }
     const id = ligne.aw_product_id?.trim();
     const merchantId = ligne.merchant_product_id?.trim();
     if (!id && !merchantId) continue;
@@ -149,7 +200,7 @@ async function chargerFlux() {
   }
   if (lignes === 0) throw new Error('Flux Awin vide — 0 ligne parsée.');
   if (lignesIgnorees > 0) console.log(`(${lignesIgnorees} ligne(s) du flux ignorée(s) — mal échappées)`);
-  return { parFluxId, parMerchantId, genereLe };
+  return { parFluxId, parMerchantId, genereLe: genereLe ?? dateFlux };
 }
 
 function produitsDeclares() {
@@ -172,31 +223,38 @@ const produits = produitsDeclares();
 
 const synchronise = {};
 const nonTrouves = [];
-
-// Horodatage de reference : la generation du flux, jamais l'heure du run.
-// Un flux sans `Last-Modified` ne permet aucune garantie de fraicheur — on
-// retombe alors sur l'heure du run en le disant clairement, plutot que de
-// laisser croire a une verification qui n'a pas eu lieu.
 const maintenant = new Date();
-const dateFraicheur = genereLe && genereLe <= maintenant ? genereLe : maintenant;
-const syncedAt = dateFraicheur.toISOString();
-const ageHeures = (maintenant - dateFraicheur) / 3_600_000;
 
-if (!genereLe) {
-  console.log(
-    "\n⚠ Le flux ne renvoie pas d'en-tête Last-Modified : impossible de dater\n" +
-      "  les prix. Repli sur l'heure de synchronisation — la fraîcheur affichée\n" +
-      '  sur le site est donc celle du téléchargement, pas celle du prix.\n',
-  );
-} else if (ageHeures >= 72) {
-  console.log(
-    `\n⚠ Flux Awin généré il y a ${Math.round(ageHeures)} h (> 72 h) : les fiches\n` +
-      '  repasseront automatiquement en fourchette de prix. Vérifier la\n' +
-      "  configuration Create-a-Feed côté Awin si ça se reproduit.\n",
-  );
-} else {
-  console.log(`\nFlux Awin généré il y a ${Math.round(ageHeures)} h.`);
+/**
+ * Repli n°3, celui qui sert reellement sur ce flux : ni en-tete HTTP ni
+ * colonne de date, donc la seule preuve qu'Awin a regenere son export est
+ * que son contenu ait bouge.
+ *
+ * Regle : si les valeurs metier de toutes les fiches sont identiques a la
+ * synchronisation precedente, on conserve les `syncedAt` d'origine. Les
+ * fiches vieillissent alors normalement et repassent en fourchette apres
+ * 72 h, ce qui est le comportement correct — on ne peut pas prouver qu'un
+ * prix est frais quand rien ne distingue un flux vivant d'un flux fige.
+ * Effet de bord voulu : le fichier reste alors byte-identique, donc le
+ * workflow ne commit rien et ne redeploie pas.
+ *
+ * A l'inverse, un seul changement suffit a prouver que le flux est vivant :
+ * toutes les fiches sont alors rehorodatees a maintenant.
+ */
+function snapshotPrecedent() {
+  try {
+    return JSON.parse(readFileSync(new URL('../src/data/prix-synchronises.json', import.meta.url), 'utf8'));
+  } catch {
+    return {};
+  }
 }
+
+function valeursMetier({ prix, enStock, ean, image }) {
+  return JSON.stringify({ prix, enStock, ean, image });
+}
+
+const precedent = snapshotPrecedent();
+const dateFluxConnue = genereLe && genereLe <= maintenant ? genereLe : undefined;
 
 for (const { slug, nom, awProductId, modelId } of produits) {
   const entree = (awProductId && parFluxId.get(awProductId)) || (modelId && parMerchantId.get(modelId));
@@ -204,7 +262,49 @@ for (const { slug, nom, awProductId, modelId } of produits) {
     nonTrouves.push(nom);
     continue;
   }
+  synchronise[slug] = entree;
+}
+
+const inchange =
+  Object.keys(synchronise).length === Object.keys(precedent).length &&
+  Object.entries(synchronise).every(
+    ([slug, e]) => precedent[slug] && valeursMetier(precedent[slug]) === valeursMetier(e),
+  );
+
+for (const [slug, entree] of Object.entries(synchronise)) {
+  // Priorite : date du flux si Awin la fournit ; sinon `syncedAt` d'origine
+  // tant que le contenu n'a pas bouge ; sinon l'heure du run.
+  const syncedAt = dateFluxConnue
+    ? dateFluxConnue.toISOString()
+    : inchange && precedent[slug]?.syncedAt
+      ? precedent[slug].syncedAt
+      : maintenant.toISOString();
   synchronise[slug] = { ...entree, syncedAt };
+}
+
+const reference = new Date(Object.values(synchronise)[0]?.syncedAt ?? maintenant);
+const ageHeures = (maintenant - reference) / 3_600_000;
+
+if (dateFluxConnue) {
+  console.log(`\nFlux Awin daté à la source, généré il y a ${Math.round(ageHeures)} h.`);
+} else if (!inchange) {
+  console.log(
+    '\nLe contenu du flux a changé depuis la dernière synchronisation : les prix\n' +
+      'sont donc bien rafraîchis, horodatage à maintenant.',
+  );
+} else {
+  console.log(
+    `\n⚠ Flux non daté et contenu identique depuis ${Math.round(ageHeures)} h : rien ne prouve\n` +
+      "  qu'Awin l'ait regénéré. Les `syncedAt` d'origine sont conservés, donc les\n" +
+      '  fiches repasseront en fourchette au-delà de 72 h. Ce fichier est inchangé,\n' +
+      '  le workflow ne redéploiera pas.',
+  );
+}
+if (ageHeures >= 72) {
+  console.log(
+    '\n⚠ Les prix ont dépassé 72 h : le site affiche désormais des fourchettes.\n' +
+      "  Vérifier la configuration Create-a-Feed côté Awin.",
+  );
 }
 
 writeFileSync(
