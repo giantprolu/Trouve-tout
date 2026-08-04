@@ -148,6 +148,22 @@ const AWIN_ANNONCEUR_MANOMANO = process.env.AWIN_ADVERTISER_ID ?? '17547';
 const FLUX_PERIME_JOURS = Number(process.env.AWIN_FLUX_PERIME_JOURS ?? 7);
 
 /**
+ * L'identifiant editeur Awin, present dans chaque lien d'affiliation
+ * (`&a=<id>`), donc deja dans les donnees — inutile d'en faire un secret de
+ * plus. `AWIN_PUBLISHER_ID` reste prioritaire si un jour il diverge.
+ */
+function publisherIdAwin() {
+  const fourni = process.env.AWIN_PUBLISHER_ID?.trim();
+  if (fourni) return fourni;
+  try {
+    const src = readFileSync(new URL('../src/lib/data.ts', import.meta.url), 'utf8');
+    return src.match(/awin1\.com\/[^']*[?&]a=(\d+)/)?.[1];
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Liste les flux de l'annonceur, du plus fraichement importe au plus ancien.
  *
  * C'est ce qui a permis de comprendre l'incident du 2026-08-04 : le compte
@@ -171,14 +187,27 @@ async function fluxDisponibles() {
     );
     return [];
   }
+  // Deux points d'entree pour la meme liste. Le premier est celui que sert
+  // l'interface Awin et le seul qui reponde sur ce compte ; l'ancien renvoie
+  // un 500 indifferencie, qu'on prenait a tort pour une cle invalide. Il
+  // reste en second au cas ou un compte n'aurait que celui-la.
+  const pub = publisherIdAwin();
+  const urls = [
+    pub && `https://ui.awin.com/productdata-darwin-download/publisher/${pub}/${cle}/1/feedList`,
+    `https://productdata.awin.com/datafeed/list/apikey/${cle}`,
+  ].filter(Boolean);
+
   try {
-    const res = await fetch(`https://productdata.awin.com/datafeed/list/apikey/${cle}`);
-    if (!res.ok) {
-      // Awin repond 500 sur une cle inconnue plutot que 401/403 : verifie.
+    let res;
+    for (const url of urls) {
+      res = await fetch(url);
+      if (res.ok) break;
+      console.log(`  (liste des flux : HTTP ${res.status} sur ${new URL(url).host})`);
+    }
+    if (!res?.ok) {
       console.log(
-        `⚠ Liste des flux Awin injoignable (HTTP ${res.status})` +
-          (res.status >= 500 ? ' — clé probablement invalide ou révoquée' : '') +
-          ' — repli sur AWIN_FEED_URL.',
+        '⚠ Liste des flux Awin injoignable — vérifier AWIN_DATAFEED_API_KEY et\n' +
+          `  l'identifiant éditeur (${pub ?? 'introuvable'}). Repli sur AWIN_FEED_URL.`,
       );
       return [];
     }
@@ -306,11 +335,18 @@ async function parcourirSource(source, index, trouve) {
     }
     const id = ligne.aw_product_id?.trim();
     const merchantId = ligne.merchant_product_id?.trim();
-    if (!id && !merchantId) continue;
+    const codeEan = (ligne.ean?.trim() || ligne.product_GTIN?.trim() || '').replace(/^0+/, '');
+    if (!id && !merchantId && !codeEan) continue;
     // Priorite a aw_product_id : c'est l'annonce precise vers laquelle pointe
     // le lien affilie de la fiche. merchant_product_id ne sert qu'aux fiches
-    // qui n'ont pas encore de lien tracke.
-    const slug = (id && index.parAw.get(id)) || (merchantId && index.parMerchant.get(merchantId));
+    // sans lien tracke. L'EAN vient en dernier mais rattrape tout le reste :
+    // Awin reattribue ses `aw_product_id` d'un flux a l'autre, donc les `p=`
+    // stockes dans les fiches cessent de correspondre des que l'annonceur
+    // change de flux — l'EAN, lui, ne bouge jamais.
+    const slug =
+      (id && index.parAw.get(id)) ||
+      (merchantId && index.parMerchant.get(merchantId)) ||
+      (codeEan && index.parEan.get(codeEan));
     if (!slug) continue;
     const dejaVu = trouve.get(slug);
     if (dejaVu?.viaAw && !(id && index.parAw.has(id))) continue;
@@ -335,6 +371,9 @@ async function parcourirSource(source, index, trouve) {
       image: ligne.merchant_image_url?.trim() || ligne.aw_image_url?.trim() || undefined,
       viaAw: Boolean(id && index.parAw.has(id)),
       dateDonnee: dateLigne && !Number.isNaN(dateLigne.getTime()) ? dateLigne : (source.importeLe ?? genereLe),
+      // Memorise pour que la prochaine synchronisation commence par les flux
+      // qui portaient deja la fiche, au lieu de re-balayer le catalogue.
+      fluxId: source.id,
     };
     // Plusieurs annonces Awin peuvent exister pour un meme produit ManoMano
     // (marketplace : autant d'annonces que de vendeurs). A defaut de savoir
@@ -377,14 +416,40 @@ async function chargerFlux(produits) {
     process.exit(1);
   }
 
-  const index = { parAw: new Map(), parMerchant: new Map() };
+  const index = { parAw: new Map(), parMerchant: new Map(), parEan: new Map() };
   for (const p of produits) {
     if (p.awProductId) index.parAw.set(p.awProductId, p.slug);
     if (p.modelId) index.parMerchant.set(p.modelId, p.slug);
   }
+  // Les EAN proviennent de la derniere synchronisation reussie : c'est le
+  // seul identifiant stable dont on dispose pour rattraper une fiche dont
+  // l'`aw_product_id` a ete reattribue.
+  const connus = snapshotPrecedent();
+  for (const p of produits) {
+    const ean = connus[p.slug]?.ean?.replace(/^0+/, '');
+    if (ean) index.parEan.set(ean, p.slug);
+  }
+  console.log(
+    `\nIdentifiants de correspondance : ${index.parAw.size} aw_product_id, ` +
+      `${index.parMerchant.size} merchant_product_id, ${index.parEan.size} EAN.`,
+  );
+
+  // Les 118 fiches sont éparpillées dans un catalogue découpé en flux d'un
+  // million de lignes : commencer par ceux qui les portaient au run précédent
+  // évite d'en relire une vingtaine pour rien. L'ordre de fraîcheur est
+  // conservé à l'intérieur de chaque groupe, et les flux inconnus restent en
+  // second pour rattraper les fiches qui ont changé de partition.
+  const dejaPorteurs = new Set(Object.values(connus).map((e) => e?.fluxId).filter(Boolean));
+  const ordonnees = [
+    ...sources.filter((s) => dejaPorteurs.has(s.id)),
+    ...sources.filter((s) => !dejaPorteurs.has(s.id)),
+  ];
+  if (dejaPorteurs.size) {
+    console.log(`${dejaPorteurs.size} flux déjà porteur(s) au run précédent, examinés en premier.`);
+  }
 
   const trouve = new Map();
-  for (const source of sources) {
+  for (const source of ordonnees) {
     if (trouve.size >= produits.length) break;
     const age = source.importeLe ? `importé il y a ${Math.round((Date.now() - source.importeLe) / 3_600_000)} h` : 'date inconnue';
     console.log(`\n▸ ${source.nom} (${source.id}) — ${age}`);
@@ -449,8 +514,8 @@ function valeursMetier({ prix, enStock, ean, image }) {
 
 const precedent = snapshotPrecedent();
 
-for (const [slug, { prix, enStock, ean, image }] of trouve) {
-  synchronise[slug] = { prix, enStock, ean, image };
+for (const [slug, { prix, enStock, ean, image, fluxId }] of trouve) {
+  synchronise[slug] = { prix, enStock, ean, image, fluxId };
 }
 
 const inchange =

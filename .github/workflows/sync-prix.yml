@@ -2,11 +2,16 @@ name: Synchronisation des prix ManoMano
 
 on:
   schedule:
-    # GitHub Actions raisonne en UTC (pas de fuseau horaire natif) : 6h et 10h
-    # UTC correspondent à 8h et 12h heure de Paris en été (UTC+2). En hiver
-    # (UTC+1) ça glissera d'une heure vers 9h/13h jusqu'au prochain ajustement.
+    # GitHub Actions raisonne en UTC (pas de fuseau horaire natif) : 6h UTC
+    # correspond à 8h heure de Paris en été (UTC+2), 7h en hiver.
+    #
+    # Une seule exécution par jour depuis le 2026-08-04 : l'annonceur a
+    # remplacé ses deux flux d'origine par une trentaine de partitions d'un
+    # million de lignes, entre lesquelles les 118 fiches sont éparpillées. Un
+    # run complet lit donc plusieurs dizaines de millions de lignes et dure
+    # bien plus longtemps qu'avant — inutile de payer ça deux fois par jour
+    # pour un catalogue dont les prix bougent au mieux quotidiennement.
     - cron: '0 6 * * *'
-    - cron: '0 10 * * *'
   workflow_dispatch: {}
 
 permissions:

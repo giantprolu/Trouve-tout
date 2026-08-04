@@ -121,7 +121,15 @@ export function fourchettePrix(prixIndicatif: number): string {
  */
 const prixLive = prixSynchronises as Record<
   string,
-  { prix: number; enStock: boolean; ean?: string; image?: string; syncedAt: string }
+  {
+    prix: number;
+    enStock: boolean;
+    ean?: string;
+    image?: string;
+    syncedAt: string;
+    /** Flux Awin d'où vient la fiche — sert au script de synchro, pas à l'affichage. */
+    fluxId?: string;
+  }
 >;
 
 /**
