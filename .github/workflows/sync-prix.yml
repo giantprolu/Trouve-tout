@@ -30,10 +30,15 @@ jobs:
         env:
           AWIN_FEED_URL: ${{ secrets.AWIN_FEED_URL }}
 
+      # Depuis que `syncedAt` porte la date de génération du flux et non celle
+      # du run, ce test fait enfin ce que son nom dit : tant qu'Awin ne
+      # régénère pas son export, le fichier est identique au précédent et rien
+      # n'est poussé. Avant, les 118 `syncedAt` changeaient à chaque exécution
+      # et déclenchaient deux redéploiements Vercel par jour pour rien.
       - name: Commit et push si le flux a changé
         run: |
           if git diff --quiet -- src/data/prix-synchronises.json; then
-            echo "Aucun changement de prix."
+            echo "Flux inchangé depuis la dernière synchronisation — rien à pousser."
             exit 0
           fi
           git config user.name "trouve-tout-bot"

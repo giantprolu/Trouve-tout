@@ -19,7 +19,7 @@
  * doublon). On matche d'abord sur aw_product_id, puis en repli sur
  * merchant_product_id pour les fiches qui n'ont que ça.
  */
-import { readFileSync, writeFileSync, createReadStream } from 'node:fs';
+import { readFileSync, writeFileSync, createReadStream, statSync } from 'node:fs';
 import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import { parse } from 'csv-parse';
@@ -30,13 +30,29 @@ if (!feedUrl) {
   process.exit(1);
 }
 
+/**
+ * Renvoie le flux ET la date a laquelle Awin l'a genere.
+ *
+ * Cette date est la seule qui compte pour la fraicheur affichee sur le site :
+ * l'heure a laquelle ce script tourne ne dit rien de l'age des prix. Awin
+ * regenere ses exports Create-a-Feed a son propre rythme, donc telecharger
+ * deux fois par jour un CSV vieux de dix jours donnerait, si on horodatait
+ * au moment du run, un "prix verifie il y a 2 h" entierement faux — et un
+ * `offers` JSON-LD en decalage avec le prix reel du marchand, ce que Google
+ * sanctionne. Voir CLAUDE.md, sections "Prix" et "Donnees structurees".
+ */
 async function fluxBrut(source) {
   if (source.startsWith('http://') || source.startsWith('https://')) {
     const res = await fetch(source);
     if (!res.ok || !res.body) throw new Error(`Flux Awin injoignable (HTTP ${res.status})`);
-    return Readable.fromWeb(res.body);
+    const lastModified = res.headers.get('last-modified');
+    const genereLe = lastModified ? new Date(lastModified) : undefined;
+    return {
+      stream: Readable.fromWeb(res.body),
+      genereLe: genereLe && !Number.isNaN(genereLe.getTime()) ? genereLe : undefined,
+    };
   }
-  return createReadStream(source);
+  return { stream: createReadStream(source), genereLe: statSync(source).mtime };
 }
 
 /**
@@ -51,7 +67,7 @@ async function fluxBrut(source) {
  * de reconstituer le flux complet.
  */
 async function fluxCsv(source) {
-  const brut = await fluxBrut(source);
+  const { stream: brut, genereLe } = await fluxBrut(source);
   const it = brut[Symbol.asyncIterator]();
   const premier = await it.next();
   const premierChunk = premier.done ? Buffer.alloc(0) : Buffer.from(premier.value);
@@ -66,7 +82,7 @@ async function fluxCsv(source) {
     }
   }
   const flux = Readable.from(reassemble());
-  return gzip ? flux.pipe(createGunzip()) : flux;
+  return { stream: gzip ? flux.pipe(createGunzip()) : flux, genereLe };
 }
 
 function prixNumerique(brut) {
@@ -76,7 +92,7 @@ function prixNumerique(brut) {
 }
 
 async function chargerFlux() {
-  const stream = await fluxCsv(feedUrl);
+  const { stream, genereLe } = await fluxCsv(feedUrl);
   // relax_quotes + skip_records_with_error : un export marchand de 50k+ lignes
   // contient presque toujours quelques champs mal échappés (guillemet isolé
   // dans une description) — on ignore ces lignes-là plutôt que de faire
@@ -133,7 +149,7 @@ async function chargerFlux() {
   }
   if (lignes === 0) throw new Error('Flux Awin vide — 0 ligne parsée.');
   if (lignesIgnorees > 0) console.log(`(${lignesIgnorees} ligne(s) du flux ignorée(s) — mal échappées)`);
-  return { parFluxId, parMerchantId };
+  return { parFluxId, parMerchantId, genereLe };
 }
 
 function produitsDeclares() {
@@ -151,12 +167,36 @@ function produitsDeclares() {
   }).filter((p) => p.slug && (p.awProductId || p.modelId));
 }
 
-const { parFluxId, parMerchantId } = await chargerFlux();
+const { parFluxId, parMerchantId, genereLe } = await chargerFlux();
 const produits = produitsDeclares();
 
 const synchronise = {};
 const nonTrouves = [];
-const syncedAt = new Date().toISOString();
+
+// Horodatage de reference : la generation du flux, jamais l'heure du run.
+// Un flux sans `Last-Modified` ne permet aucune garantie de fraicheur — on
+// retombe alors sur l'heure du run en le disant clairement, plutot que de
+// laisser croire a une verification qui n'a pas eu lieu.
+const maintenant = new Date();
+const dateFraicheur = genereLe && genereLe <= maintenant ? genereLe : maintenant;
+const syncedAt = dateFraicheur.toISOString();
+const ageHeures = (maintenant - dateFraicheur) / 3_600_000;
+
+if (!genereLe) {
+  console.log(
+    "\n⚠ Le flux ne renvoie pas d'en-tête Last-Modified : impossible de dater\n" +
+      "  les prix. Repli sur l'heure de synchronisation — la fraîcheur affichée\n" +
+      '  sur le site est donc celle du téléchargement, pas celle du prix.\n',
+  );
+} else if (ageHeures >= 72) {
+  console.log(
+    `\n⚠ Flux Awin généré il y a ${Math.round(ageHeures)} h (> 72 h) : les fiches\n` +
+      '  repasseront automatiquement en fourchette de prix. Vérifier la\n' +
+      "  configuration Create-a-Feed côté Awin si ça se reproduit.\n",
+  );
+} else {
+  console.log(`\nFlux Awin généré il y a ${Math.round(ageHeures)} h.`);
+}
 
 for (const { slug, nom, awProductId, modelId } of produits) {
   const entree = (awProductId && parFluxId.get(awProductId)) || (modelId && parMerchantId.get(modelId));

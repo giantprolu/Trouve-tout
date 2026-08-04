@@ -40,8 +40,9 @@ pour le suivi.
 ## Prix
 
 Le prix affiché vient de `prixActuel()`/`prixAffichage()`
-(`src/lib/affiliation.ts`) : prix exact si le produit a été synchronisé avec
-le flux Awin/ManoMano il y a moins de 72 h, fourchette (`fourchettePrix()`,
+(`src/lib/affiliation.ts`) : prix exact si le flux Awin/ManoMano d'où il
+sort a été **généré** il y a moins de 72 h (pas simplement téléchargé, voir
+"Synchronisation des prix"), fourchette (`fourchettePrix()`,
 écart max 50 €) sinon — décision du 2026-07-30 qui affine celle du
 2026-07-29 (prix exact proscrit). La fourchette existait parce que
 `prixIndicatif` venait d'un export CSV figé sans rafraîchissement : ce
@@ -66,6 +67,19 @@ et pousse directement sur `main` s'il y a un changement, ce qui déclenche un
 redéploiement Vercel automatique : exception assumée à la règle "ne pas
 déployer en production" ci-dessous, qui vise les actions manuelles de
 l'assistant, pas ce pipeline construit explicitement pour ça.
+
+Le `syncedAt` écrit dans le fichier est la date de **génération du flux**
+(en-tête HTTP `Last-Modified`), jamais l'heure d'exécution du script —
+correction du 2026-08-04. Auparavant chaque run réhorodatait les 118 fiches,
+ce qui produisait deux effets : la fraîcheur des 72 h mesurait l'âge du
+téléchargement et non celui du prix (un flux figé côté Awin aurait donc fait
+publier un `offers` JSON-LD faussement frais), et le garde-fou
+`git diff --quiet` du workflow voyait toujours un changement, d'où deux
+redéploiements par jour pour rien. Corollaire voulu : si Awin ne régénère
+pas son export pendant plus de 72 h, les fiches repassent d'elles-mêmes en
+fourchette. Le script l'annonce dans ses logs, comme il signale un flux sans
+`Last-Modified` — auquel cas aucune garantie de fraîcheur n'est possible et
+il le dit au lieu de faire semblant.
 
 ## Données structurées
 
