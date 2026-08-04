@@ -83,7 +83,12 @@ API, à récupérer dans Awin). Avec elle, le script interroge
 l'annonceur par `Last Imported` décroissant, ignore ceux de plus de 7 jours et
 les parcourt du plus frais au plus ancien jusqu'à retrouver les 118 fiches —
 en s'arrêtant dès qu'elles y sont, les flux ManoMano faisant environ un
-million de lignes chacun. `AWIN_FEED_URL` ne reste qu'un repli.
+million de lignes chacun. `AWIN_FEED_URL` reste un repli, et accepte
+plusieurs URL séparées par des virgules ou des retours à la ligne : c'est la
+seule porte de sortie quand la clé n'est pas exploitable, les URL des flux
+étant lisibles dans la liste téléchargée à la main. **Toujours en garder une
+de renseignée** — Awin répond `500` sur une clé invalide, et sans repli la
+synchronisation s'arrête au lieu de se dégrader.
 
 La fraîcheur de chaque fiche vient, par ordre de précision : de la colonne
 `last_updated` de sa ligne, sinon du `Last Imported` de son flux, sinon de

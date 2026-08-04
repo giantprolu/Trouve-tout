@@ -31,12 +31,27 @@ import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import { parse } from 'csv-parse';
 
-const feedUrl = process.env.AWIN_FEED_URL;
-if (!feedUrl && !process.env.AWIN_DATAFEED_API_KEY) {
+/**
+ * AWIN_FEED_URL accepte plusieurs sources, separees par des virgules, des
+ * espaces ou des retours a la ligne. Le catalogue ManoMano est decoupe en
+ * flux d'environ un million de produits : y retrouver 118 references peut
+ * demander d'en parcourir plusieurs. Sert aussi de secours quand la cle
+ * datafeed n'est pas exploitable — c'est alors la seule facon de viser des
+ * flux vivants, les URL etant lisibles dans la liste telechargee a la main.
+ */
+const feedUrls = (process.env.AWIN_FEED_URL ?? '')
+  .split(/[\s,]+/)
+  .map((u) => u.trim())
+  .filter(Boolean);
+
+if (!feedUrls.length && !process.env.AWIN_DATAFEED_API_KEY?.trim()) {
   console.error(
-    '\n✖ Ni AWIN_DATAFEED_API_KEY ni AWIN_FEED_URL — aucune source de prix.\n' +
-      '  La clé datafeed se récupère dans Awin, et laisse le script choisir\n' +
-      '  lui-même un flux à jour.\n',
+    '\n✖ Aucune source de prix : ni AWIN_DATAFEED_API_KEY ni AWIN_FEED_URL.\n\n' +
+      "  AWIN_DATAFEED_API_KEY est la clé « datafeed » d'Awin, 32 caractères\n" +
+      '  hexadécimaux, distincte du token de la Publisher API. Elle laisse le\n' +
+      '  script choisir lui-même un flux à jour.\n\n' +
+      '  AWIN_FEED_URL accepte une ou plusieurs URL de flux (séparées par des\n' +
+      '  virgules ou des retours à la ligne) et reste utilisable seule.\n',
   );
   process.exit(1);
 }
@@ -143,12 +158,28 @@ const FLUX_PERIME_JOURS = Number(process.env.AWIN_FLUX_PERIME_JOURS ?? 7);
  * l'annonceur renomme ou renumerote ses flux.
  */
 async function fluxDisponibles() {
-  const cle = process.env.AWIN_DATAFEED_API_KEY;
+  // Un secret colle depuis l'interface GitHub embarque facilement une espace
+  // ou un retour a la ligne, qui partent tels quels dans l'URL et provoquent
+  // une erreur cote Awin sans aucune indication de la cause.
+  const cle = process.env.AWIN_DATAFEED_API_KEY?.trim();
   if (!cle) return [];
+  if (!/^[0-9a-f]{32}$/i.test(cle)) {
+    console.log(
+      `⚠ AWIN_DATAFEED_API_KEY ne ressemble pas à une clé datafeed (32 caractères\n` +
+        `  hexadécimaux) mais à ${cle.length} caractères. La clé datafeed est distincte\n` +
+        '  du token de la Publisher API — repli sur AWIN_FEED_URL.',
+    );
+    return [];
+  }
   try {
     const res = await fetch(`https://productdata.awin.com/datafeed/list/apikey/${cle}`);
     if (!res.ok) {
-      console.log(`⚠ Liste des flux Awin injoignable (HTTP ${res.status}) — repli sur AWIN_FEED_URL.`);
+      // Awin repond 500 sur une cle inconnue plutot que 401/403 : verifie.
+      console.log(
+        `⚠ Liste des flux Awin injoignable (HTTP ${res.status})` +
+          (res.status >= 500 ? ' — clé probablement invalide ou révoquée' : '') +
+          ' — repli sur AWIN_FEED_URL.',
+      );
       return [];
     }
     const corps = Buffer.from(await res.arrayBuffer());
@@ -332,9 +363,17 @@ async function chargerFlux(produits) {
   const decouverts = await fluxDisponibles();
   const sources = decouverts.length
     ? decouverts
-    : [{ id: 'env', nom: 'AWIN_FEED_URL', url: feedUrl, importeLe: undefined }];
-  if (!sources[0].url) {
-    console.error('\n✖ Aucune source : ni AWIN_DATAFEED_API_KEY exploitable, ni AWIN_FEED_URL.\n');
+    : feedUrls.map((url, i) => ({
+        id: `env${feedUrls.length > 1 ? i + 1 : ''}`,
+        nom: 'AWIN_FEED_URL',
+        url,
+        importeLe: undefined,
+      }));
+  if (!sources.length) {
+    console.error(
+      '\n✖ Aucune source exploitable : la clé datafeed a échoué et AWIN_FEED_URL\n' +
+        '  est vide. Renseigner au moins une URL de flux le temps de rétablir la clé.\n',
+    );
     process.exit(1);
   }
 
