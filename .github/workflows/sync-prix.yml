@@ -29,6 +29,11 @@ jobs:
       - run: node scripts/sync-prix.mjs
         env:
           AWIN_FEED_URL: ${{ secrets.AWIN_FEED_URL }}
+          # Facultatif mais fortement recommandé : donne accès à la liste des
+          # flux Awin et donc à leur date réelle de dernière mise à jour, la
+          # seule datation officielle. Clé distincte de la Publisher API,
+          # à récupérer dans Awin > Toolbox > Create-a-Feed.
+          AWIN_DATAFEED_API_KEY: ${{ secrets.AWIN_DATAFEED_API_KEY }}
 
       # Depuis que `syncedAt` porte la date de génération du flux et non celle
       # du run, ce test fait enfin ce que son nom dit : tant qu'Awin ne

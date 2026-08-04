@@ -76,14 +76,25 @@ Awin faisait donc publier un `offers` JSON-LD faussement frais), et le
 garde-fou `git diff --quiet` du workflow voyait toujours un changement, d'où
 deux redéploiements par jour pour rien.
 
-Le script cherche donc une date de fraîcheur dans cet ordre : en-tête HTTP
-`Last-Modified`, puis une colonne de date du flux, puis — à défaut — la
-comparaison au snapshot précédent. **Ce flux ManoMano ne fournit ni l'un ni
-l'autre** (vérifié en production le 2026-08-04), c'est donc le troisième cas
-qui s'applique : tant que les valeurs métier de toutes les fiches sont
-identiques, les `syncedAt` d'origine sont conservés et le fichier ne bouge
-pas. Un seul changement suffit à prouver que le flux est vivant et
-réhorodate tout.
+Le script cherche donc une date de fraîcheur dans cet ordre : la liste des
+flux Awin (`https://productdata.awin.com/datafeed/list/apikey/<clé>`, colonne
+`Last Imported` — **seule datation officielle**, activée en renseignant le
+secret `AWIN_DATAFEED_API_KEY`, distinct de la clé Publisher API), puis
+l'en-tête HTTP `Last-Modified`, puis une colonne de date du flux, puis — à
+défaut — la comparaison au snapshot précédent. **Le flux ManoMano ne fournit
+ni en-tête ni colonne de date** (vérifié en production le 2026-08-04) : sans
+la clé datafeed, c'est donc le dernier cas qui s'applique — tant que les
+valeurs métier de toutes les fiches sont identiques, les `syncedAt` d'origine
+sont conservés et le fichier ne bouge pas. Un seul changement suffit à
+prouver que le flux est vivant et réhorodate tout.
+
+Épisode fondateur : le 2026-08-04, les 118 prix du flux étaient identiques au
+centime aux `prixIndicatif` figés le 2026-07-29, six jours plus tôt, alors
+que ManoMano affichait +5,8 % sur au moins une fiche. Le site publiait donc
+des `offers` faux. Les fiches ont été redatées à leur date réelle de constat
+et sont repassées en fourchette. Retenir de cet épisode qu'un flux qui se
+télécharge n'est pas un flux qui vit, et qu'aucune fraîcheur ne se déduit de
+l'heure d'un `cron`.
 
 Conséquence assumée : si le flux reste identique plus de 72 h, les fiches
 repassent en fourchette et les `offers` disparaissent. C'est le comportement

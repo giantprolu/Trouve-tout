@@ -105,6 +105,62 @@ function prixNumerique(brut) {
 }
 
 /**
+ * Source de datation n°0, la seule officielle : Awin publie la liste des flux
+ * auxquels le compte a acces, avec pour chacun la date de derniere mise a
+ * jour interne (colonne "Last Imported").
+ *
+ *   https://productdata.awin.com/datafeed/list/apikey/<AWIN_DATAFEED_API_KEY>
+ *
+ * Attention, cette cle est distincte de celle de la Publisher API : elle se
+ * recupere dans l'interface Awin, section Toolbox > Create-a-Feed. Sans elle
+ * on retombe sur les replis ci-dessous, qui ne font que constater l'immobilite
+ * du flux sans pouvoir la dater.
+ */
+const AWIN_ANNONCEUR_MANOMANO = process.env.AWIN_ADVERTISER_ID ?? '17547';
+
+async function dateFluxDepuisListe() {
+  const cle = process.env.AWIN_DATAFEED_API_KEY;
+  if (!cle) return undefined;
+  try {
+    const res = await fetch(`https://productdata.awin.com/datafeed/list/apikey/${cle}`);
+    if (!res.ok) {
+      console.log(`⚠ Liste des flux Awin injoignable (HTTP ${res.status}) — datation par repli.`);
+      return undefined;
+    }
+    const corps = Buffer.from(await res.arrayBuffer());
+    const lignes = await new Promise((resoudre, rejeter) => {
+      const acc = [];
+      Readable.from([corps])
+        .pipe(parse({ columns: true, skip_empty_lines: true, relax_quotes: true }))
+        .on('data', (l) => acc.push(l))
+        .on('end', () => resoudre(acc))
+        .on('error', rejeter);
+    });
+    if (!lignes.length) return undefined;
+
+    // Les intitules de colonnes d'Awin ont deja bouge par le passe : on les
+    // reconnait par leur contenu plutot que par une egalite stricte.
+    const cles = Object.keys(lignes[0]);
+    const cleImport = cles.find((c) => /last.*import/i.test(c));
+    const cleAnnonceur = cles.find((c) => /advertiser.*id/i.test(c));
+    if (!cleImport) {
+      console.log(`⚠ Pas de colonne "Last Imported" dans la liste Awin (colonnes : ${cles.join(', ')}).`);
+      return undefined;
+    }
+    const ligne =
+      (cleAnnonceur && lignes.find((l) => String(l[cleAnnonceur]).trim() === AWIN_ANNONCEUR_MANOMANO)) ||
+      lignes[0];
+    const d = new Date(String(ligne[cleImport]).trim().replace(' ', 'T') + 'Z');
+    if (Number.isNaN(d.getTime())) return undefined;
+    console.log(`Awin déclare le flux ${AWIN_ANNONCEUR_MANOMANO} mis à jour le ${ligne[cleImport]}.`);
+    return d;
+  } catch (e) {
+    console.log(`⚠ Lecture de la liste des flux Awin impossible (${e.message}) — datation par repli.`);
+    return undefined;
+  }
+}
+
+/**
  * Repli n°2 quand l'en-tete HTTP manque : certains exports Awin embarquent
  * la date de derniere mise a jour dans une colonne. On la cherche sur la
  * premiere ligne parmi les intitules connus, et on ne la retient que si sa
@@ -218,6 +274,7 @@ function produitsDeclares() {
   }).filter((p) => p.slug && (p.awProductId || p.modelId));
 }
 
+const dateOfficielle = await dateFluxDepuisListe();
 const { parFluxId, parMerchantId, genereLe } = await chargerFlux();
 const produits = produitsDeclares();
 
@@ -254,7 +311,11 @@ function valeursMetier({ prix, enStock, ean, image }) {
 }
 
 const precedent = snapshotPrecedent();
-const dateFluxConnue = genereLe && genereLe <= maintenant ? genereLe : undefined;
+// Ordre de confiance : ce qu'Awin declare officiellement, puis l'en-tete HTTP
+// du fichier, puis une colonne de date du flux. Une date posterieure a
+// maintenant serait absurde et vaut absence de date.
+const candidateDate = dateOfficielle ?? genereLe;
+const dateFluxConnue = candidateDate && candidateDate <= maintenant ? candidateDate : undefined;
 
 for (const { slug, nom, awProductId, modelId } of produits) {
   const entree = (awProductId && parFluxId.get(awProductId)) || (modelId && parMerchantId.get(modelId));
